@@ -5,8 +5,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
-import { AdminModule } from './admin/admin.module';
-import { GroupModule } from './group/group.module';
 import { AuthModule } from './auth/auth.module';
 import configurations from './config/configurations';
 
@@ -28,8 +26,6 @@ import configurations from './config/configurations';
     }),
     AuthModule,
     UserModule,
-    AdminModule,
-    GroupModule,
   ],
   controllers: [AppController],
   providers: [AppService],
