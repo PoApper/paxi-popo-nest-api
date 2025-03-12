@@ -16,10 +16,10 @@ export class Group {
   ownerUuid: string;
 
   @Column({ nullable: false })
-  departure: string;
+  departureLocation: string;
 
   @Column({ nullable: false })
-  destination: string;
+  destinationLocation: string;
 
   @Column({ nullable: false, default: 4 })
   maxParticipant: number;
