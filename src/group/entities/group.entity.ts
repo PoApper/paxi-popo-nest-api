@@ -1,7 +1,8 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 import { User } from 'src/user/entities/user.entity';
 import { GroupStatus } from 'src/group/entities/group.meta';
+import { GroupUser } from 'src/group/entities/group.user.entity';
 
 @Entity()
 export class Group {
@@ -45,15 +46,18 @@ export class Group {
    * Database Relation
    */
 
-  @ManyToOne(() => User, (user) => user.own_group, {
+  @ManyToOne(() => User, (user) => user.own_groups, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'ownerUuid' })
   owner: User;
 
-  @ManyToOne(() => User, (user) => user.pay_group, {
+  @ManyToOne(() => User, (user) => user.pay_groups, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'payerUuid' })
   payer: User;
+
+  @OneToMany(() => GroupUser, (groupUser) => groupUser.group)
+  group_users: GroupUser[];
 }

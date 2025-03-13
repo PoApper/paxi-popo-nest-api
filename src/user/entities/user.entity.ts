@@ -11,6 +11,7 @@ import {
 import { Group } from 'src/group/entities/group.entity';
 
 import { UserStatus, UserType } from '../user.meta';
+import { GroupUser } from 'src/group/entities/group.user.entity';
 
 @Entity()
 @Unique(['email'])
@@ -52,11 +53,14 @@ export class User extends BaseEntity {
    * Database Relation
    */
 
-  @OneToMany(() => Group, (own_group) => own_group.owner)
-  own_group: Group[];
+  @OneToMany(() => Group, (group) => group.owner)
+  own_groups: Group[];
 
-  @OneToMany(() => Group, (pay_group) => pay_group.payer)
-  pay_group: Group[];
+  @OneToMany(() => Group, (group) => group.payer)
+  pay_groups: Group[];
+
+  @OneToMany(() => GroupUser, (group_user) => group_user.user)
+  group_users: GroupUser[];
 
   // TODO: 계좌번호 추가
 }
