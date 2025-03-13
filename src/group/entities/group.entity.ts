@@ -1,4 +1,4 @@
-import { Column, Entity, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 
 import { User } from 'src/user/entities/user.entity';
 import { GroupStatus } from 'src/group/entities/group.meta';
@@ -11,8 +11,7 @@ export class Group {
   @Column({ nullable: false })
   title: string;
 
-  @Column({ nullable: false })
-  @OneToOne(() => User, (user) => user.uuid)
+  @Column({ nullable: false, collation: 'utf8mb4_general_ci' })
   ownerUuid: string;
 
   @Column({ nullable: false })
@@ -36,10 +35,25 @@ export class Group {
   @Column({ nullable: true })
   description: string;
 
-  @Column({ nullable: true })
-  @OneToOne(() => User, (user) => user.uuid)
+  @Column({ nullable: true, collation: 'utf8mb4_general_ci' })
   payerUuid: string;
 
   @Column({ nullable: true })
   payAmount: number;
+
+  /**
+   * Database Relation
+   */
+
+  @ManyToOne(() => User, (user) => user.own_group, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'ownerUuid' })
+  owner: User;
+
+  @ManyToOne(() => User, (user) => user.pay_group, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'payerUuid' })
+  payer: User;
 }

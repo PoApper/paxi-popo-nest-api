@@ -3,9 +3,12 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
+
+import { Group } from 'src/group/entities/group.entity';
 
 import { UserStatus, UserType } from '../user.meta';
 
@@ -44,6 +47,16 @@ export class User extends BaseEntity {
   // 여기서는 변경될 수 없음
   @Column()
   lastLoginAt: Date;
+
+  /**
+   * Database Relation
+   */
+
+  @OneToMany(() => Group, (own_group) => own_group.owner)
+  own_group: Group[];
+
+  @OneToMany(() => Group, (pay_group) => pay_group.payer)
+  pay_group: Group[];
 
   // TODO: 계좌번호 추가
 }
