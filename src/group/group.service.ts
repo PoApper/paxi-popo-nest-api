@@ -23,18 +23,21 @@ export class GroupService {
   }
 
   findAll() {
-    return `This action returns all group`;
+    return this.groupRepo.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} group`;
+  findOne(uuid: string) {
+    return this.groupRepo.findOneBy({ uuid: uuid });
   }
 
-  update(id: number, updateGroupDto: UpdateGroupDto) {
-    return `This action updates a #${id} group`;
+  update(uuid: string, updateGroupDto: UpdateGroupDto) {
+    return this.groupRepo.update(
+      { uuid: uuid },
+      { ...updateGroupDto },
+    );
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} group`;
+  remove(uuid: string) {
+    return this.groupRepo.delete({ uuid: uuid });
   }
 }
