@@ -21,7 +21,7 @@ export class GroupUser {
   @Column({ nullable: false })
   groupUuid: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, default: GroupUserStatus.JOINED })
   status: GroupUserStatus;
 
   @Column({ nullable: false, default: false })

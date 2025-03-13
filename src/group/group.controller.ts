@@ -6,7 +6,7 @@ import {
   Get,
   Param,
   Patch,
-  Post,
+  Post, Put,
   Req,
   UnauthorizedException,
   UseGuards,
@@ -29,17 +29,9 @@ export class GroupController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBody({ type: CreateGroupDto })
-  create(@Req() req, @Body() dto: CreateGroupDto) {
+  async create(@Req() req, @Body() dto: CreateGroupDto) {
     const user = req.user as JwtPayload;
-
-    // 출발 시간 현재보다 이전인지 확인
-    if (dto.departureTime < new Date()) {
-      throw new BadRequestException(
-        '출발 시간은 현재 시간보다 이전일 수 없습니다.',
-      );
-    }
-
-    return this.groupService.create(user, dto);
+    return await this.groupService.create(user, dto);
   }
 
   @Get()
@@ -61,29 +53,26 @@ export class GroupController {
     @Req() req,
     @Body() updateGroupDto: UpdateGroupDto,
   ) {
-    const group = await this.groupService.findOne(uuid);
-    if (!group) {
-      throw new BadRequestException('그룹이 존재하지 않습니다.');
-    }
     const user = req.user as JwtPayload;
-
-    if (user.userType == UserType.admin || group?.ownerUuid == user.uuid) {
-      // 출발 시간이 있다면 현재보다 이전인지 확인
-      const departureTime = updateGroupDto.departureTime;
-      if (departureTime && new Date(departureTime) < new Date()) {
-        throw new BadRequestException(
-          '출발 시간은 현재 시간보다 이전일 수 없습니다.',
-        );
-      }
-
-      return this.groupService.update(uuid, updateGroupDto);
-    } else {
-      throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
-    }
+    return await this.groupService.update(uuid, updateGroupDto, user);
   }
 
   @Delete(':id')
   remove(@Param('id') uuid: string) {
     return this.groupService.remove(uuid);
+  }
+
+  @Post('join/:uuid')
+  @UseGuards(JwtAuthGuard)
+  async joinGroup(@Req() req, @Param('uuid') uuid: string) {
+    const user = req.user as JwtPayload;
+    return await this.groupService.joinGroup(uuid, user.uuid);
+  }
+
+  @Put('leave/:uuid')
+  @UseGuards(JwtAuthGuard)
+  async leaveGroup(@Req() req, @Param('uuid') uuid: string) {
+    const user = req.user as JwtPayload;
+    return await this.groupService.leaveGroup(uuid, user.uuid);
   }
 }
