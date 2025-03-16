@@ -14,6 +14,7 @@ import { GroupUserStatus } from 'src/group/entities/group.user.meta';
 
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
+import { GroupStatus } from 'src/group/entities/group.meta';
 
 @Injectable()
 export class GroupService {
@@ -78,6 +79,13 @@ export class GroupService {
     if (!group) {
       throw new BadRequestException('그룹이 존재하지 않습니다.');
     }
+    if (
+      group.status == GroupStatus.COMPLETED ||
+      group.status == GroupStatus.DELETED
+    ) {
+      throw new BadRequestException('이미 종료된 그룹입니다.');
+    }
+
     if (user.userType == UserType.admin || group?.ownerUuid == user.uuid) {
       // 출발 시간이 있다면 현재보다 이전인지 확인
       const departureTime = updateGroupDto.departureTime;
@@ -94,7 +102,10 @@ export class GroupService {
   }
 
   remove(uuid: string) {
-    return this.groupRepo.delete({ uuid: uuid });
+    return this.groupRepo.update(
+      { uuid: uuid },
+      { status: GroupStatus.DELETED },
+    );
   }
 
   async joinGroup(uuid: string, userUuid: string) {
@@ -102,15 +113,26 @@ export class GroupService {
     if (!group) {
       throw new BadRequestException('그룹이 존재하지 않습니다.');
     }
+    if (group.status != GroupStatus.ACTIVATED) {
+      throw new BadRequestException('현재 그룹은 가입할 수 없습니다.');
+    }
 
     const groupUser = await this.groupUserRepo.findOneBy({
       groupUuid: uuid,
       userUuid: userUuid,
     });
     if (groupUser) {
-      if (groupUser.status == GroupUserStatus.KICKED) {
-        throw new BadRequestException('강퇴된 사용자입니다.');
-      } else throw new BadRequestException('이미 가입되어 있습니다.');
+      if (groupUser.status == GroupUserStatus.JOINED) {
+        throw new BadRequestException('이미 가입된 그룹입니다.');
+      } else if (groupUser.status == GroupUserStatus.LEFT) {
+        // 가입 상태로 변경
+        return this.groupUserRepo.update(
+          { groupUuid: uuid, userUuid: userUuid },
+          { status: GroupUserStatus.JOINED },
+        );
+      } else if (groupUser.status == GroupUserStatus.KICKED) {
+        throw new BadRequestException('강퇴된 그룹입니다.');
+      }
     }
 
     return this.groupUserRepo.save({
@@ -138,6 +160,7 @@ export class GroupService {
         const newOwnerGroupUser = await this.groupUserRepo.findOneBy({
           groupUuid: uuid,
           userUuid: Not(userUuid),
+          status: GroupUserStatus.JOINED,
         });
 
         if (!newOwnerGroupUser) {
@@ -150,7 +173,10 @@ export class GroupService {
           { ownerUuid: newOwnerGroupUser.userUuid },
         );
       }
-      const result = await this.groupUserRepo.delete({ id: groupUser.id });
+      const result = await this.groupUserRepo.update(
+        { groupUuid: uuid, userUuid: userUuid },
+        { status: GroupUserStatus.LEFT },
+      );
       await queryRunner.commitTransaction();
       return result;
     } catch (err) {

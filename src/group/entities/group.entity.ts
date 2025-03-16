@@ -33,7 +33,7 @@ export class Group {
   @Column({ nullable: false, default: GroupStatus.ACTIVATED })
   status: GroupStatus;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, type: 'text' })
   description: string;
 
   @Column({ nullable: true, collation: 'utf8mb4_general_ci' })
