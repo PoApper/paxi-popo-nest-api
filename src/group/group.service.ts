@@ -1,15 +1,16 @@
 import {
   BadRequestException,
-  Injectable,
+  Injectable, InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Group } from 'src/group/entities/group.entity';
 import { GroupUser } from 'src/group/entities/group.user.entity';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { UserType } from 'src/user/user.meta';
+import { GroupUserStatus } from 'src/group/entities/group.user.meta';
 
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
@@ -31,23 +32,33 @@ export class GroupService {
       );
     }
 
-    // TODO: 트랜잭션 처리하기
+    const queryRunner = this.groupRepo.manager.connection.createQueryRunner();
+    await queryRunner.startTransaction();
 
-    const group = await this.groupRepo.save({
-      ...dto,
-      ownerUuid: user.uuid,
-      group_users: [{ userUuid: user.uuid }],
-    });
+    try {
+      const group = await queryRunner.manager.save(Group, {
+        ...dto,
+        ownerUuid: user.uuid,
+        group_users: [{ userUuid: user.uuid }],
+      });
 
-    await this.groupUserRepo.save({
-      groupUuid: group.uuid,
-      userUuid: user.uuid,
-    });
+      await queryRunner.manager.save(GroupUser, {
+        groupUuid: group.uuid,
+        userUuid: user.uuid,
+      });
 
-    return await this.groupRepo.findOne({
-      where: { uuid: group.uuid },
-      relations: ['group_users'],
-    });
+      await queryRunner.commitTransaction();
+
+      return await this.groupRepo.findOne({
+        where: { uuid: group.uuid },
+        relations: ['group_users'],
+      });
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   findAll() {
@@ -91,8 +102,17 @@ export class GroupService {
     if (!group) {
       throw new BadRequestException('그룹이 존재하지 않습니다.');
     }
-    // TODO: kick 상태일때 조인 못하도록
-    // TODO: 이미 가입되어 있을 때 조인 못하도록
+
+    const groupUser = await this.groupUserRepo.findOneBy({
+      groupUuid: uuid,
+      userUuid: userUuid,
+    });
+    if (groupUser) {
+      if (groupUser.status == GroupUserStatus.KICKED) {
+        throw new BadRequestException('강퇴된 사용자입니다.');
+      } else throw new BadRequestException('이미 가입되어 있습니다.');
+    }
+
     return this.groupUserRepo.save({
       groupUuid: uuid,
       userUuid: userUuid,
@@ -100,17 +120,44 @@ export class GroupService {
   }
 
   async leaveGroup(uuid: string, userUuid: string) {
-    const groupUser = await this.groupUserRepo.findOneBy({
-      groupUuid: uuid,
-      userUuid: userUuid,
+    const groupUser = await this.groupUserRepo.findOne({
+      where: { groupUuid: uuid, userUuid: userUuid },
+      relations: ['group'],
     });
 
     if (!groupUser) {
       throw new BadRequestException('그룹에 가입되어 있지 않습니다.');
     }
 
-    // TODO: 방장이 나가면 방장이 넘겨주기(?) - 방장이 나가면 자동으로 넘어가는 방식
+    const queryRunner =
+      this.groupUserRepo.manager.connection.createQueryRunner();
+    await queryRunner.startTransaction();
 
-    return this.groupUserRepo.delete({ id: groupUser.id });
+    try {
+      if (groupUser.group.ownerUuid == userUuid) {
+        const newOwnerGroupUser = await this.groupUserRepo.findOneBy({
+          groupUuid: uuid,
+          userUuid: Not(userUuid),
+        });
+
+        if (!newOwnerGroupUser) {
+          throw new BadRequestException('방장이 없어 방을 나갈 수 없습니다.');
+        }
+
+        await queryRunner.manager.update(
+          Group,
+          { uuid: uuid },
+          { ownerUuid: newOwnerGroupUser.userUuid },
+        );
+      }
+      const result = await this.groupUserRepo.delete({ id: groupUser.id });
+      await queryRunner.commitTransaction();
+      return result;
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 }
