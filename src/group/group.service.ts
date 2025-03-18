@@ -1,6 +1,7 @@
 import {
   BadRequestException,
-  Injectable, InternalServerErrorException,
+  Injectable,
+  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Not, Repository } from 'typeorm';
@@ -11,10 +12,10 @@ import { GroupUser } from 'src/group/entities/group.user.entity';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { UserType } from 'src/user/user.meta';
 import { GroupUserStatus } from 'src/group/entities/group.user.meta';
+import { GroupStatus } from 'src/group/entities/group.meta';
 
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
-import { GroupStatus } from 'src/group/entities/group.meta';
 
 @Injectable()
 export class GroupService {
@@ -98,10 +99,12 @@ export class GroupService {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
 
+    // TODO: update 시 리턴 값 findOne으로 변경
     return this.groupRepo.update({ uuid: uuid }, { ...updateGroupDto });
   }
 
   remove(uuid: string) {
+    // TODO: delete 시 리턴 값 지워진 그룹의 id를 리턴하도록 변경
     return this.groupRepo.update(
       { uuid: uuid },
       { status: GroupStatus.DELETED },
@@ -159,6 +162,7 @@ export class GroupService {
       if (groupUser.group.ownerUuid == userUuid) {
         const newOwnerGroupUser = await this.groupUserRepo.findOneBy({
           groupUuid: uuid,
+          // 어떤 유저가 선택되는 것일까?
           userUuid: Not(userUuid),
           status: GroupUserStatus.JOINED,
         });
