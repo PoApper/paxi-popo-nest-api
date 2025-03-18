@@ -6,12 +6,13 @@ import {
   Get,
   Param,
   Patch,
-  Post, Put,
+  Post,
+  Put,
   Req,
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -57,6 +58,17 @@ export class GroupController {
     return await this.groupService.update(uuid, updateGroupDto, user);
   }
 
+  @ApiOperation({
+    summary: '그룹을 삭제합니다.',
+    responses: {
+      200: {
+        description: '그룹 삭제 성공',
+      },
+      400: {
+        description: '그룹 삭제 실패, 그룹이 존재하지 않음 또는 owner가 아님',
+      },
+    },
+  })
   @Delete(':id')
   remove(@Param('id') uuid: string) {
     return this.groupService.remove(uuid);
