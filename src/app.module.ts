@@ -7,6 +7,7 @@ import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { GroupModule } from './group/group.module';
+import { ChatGateway } from './chat/chat.gateway';
 import configurations from './config/configurations';
 
 @Module({
@@ -30,6 +31,6 @@ import configurations from './config/configurations';
     GroupModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ChatGateway],
 })
 export class AppModule {}
