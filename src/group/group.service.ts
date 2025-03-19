@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Injectable,
-  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Not, Repository } from 'typeorm';
@@ -103,12 +102,23 @@ export class GroupService {
     return this.groupRepo.update({ uuid: uuid }, { ...updateGroupDto });
   }
 
-  remove(uuid: string) {
+  async remove(uuid: string, userUuid: string) {
     // TODO: delete 시 리턴 값 지워진 그룹의 id를 리턴하도록 변경
-    return this.groupRepo.update(
+    const group = await this.findOne(uuid);
+    if (!group) {
+      throw new BadRequestException('그룹이 존재하지 않습니다.');
+    }
+    if (group.status == GroupStatus.DELETED) {
+      throw new BadRequestException('이미 삭제된 그룹입니다.');
+    }
+    if (group.ownerUuid != userUuid) {
+      throw new UnauthorizedException('방장이 아닙니다.');
+    }
+    await this.groupRepo.update(
       { uuid: uuid },
       { status: GroupStatus.DELETED },
     );
+    return uuid;
   }
 
   async joinGroup(uuid: string, userUuid: string) {
@@ -120,31 +130,97 @@ export class GroupService {
       throw new BadRequestException('현재 그룹은 가입할 수 없습니다.');
     }
 
-    const groupUser = await this.groupUserRepo.findOneBy({
-      groupUuid: uuid,
-      userUuid: userUuid,
+    const queryRunner = this.groupRepo.manager.connection.createQueryRunner();
+    await queryRunner.startTransaction();
+
+    const groupUser = await this.groupUserRepo.findOne({
+      where: { groupUuid: uuid, userUuid: userUuid },
     });
-    if (groupUser) {
-      if (groupUser.status == GroupUserStatus.JOINED) {
-        throw new BadRequestException('이미 가입된 그룹입니다.');
-      } else if (groupUser.status == GroupUserStatus.LEFT) {
-        // 가입 상태로 변경
-        return this.groupUserRepo.update(
-          { groupUuid: uuid, userUuid: userUuid },
-          { status: GroupUserStatus.JOINED },
+
+    try {
+      if (groupUser) {
+        if (groupUser.status == GroupUserStatus.JOINED) {
+          throw new BadRequestException('이미 가입된 그룹입니다.');
+        } else if (groupUser.status == GroupUserStatus.LEFT) {
+          // 가입 상태로 변경
+          await queryRunner.manager.update(
+            GroupUser,
+            { groupUuid: uuid, userUuid: userUuid },
+            { status: GroupUserStatus.JOINED },
+          );
+        } else if (groupUser.status == GroupUserStatus.KICKED) {
+          throw new BadRequestException('강퇴된 그룹입니다.');
+        }
+      } else {
+        // 참여 인원 증가
+        const participantsNumber = await this.getParticipantsNumber(uuid);
+        if (participantsNumber != group.currentParticipant) {
+          // TODO: 로그로 변경
+          console.log(
+            'JOINED 상태인 그룹 유저 수와 참여 인원 수가 일치하지 않음!!',
+          );
+        }
+        await queryRunner.manager.update(
+          Group,
+          { uuid: uuid },
+          { currentParticipant: participantsNumber + 1 },
         );
-      } else if (groupUser.status == GroupUserStatus.KICKED) {
-        throw new BadRequestException('강퇴된 그룹입니다.');
+
+        await queryRunner.manager.save(GroupUser, {
+          groupUuid: uuid,
+          userUuid: userUuid,
+        });
       }
+
+      await queryRunner.commitTransaction();
+
+      return await this.groupUserRepo.findOne({
+        where: { groupUuid: uuid, userUuid: userUuid },
+        relations: ['group'],
+      });
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
     }
 
-    return this.groupUserRepo.save({
-      groupUuid: uuid,
-      userUuid: userUuid,
-    });
+    // const groupUser = await this.groupUserRepo.findOneBy({
+    //   groupUuid: uuid,
+    //   userUuid: userUuid,
+    // });
+    // if (groupUser) {
+    //   if (groupUser.status == GroupUserStatus.JOINED) {
+    //     throw new BadRequestException('이미 가입된 그룹입니다.');
+    //   } else if (groupUser.status == GroupUserStatus.LEFT) {
+    //     // 가입 상태로 변경
+    //     return this.groupUserRepo.update(
+    //       { groupUuid: uuid, userUuid: userUuid },
+    //       { status: GroupUserStatus.JOINED },
+    //     );
+    //   } else if (groupUser.status == GroupUserStatus.KICKED) {
+    //     throw new BadRequestException('강퇴된 그룹입니다.');
+    //   }
+    // }
+
+    // // 참여 인원 증가
+    // await this.groupRepo.update(
+    //   { uuid: uuid },
+    //   { currentParticipant: group.currentParticipant + 1 },
+    // );
+
+    // return this.groupUserRepo.save({
+    //   groupUuid: uuid,
+    //   userUuid: userUuid,
+    // });
   }
 
   async leaveGroup(uuid: string, userUuid: string) {
+    const group = await this.findOne(uuid);
+    if (!group) {
+      throw new BadRequestException('그룹이 존재하지 않습니다.');
+    }
+
     const groupUser = await this.groupUserRepo.findOne({
       where: { groupUuid: uuid, userUuid: userUuid },
       relations: ['group'],
@@ -162,13 +238,15 @@ export class GroupService {
       if (groupUser.group.ownerUuid == userUuid) {
         const newOwnerGroupUser = await this.groupUserRepo.findOneBy({
           groupUuid: uuid,
-          // 어떤 유저가 선택되는 것일까?
+          // TODO: 방장이 특정 유저를 새로운 방장으로 지정할 수 있도록 변경
           userUuid: Not(userUuid),
           status: GroupUserStatus.JOINED,
         });
 
         if (!newOwnerGroupUser) {
-          throw new BadRequestException('방장이 없어 방을 나갈 수 없습니다.');
+          throw new BadRequestException(
+            '위임된 방장이 없어 방을 나갈 수 없습니다.',
+          );
         }
 
         await queryRunner.manager.update(
@@ -177,17 +255,120 @@ export class GroupService {
           { ownerUuid: newOwnerGroupUser.userUuid },
         );
       }
-      const result = await this.groupUserRepo.update(
+      // 참여 인원 감소
+      const participantsNumber = await this.getParticipantsNumber(uuid);
+      if (participantsNumber != group.currentParticipant) {
+        // TODO: 로그로 변경
+        console.log(
+          'JOINED 상태인 그룹 유저 수와 참여 인원 수가 일치하지 않음!!',
+        );
+      }
+      await this.groupRepo.update(
+        { uuid: uuid },
+        { currentParticipant: participantsNumber - 1 },
+      );
+      // GroupUser 상태 변경
+      await this.groupUserRepo.update(
         { groupUuid: uuid, userUuid: userUuid },
         { status: GroupUserStatus.LEFT },
       );
+
       await queryRunner.commitTransaction();
-      return result;
+      // 탑승 인원을 감소시킨 그룹 정보를 반환할수도?
+      return await this.groupUserRepo.findOne({
+        where: { groupUuid: uuid, userUuid: userUuid },
+        relations: ['group'],
+      });
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async kickGroup(uuid: string, ownerUuid: string, userUuid: string) {
+    const group = await this.findOne(uuid);
+    if (!group) {
+      throw new BadRequestException('그룹이 존재하지 않습니다.');
+    }
+
+    const groupUser = await this.groupUserRepo.findOne({
+      where: { groupUuid: uuid, userUuid: userUuid },
+      relations: ['group'],
+    });
+
+    if (!groupUser) {
+      throw new BadRequestException(
+        '강퇴하려는 사용자가 그룹에 가입되어 있지 않습니다.',
+      );
+    }
+
+    if (group.ownerUuid != ownerUuid) {
+      throw new UnauthorizedException('방장이 아닙니다.');
+    }
+
+    const queryRunner =
+      this.groupUserRepo.manager.connection.createQueryRunner();
+    await queryRunner.startTransaction();
+
+    try {
+      // 참여 인원 감소
+      const participantsNumber = await this.getParticipantsNumber(uuid);
+      if (participantsNumber != group.currentParticipant) {
+        // TODO: 로그로 변경
+        console.log(
+          'JOINED 상태인 그룹 유저 수와 참여 인원 수가 일치하지 않음!!',
+        );
+      }
+      await this.groupRepo.update(
+        { uuid: uuid },
+        { currentParticipant: participantsNumber - 1 },
+      );
+      // GroupUser 상태 변경
+      await this.groupUserRepo.update(
+        { groupUuid: uuid, userUuid: userUuid },
+        { status: GroupUserStatus.KICKED },
+      );
+
+      await queryRunner.commitTransaction();
+
+      return await this.groupUserRepo.findOne({
+        where: { groupUuid: uuid, userUuid: userUuid },
+        relations: ['group'],
+      });
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async completeGroup(uuid: string, userUuid: string) {
+    const group = await this.findOne(uuid);
+    if (!group) {
+      throw new BadRequestException('그룹이 존재하지 않습니다.');
+    }
+
+    if (group.ownerUuid != userUuid) {
+      throw new UnauthorizedException('방장이 아닙니다.');
+    }
+
+    if (group.status == GroupStatus.COMPLETED) {
+      throw new BadRequestException('이미 종료된 그룹입니다.');
+    }
+
+    return this.groupRepo.update(
+      { uuid: uuid },
+      { status: GroupStatus.COMPLETED },
+    );
+  }
+
+  async getParticipantsNumber(uuid: string) {
+    // STATUS가 JOINED인 GROUP_USER의 개수를 반환
+    return this.groupUserRepo.count({
+      where: { groupUuid: uuid, status: GroupUserStatus.JOINED },
+    });
   }
 }

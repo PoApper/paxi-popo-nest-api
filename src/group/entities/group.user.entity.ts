@@ -5,9 +5,9 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+
 import { GroupUserStatus } from 'src/group/entities/group.user.meta';
 import { Group } from 'src/group/entities/group.entity';
-
 import { User } from 'src/user/entities/user.entity';
 
 @Entity()
