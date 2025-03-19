@@ -14,7 +14,6 @@ async function bootstrap() {
     .setDescription('Paxi API documentation')
     .setVersion('1.0')
     .addTag('paxi')
-    .addBearerAuth()
     .addCookieAuth('Authentication')
     .build();
 
