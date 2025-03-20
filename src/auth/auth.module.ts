@@ -13,9 +13,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-    }),
+    // JwtModule.register({
+    //   secret: process.env.JWT_SECRET,
+    // }),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

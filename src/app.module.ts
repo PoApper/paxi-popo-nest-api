@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -26,6 +27,9 @@ import configurations from './config/configurations';
         console.log(dbConfig);
         return dbConfig;
       },
+    }),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET,
     }),
     AuthModule,
     UserModule,
