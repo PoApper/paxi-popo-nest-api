@@ -8,6 +8,7 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { GroupModule } from './group/group.module';
 import { ChatGateway } from './chat/chat.gateway';
+import { ChatModule } from './chat/chat.module';
 import configurations from './config/configurations';
 
 @Module({
@@ -29,6 +30,7 @@ import configurations from './config/configurations';
     AuthModule,
     UserModule,
     GroupModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, ChatGateway],
