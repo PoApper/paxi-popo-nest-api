@@ -212,3 +212,29 @@ export class GroupController {
     return await this.groupService.kickGroup(uuid, user.uuid, userUuid);
   }
 }
+
+/* docs 데코레이터 간소화 */
+/*
+  @ApiOperation({
+    summary: '주어진 사용자를 주어진 그룹에 가입시킵니다.',
+    responses: {
+      200: {
+        description: '가입된 그룹 정보를 반환',
+        content: {
+          'application/json': {
+            schema: {
+              $ref: '#/components/schemas/Group',
+            },
+          },
+        },
+      },
+      400: {
+        description:
+          '그룹이 존재하지 않는 경우, 그룹이 가입할 수 없는 상태(ACTIVATED 상태가 아님, 이미 가입된 그룹, 강퇴된 그룹)인 경우',
+      },
+      401: {
+        description: '로그인이 되어 있지 않은 경우',
+      },
+    },
+  })
+ */
