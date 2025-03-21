@@ -6,12 +6,13 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
+  UpdateDateColumn,
 } from 'typeorm';
 
 import { Group } from 'src/group/entities/group.entity';
+import { GroupUser } from 'src/group/entities/group.user.entity';
 
 import { UserStatus, UserType } from '../user.meta';
-import { GroupUser } from 'src/group/entities/group.user.entity';
 
 @Entity()
 @Unique(['email'])

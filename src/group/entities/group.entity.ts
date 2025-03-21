@@ -49,6 +49,9 @@ export class Group {
   @Column({ nullable: true })
   payAmount: number;
 
+  @Column({ nullable: false })
+  createdAt: Date;
+
   /**
    * Database Relation
    */

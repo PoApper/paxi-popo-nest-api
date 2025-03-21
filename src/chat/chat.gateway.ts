@@ -20,22 +20,29 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('client connected');
     try {
       const cookies = client.handshake.headers.cookie;
-      // @ts-ignore
       const token = cookies
         ?.split('; ')
         ?.find((cookie) => cookie.startsWith('Authentication='))
-        .split('=')[1];
+        ?.split('=')[1];
 
-      const payload: JwtPayload = this.jwtService.verify(token, {
+      if (!token) {
+        client.disconnect();
+        return;
+      }
+
+      const payload: JwtPayload = await this.jwtService.verify(token, {
         secret: process.env.JWT_SECRET_KEY,
       });
+
+      client.data.user = payload;
     } catch (e) {
       console.log('error', e);
       client.disconnect();
     }
   }
 
-  async handleDisconnect(client: Socket) {
+  handleDisconnect(client: Socket) {
     console.log('client disconnected');
+    delete client.data.user;
   }
 }
