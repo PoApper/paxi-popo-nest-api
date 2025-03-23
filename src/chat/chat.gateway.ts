@@ -108,8 +108,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const { groupUuid, message } = payload;
 
-      // 유저 그룹 확인
-      if (!client.data.groups.has(groupUuid)) {
+      // 그룹 참여 유저 확인
+      // TODO: 혹은 client.data.groups.has(groupUuid) 로 확인할 수도 있을까?
+      // 유저가 방을 나간 뒤에도 client.data가 유지된다면 DB 조회가 필요없으므로 이 방법이 나을 것 같다.
+      const groupUser = await this.groupService.findUsersByGroupUuid(groupUuid);
+      const userInGroup = groupUser.some(
+        (user) => user.userUuid === client.data.user.uuid,
+      );
+      if (!userInGroup) {
         client.emit('error', { message: '그룹에 속한 유저가 아닙니다.' });
         return;
       }
