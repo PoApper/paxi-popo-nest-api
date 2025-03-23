@@ -122,7 +122,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         messageType: ChatMessageType.TEXT,
       });
 
-      // 그룹 메시지 전송
+      // 내 화면 반영을 위해 본인에게 메시지 전송
+      client.emit('newMessage', chatMessage);
+      // 본인을 제외한 그룹 유저들에게 메시지 전송
       client.to(groupUuid).emit('newMessage', chatMessage);
     } catch (error) {
       client.emit('error', { message: `메시지 전송 실패: ${error}` });
@@ -148,7 +150,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 그룹 나가기 메시지 전송
       const systemMessage = await this.chatService.create({
         groupUuid,
-        senderUuid: undefined,
+        senderUuid: SYSTEM_USER_UUID,
         message: `${client.data.user.name} 님이 그룹에서 나갔습니다.`,
         messageType: ChatMessageType.TEXT,
       });
