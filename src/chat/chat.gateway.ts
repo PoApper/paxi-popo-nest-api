@@ -160,6 +160,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: { groupUuid: string; lastReadMessageId: string },
   ) {
     try {
+      // 이것도 굳이 들고올 필요 없을 것 같음
+      // DB에서 최신 메세지를 들고올 수 있기 때문
       const { groupUuid, lastReadMessageId } = payload;
 
       // 유저 그룹 확인
@@ -178,4 +180,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('error', { message: `메시지 읽음 처리 실패: ${error}` });
     }
   }
+
+  // TODO: 채팅 메세지 수정 기능 추가
+  // TODO: 채팅 메세지 삭제 기능 추가
+  // TODO: 소켓이 끊어지고 다시 연결될 때 소켓 복원 기능 추가
 }
