@@ -1,10 +1,12 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 
 import { User } from 'src/user/entities/user.entity';
@@ -49,8 +51,11 @@ export class Group {
   @Column({ nullable: true })
   payAmount: number;
 
-  @Column({ nullable: false })
+  @CreateDateColumn({ nullable: false })
   createdAt: Date;
+
+  @UpdateDateColumn({ nullable: false })
+  updatedAt: Date;
 
   /**
    * Database Relation
