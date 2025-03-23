@@ -1,16 +1,17 @@
 import {
+  ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
-  ConnectedSocket,
-  MessageBody,
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { GroupService } from 'src/group/group.service';
+import { GroupUserStatus } from 'src/group/entities/group.user.meta';
 
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
@@ -69,7 +70,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 그룹 참여 유저 확인
       const groupUser = await this.groupService.findUsersByGroupUuid(groupUuid);
       const userInGroup = groupUser.some(
-        (user) => user.userUuid === client.data.user.uuid,
+        (user) =>
+          user.userUuid === client.data.user.uuid &&
+          user.status === GroupUserStatus.JOINED,
       );
 
       if (!userInGroup) {
@@ -91,6 +94,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           messageType: ChatMessageType.TEXT,
         });
 
+        // 내 화면 반영을 위해 본인에게 메시지 전송
+        client.emit('newMessage', systemMessage);
+        // 그룹 유저들에게 메시지 전송
         client.to(groupUuid).emit('newMessage', systemMessage);
       } else {
         // TODO: 이미 참여한 그룹일 경우 메세지 읽음 처리
@@ -108,8 +114,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const { groupUuid, message } = payload;
 
-      // 유저 그룹 확인
-      if (!client.data.groups.has(groupUuid)) {
+      // 그룹 참여 유저 확인
+      // TODO: 혹은 client.data.groups.has(groupUuid) 로 확인할 수도 있을까?
+      // 유저가 방을 나간 뒤에도 client.data가 유지된다면 DB 조회가 필요없으므로 이 방법이 나을 것 같다.
+      const groupUser = await this.groupService.findUsersByGroupUuid(groupUuid);
+      const userInGroup = groupUser.some(
+        (user) =>
+          user.userUuid === client.data.user.uuid &&
+          user.status === GroupUserStatus.JOINED,
+      );
+      if (!userInGroup) {
         client.emit('error', { message: '그룹에 속한 유저가 아닙니다.' });
         return;
       }
