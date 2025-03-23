@@ -77,19 +77,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return;
       }
 
-      // 유저 소켓의 groups에 groupUuid 추가
-      client.join(groupUuid);
-      client.data.groups.add(groupUuid);
+      // 첫 입장 시 시스템 메시지 전송
+      if (!client.data.groups.has(groupUuid)) {
+        // 유저 소켓의 groups에 groupUuid 추가
+        client.join(groupUuid);
+        client.data.groups.add(groupUuid);
 
-      // 그룹 참여 메시지 전송
-      const systemMessage = await this.chatService.create({
-        groupUuid,
-        senderUuid: SYSTEM_USER_UUID,
-        message: `${client.data.user.name} 님이 그룹에 참여했습니다.`,
-        messageType: ChatMessageType.TEXT,
-      });
+        // 그룹 참여 메시지 전송
+        const systemMessage = await this.chatService.create({
+          groupUuid,
+          senderUuid: SYSTEM_USER_UUID,
+          message: `${client.data.user.name} 님이 그룹에 참여했습니다.`,
+          messageType: ChatMessageType.TEXT,
+        });
 
-      client.to(groupUuid).emit('newMessage', systemMessage);
+        client.to(groupUuid).emit('newMessage', systemMessage);
+      } else {
+        // TODO: 이미 참여한 그룹일 경우 메세지 읽음 처리
+      }
     } catch (error) {
       client.emit('error', { message: `그룹 참여 실패: ${error}` });
     }
@@ -151,33 +156,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.to(groupUuid).emit('newMessage', systemMessage);
     } catch (error) {
       client.emit('error', { message: `그룹 나가기 실패: ${error}` });
-    }
-  }
-
-  @SubscribeMessage('readMessage')
-  handleReadMessage(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { groupUuid: string; lastReadMessageId: string },
-  ) {
-    try {
-      // 이것도 굳이 들고올 필요 없을 것 같음
-      // DB에서 최신 메세지를 들고올 수 있기 때문
-      const { groupUuid, lastReadMessageId } = payload;
-
-      // 유저 그룹 확인
-      if (!client.data.groups.has(groupUuid)) {
-        client.emit('error', { message: '그룹에 속한 유저가 아닙니다.' });
-        return;
-      }
-
-      // TODO: 메시지 읽음 처리를 위한 테이블을 생성해야됨
-      // 일단 메시지 읽음 처리 확인 메시지 전송
-      client.to(groupUuid).emit('messageRead', {
-        userId: client.data.user.uuid,
-        lastReadMessageId,
-      });
-    } catch (error) {
-      client.emit('error', { message: `메시지 읽음 처리 실패: ${error}` });
     }
   }
 
