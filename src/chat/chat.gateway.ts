@@ -3,6 +3,8 @@ import {
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
+  ConnectedSocket,
+  MessageBody,
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
@@ -12,6 +14,10 @@ import { GroupService } from 'src/group/group.service';
 
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
+
+// 시스템 유저의 UUID
+const SYSTEM_USER_UUID = undefined;
+
 @WebSocketGateway()
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
@@ -20,7 +26,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly groupService: GroupService,
   ) {}
 
-  async handleConnection(client: Socket) {
+  async handleConnection(@ConnectedSocket() client: Socket) {
     console.log(`${client.id} connected`);
     try {
       const cookies = client.handshake.headers.cookie;
@@ -47,15 +53,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  handleDisconnect(client: Socket) {
+  handleDisconnect(@ConnectedSocket() client: Socket) {
     console.log(`${client.id} disconnected`);
     delete client.data.user;
     delete client.data.groups;
   }
 
   @SubscribeMessage('joinGroup')
-  async handleJoinGroup(client: Socket, groupUuid: string) {
+  async handleJoinGroup(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { groupUuid: string },
+  ) {
     try {
+      const { groupUuid } = data;
       // 그룹 참여 유저 확인
       const groupUser = await this.groupService.findUsersByGroupUuid(groupUuid);
       const userInGroup = groupUser.some(
@@ -74,6 +84,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 그룹 참여 메시지 전송
       const systemMessage = await this.chatService.create({
         groupUuid,
+        senderUuid: SYSTEM_USER_UUID,
         message: `${client.data.user.name} 님이 그룹에 참여했습니다.`,
         messageType: ChatMessageType.TEXT,
       });
@@ -86,8 +97,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
-    client: Socket,
-    payload: { groupUuid: string; message: string },
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { groupUuid: string; message: string },
   ) {
     try {
       const { groupUuid, message } = payload;
@@ -114,7 +125,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('leaveGroup')
-  async handleLeaveGroup(client: Socket, groupUuid: string) {
+  async handleLeaveGroup(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() groupUuid: string,
+  ) {
     try {
       // 유저 그룹 확인
       if (!client.data.groups.has(groupUuid)) {
@@ -129,6 +143,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 그룹 나가기 메시지 전송
       const systemMessage = await this.chatService.create({
         groupUuid,
+        senderUuid: undefined,
         message: `${client.data.user.name} 님이 그룹에서 나갔습니다.`,
         messageType: ChatMessageType.TEXT,
       });
@@ -141,8 +156,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('readMessage')
   handleReadMessage(
-    client: Socket,
-    payload: { groupUuid: string; lastReadMessageId: string },
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { groupUuid: string; lastReadMessageId: string },
   ) {
     try {
       const { groupUuid, lastReadMessageId } = payload;
