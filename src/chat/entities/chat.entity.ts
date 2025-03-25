@@ -16,13 +16,8 @@ export class Chat {
   groupUuid: string;
 
   // 시스템 메시지인 경우 null(ex. 출발 시간 안내, 입퇴장 안내 메세지 등)
-  @Column({
-    type: 'varchar',
-    length: 36,
-    nullable: true,
-    collation: 'utf8mb4_general_ci',
-  })
-  senderUuid: string | null;
+  @Column({ nullable: true })
+  senderUuid: string;
 
   @Column({ nullable: false, type: 'text' })
   message: string;

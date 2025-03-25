@@ -5,8 +5,6 @@ import {
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
-  ConnectedSocket,
-  MessageBody,
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
@@ -17,9 +15,6 @@ import { GroupUserStatus } from 'src/group/entities/group.user.meta';
 
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
-
-// 시스템 유저의 UUID
-const SYSTEM_USER_UUID = undefined;
 
 @WebSocketGateway()
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -89,9 +84,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.data.groups.add(groupUuid);
 
         // 그룹 참여 메시지 전송
+        // 시스템 유저의 경우 senderUuid를 비워둠
         const systemMessage = await this.chatService.create({
           groupUuid,
-          senderUuid: SYSTEM_USER_UUID,
           message: `${client.data.user.name} 님이 그룹에 참여했습니다.`,
           messageType: ChatMessageType.TEXT,
         });
@@ -166,7 +161,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 그룹 나가기 메시지 전송
       const systemMessage = await this.chatService.create({
         groupUuid,
-        senderUuid: SYSTEM_USER_UUID,
         message: `${client.data.user.name} 님이 그룹에서 나갔습니다.`,
         messageType: ChatMessageType.TEXT,
       });
