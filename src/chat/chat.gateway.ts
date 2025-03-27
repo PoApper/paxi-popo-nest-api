@@ -5,6 +5,7 @@ import {
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
+  WsException,
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
@@ -15,6 +16,9 @@ import { GroupUserStatus } from 'src/group/entities/group.user.meta';
 
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
+// TODO: WSException 달기
+// TODO: Websocket API Swagger 문서화 할 방법 찾기
+// TODO: 유저가 방을 나갔을 때(Kicked or Leave) 호출되는 API 정리. 웹소켓이 아니라 그룹 모듈에서 호출되어야 할 것 같다. 그러면 user socket groups에서 빠져나가는 그룹의 uuid를 어떻게 지울 수 있을까?. groupservice에서?
 
 @WebSocketGateway()
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -27,6 +31,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(@ConnectedSocket() client: Socket) {
     console.log(`${client.id} connected`);
     try {
+      // TODO: 앱 프레임워크인 ReactNative에서 Websocket 연결 시 쿠키 전달 방법이 있는지 확인
+      // 만약, 쿠키 전달을 하지 못한다면 인증 로직 수정해야 함
       const cookies = client.handshake.headers.cookie;
       const token = cookies
         ?.split('; ')
@@ -35,8 +41,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       console.log('token', token);
       if (!token) {
-        client.disconnect();
-        return;
+        throw new WsException('인증 토큰이 없습니다.');
       }
 
       const payload: JwtPayload = await this.jwtService.verify(token, {
@@ -45,9 +50,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.data.user = payload;
       client.data.groups = new Set<string>();
-    } catch (e) {
-      console.log('error', e);
-      client.disconnect();
+    } catch (error) {
+      throw new WsException(`웹소켓 연결에 실패했습니다. ${error.message}`);
     }
   }
 
@@ -73,10 +77,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       );
 
       if (!userInGroup) {
-        client.emit('error', { message: '그룹에 속한 유저가 아닙니다.' });
-        return;
+        throw new WsException('그룹에 속한 유저가 아닙니다.');
       }
 
+      // TODO: 채팅방 메세지 불러오기 기능 구현
       // 첫 입장 시 시스템 메시지 전송
       if (!client.data.groups.has(groupUuid)) {
         // 유저 소켓의 groups에 groupUuid 추가
@@ -99,7 +103,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // TODO: 이미 참여한 그룹일 경우 메세지 읽음 처리
       }
     } catch (error) {
-      client.emit('error', { message: `그룹 참여 실패: ${error}` });
+      throw new WsException(`그룹 참여에 실패했습니다. ${error.message}`);
     }
   }
 
@@ -121,8 +125,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           user.status === GroupUserStatus.JOINED,
       );
       if (!userInGroup) {
-        client.emit('error', { message: '그룹에 속한 유저가 아닙니다.' });
-        return;
+        throw new WsException('그룹에 속한 유저가 아닙니다.');
       }
 
       // 메시지 저장
@@ -138,7 +141,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 본인을 제외한 그룹 유저들에게 메시지 전송
       client.to(groupUuid).emit('newMessage', chatMessage);
     } catch (error) {
-      client.emit('error', { message: `메시지 전송 실패: ${error}` });
+      throw new WsException(`메시지 전송에 실패했습니다. ${error.message}`);
     }
   }
 
@@ -150,8 +153,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       // 유저 그룹 확인
       if (!client.data.groups.has(groupUuid)) {
-        client.emit('error', { message: '그룹에 속한 유저가 아닙니다.' });
-        return;
+        throw new WsException('그룹에 속한 유저가 아닙니다.');
       }
 
       // 유저 소켓의 groups에서 groupUuid 제거
@@ -167,7 +169,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.to(groupUuid).emit('newMessage', systemMessage);
     } catch (error) {
-      client.emit('error', { message: `그룹 나가기 실패: ${error}` });
+      throw new WsException(`그룹 나가기에 실패했습니다. ${error.message}`);
     }
   }
 
