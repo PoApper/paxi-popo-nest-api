@@ -1,19 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
-import { INestApplication } from '@nestjs/common';
-import { DataSource } from 'typeorm';
-import { before } from 'node:test';
-import { group } from 'console';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
-import { User } from 'src/user/entities/user.entity';
-import { AppModule } from 'src/app.module';
+import configurations from 'src/config/configurations';
 
 import { GroupController } from './group.controller';
 import { GroupService } from './group.service';
-import { CreateGroupDto } from './dto/create-group.dto';
-import { Group } from './entities/group.entity';
-import { GroupUser } from './entities/group.user.entity';
+import { GroupModule } from './group.module';
 
 describe('GroupModule - Integration Test', () => {
   // let app: INestApplication;
@@ -42,16 +35,22 @@ describe('GroupModule - Integration Test', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
-        TypeOrmModule.forRoot({
-          type: 'sqlite',
-          database: ':memory:',
-          entities: [User, Group, GroupUser],
-          synchronize: true,
-          dropSchema: true,
+        ConfigModule.forRoot({
+          load: [configurations],
+          isGlobal: true,
+          envFilePath: ['.env'],
         }),
-        TypeOrmModule.forFeature([User, Group, GroupUser]),
+        TypeOrmModule.forRootAsync({
+          imports: [ConfigModule],
+          inject: [ConfigService],
+          useFactory: (configService: ConfigService) => {
+            const dbConfig = configService.get('database');
+            console.log(dbConfig);
+            return dbConfig;
+          },
+        }),
+        GroupModule,
       ],
-      providers: [GroupService, GroupController],
     }).compile();
 
     groupController = moduleFixture.get<GroupController>(GroupController);

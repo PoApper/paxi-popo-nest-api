@@ -14,6 +14,7 @@ export default () => {
       entities: ['dist/**/*.entity{.ts,.js}'],
       synchronize: isTest ? true : process.env.DATABASE_SYNC === 'true', // 테스트 환경에서는 항상 true
       dropSchema: isTest, // ✅ 테스트 시 DB 초기화
+      charset: isTest ? undefined : 'utf8mb4',
     },
   };
 };

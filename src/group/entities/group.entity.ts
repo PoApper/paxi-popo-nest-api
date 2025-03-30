@@ -21,7 +21,7 @@ export class Group {
   @Column({ nullable: false })
   title: string;
 
-  @Column({ nullable: false, collation: 'utf8mb4_general_ci' })
+  @Column({ nullable: false })
   ownerUuid: string;
 
   @Column({ nullable: false })
@@ -45,7 +45,7 @@ export class Group {
   @Column({ nullable: true, type: 'text' })
   description: string;
 
-  @Column({ nullable: true, collation: 'utf8mb4_general_ci' })
+  @Column({ nullable: true }) // , collation: 'utf8mb4_general_ci'
   payerUuid: string;
 
   @Column({ nullable: true })

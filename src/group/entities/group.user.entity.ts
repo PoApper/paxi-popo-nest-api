@@ -15,7 +15,7 @@ export class GroupUser {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: false, collation: 'utf8mb4_general_ci' })
+  @Column({ nullable: false })
   userUuid: string;
 
   @Column({ nullable: false })
