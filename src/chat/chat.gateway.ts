@@ -173,7 +173,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // TODO: 채팅 메세지 수정 기능 추가
-  // TODO: 채팅 메세지 삭제 기능 추가
+  // TODO: 채팅 메세지 수정 기능 추가 -> HTTP API로 구현
+  // TODO: 채팅 메세지 삭제 기능 추가 -> HTTP API로 구현
   // TODO: 소켓이 끊어지고 다시 연결될 때 소켓 복원 기능 추가
 }
