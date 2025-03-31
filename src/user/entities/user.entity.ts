@@ -6,14 +6,13 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
-  UpdateDateColumn,
 } from 'typeorm';
 
 import { Group } from 'src/group/entities/group.entity';
 import { GroupUser } from 'src/group/entities/group.user.entity';
+import { Chat } from 'src/chat/entities/chat.entity';
 
 import { UserStatus, UserType } from '../user.meta';
-
 @Entity()
 @Unique(['email'])
 export class User extends BaseEntity {
@@ -62,6 +61,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => GroupUser, (group_user) => group_user.user)
   group_users: GroupUser[];
+
+  @OneToMany(() => Chat, (chat) => chat.sender)
+  chats: Chat[];
 
   // TODO: 계좌번호 추가
 }
