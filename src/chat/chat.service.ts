@@ -21,4 +21,24 @@ export class ChatService {
       where: { groupUuid },
     });
   }
+
+  async getAllMessages(groupUuid: string, take: number, skip: number) {
+    return await this.chatRepository.find({
+      where: { groupUuid },
+      take: take,
+      skip: skip,
+    });
+  }
+
+  async updateMessage(messageUuid: string, body: { message: string }) {
+    await this.chatRepository.update(messageUuid, body);
+    return await this.chatRepository.findOne({
+      where: { uuid: messageUuid },
+    });
+  }
+
+  async deleteMessage(messageUuid: string) {
+    await this.chatRepository.delete(messageUuid);
+    return messageUuid;
+  }
 }
