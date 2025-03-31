@@ -16,7 +16,7 @@ export class PushKey {
   @Column({ nullable: false })
   userUuid: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, unique: true })
   pushKey: string;
 
   /**
