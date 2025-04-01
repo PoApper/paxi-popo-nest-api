@@ -22,14 +22,19 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { Chat } from './entities/chat.entity';
-
+import { ChatSenderGuard } from './guards/chat-sender.guard';
 @ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @ApiResponse({
   status: 401,
   description: '로그인이 되어 있지 않은 경우',
 })
+@ApiResponse({
+  status: 404,
+  description: '존재하지 않는 메세지입니다.',
+})
 @Controller('chat')
+// TODO: 덕지덕지 데코레이터 정리하기
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
@@ -82,6 +87,10 @@ export class ChatController {
     status: 200,
     description: '수정된 메세지를 반환합니다.',
   })
+  @ApiResponse({
+    status: 403,
+    description: '메세지 전송자가 아닙니다.',
+  })
   @ApiParam({
     name: 'messageUuid',
     description: '수정할 메세지 UUID',
@@ -102,6 +111,7 @@ export class ChatController {
       },
     },
   })
+  @UseGuards(ChatSenderGuard)
   async updateMessage(
     @Param('groupUuid') groupUuid: string,
     @Param('messageUuid') messageUuid: string,
@@ -118,6 +128,10 @@ export class ChatController {
     status: 200,
     description: '삭제된 메세지의 UUID를 반환합니다.',
   })
+  @ApiResponse({
+    status: 403,
+    description: '메세지 전송자가 아닙니다.',
+  })
   @ApiParam({
     name: 'groupUuid',
     description: '그룹 UUID',
@@ -130,6 +144,7 @@ export class ChatController {
     required: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
+  @UseGuards(ChatSenderGuard)
   async deleteMessage(
     @Param('groupUuid') groupUuid: string,
     @Param('messageUuid') messageUuid: string,

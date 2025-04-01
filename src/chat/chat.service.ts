@@ -23,6 +23,16 @@ export class ChatService {
     return this.chatRepo.save(chat);
   }
 
+  async findOne(messageUuid: string) {
+    const message = await this.chatRepo.findOne({
+      where: { uuid: messageUuid },
+    });
+    if (!message) {
+      throw new NotFoundException('존재하지 않는 메세지입니다.');
+    }
+    return message;
+  }
+
   findByGroupUuid(groupUuid: string) {
     return this.chatRepo.find({
       where: { groupUuid },
