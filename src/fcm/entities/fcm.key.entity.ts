@@ -5,11 +5,10 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-
 import { User } from 'src/user/entities/user.entity';
 
 @Entity()
-export class PushKey {
+export class FcmKey {
   @PrimaryGeneratedColumn()
   id: number;
 

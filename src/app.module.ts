@@ -3,13 +3,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 
+import { FcmModule } from 'src/fcm/fcm.module';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { GroupModule } from './group/group.module';
 import { ChatModule } from './chat/chat.module';
-import { PushModule } from './push/push.module';
 import configurations from './config/configurations';
 
 @Module({
@@ -35,7 +36,7 @@ import configurations from './config/configurations';
     UserModule,
     GroupModule,
     ChatModule,
-    PushModule,
+    FcmModule,
   ],
   controllers: [AppController],
   providers: [AppService],

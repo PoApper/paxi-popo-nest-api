@@ -6,12 +6,11 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
-  UpdateDateColumn,
 } from 'typeorm';
 
+import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
 import { Group } from 'src/group/entities/group.entity';
 import { GroupUser } from 'src/group/entities/group.user.entity';
-import { PushKey } from 'src/push/entities/push.key.entity';
 
 import { UserStatus, UserType } from '../user.meta';
 
@@ -64,8 +63,8 @@ export class User extends BaseEntity {
   @OneToMany(() => GroupUser, (group_user) => group_user.user)
   group_users: GroupUser[];
 
-  @OneToMany(() => PushKey, (push_key) => push_key.user)
-  push_keys: PushKey[];
+  @OneToMany(() => FcmKey, (fcm_key) => fcm_key.user)
+  push_keys: FcmKey[];
 
   // TODO: 계좌번호 추가
 }

@@ -1,18 +1,17 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-
-import { PushKey } from 'src/push/entities/push.key.entity';
+import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 
 @Injectable()
-export class PushService {
+export class FcmService {
   constructor(
-    @InjectRepository(PushKey)
-    private readonly pushKeyRepository: Repository<PushKey>,
+    @InjectRepository(FcmKey)
+    private readonly pushKeyRepository: Repository<FcmKey>,
   ) {}
   async createPushKey(key: string, user: JwtPayload) {
-    const pushKey = new PushKey();
+    const pushKey = new FcmKey();
     pushKey.pushKey = key;
     pushKey.userUuid = user.uuid;
 
