@@ -16,6 +16,7 @@ import configurations from './config/configurations';
     ConfigModule.forRoot({
       load: [configurations],
       isGlobal: true,
+      // NOTE: /usr/src/app/.env 로 사용 가능성
       envFilePath: ['.env'],
     }),
     TypeOrmModule.forRootAsync({
