@@ -6,7 +6,6 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
-  UpdateDateColumn,
 } from 'typeorm';
 
 import { Group } from 'src/group/entities/group.entity';
