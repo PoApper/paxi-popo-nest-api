@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
   Delete,
   Param,
@@ -7,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { FcmService } from 'src/fcm/fcm.service';
@@ -50,5 +53,30 @@ export class FcmController {
   async deletePushKey(@Req() req, @Param('key') key: string) {
     const user = req.user as JwtPayload;
     return await this.pushService.deletePushKey(key, user);
+  }
+
+  @Post('send')
+  @ApiOperation({
+    summary: '[테스트]푸시 알림을 전송합니다.',
+  })
+  async sendPushNotification(@Req() req, @Param('uuid') uuid: string) {
+    return await this.pushService.sendPushNotificationByUuid(
+      uuid,
+      'Test push notification',
+    );
+  }
+
+  @Post('send/multiple')
+  @ApiOperation({
+    summary: '[테스트]푸시 알림을 여러 사용자에게 전송합니다.',
+  })
+  async sendPushNotificationToMultipleUsers(
+    @Req() req,
+    @Param('uuids') uuids: string[],
+  ) {
+    return await this.pushService.sendMultiPushNotificationByUuids(
+      uuids,
+      'Test push notification',
+    );
   }
 }
