@@ -131,4 +131,6 @@ export class FcmService {
         return response;
       });
   }
+
+  // TODO: message 형식 정하기
 }
