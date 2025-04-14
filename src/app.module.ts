@@ -24,7 +24,12 @@ import configurations from './config/configurations';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const dbConfig = configService.get('database');
-        console.log(dbConfig);
+        // Create a safe copy of the config without sensitive information
+        const safeConfig = { ...dbConfig };
+        if (safeConfig.password) {
+          safeConfig.password = '********';
+        }
+        console.log(safeConfig);
         return dbConfig;
       },
     }),
