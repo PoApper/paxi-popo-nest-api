@@ -4,7 +4,7 @@ services:
   paxi-popo-nest-dev:
     image: 151345152001.dkr.ecr.ap-northeast-2.amazonaws.com/paxi-popo-nest-api:latest
     ports:
-      - 6100:4000
+      - 6100:4001
     secrets:
       - source: poapper_paxi_popo_dotenv_dev_1
         target: /usr/src/app/.env
@@ -16,7 +16,7 @@ services:
   paxi-popo-nest-prod:
     image: 151345152001.dkr.ecr.ap-northeast-2.amazonaws.com/paxi-popo-nest-api:vX.X.X
     ports:
-      - 4100:4000
+      - 4100:4001
     secrets:
       - source: poapper_paxi_popo_dotenv_prod_1
         target: /usr/src/app/.env
