@@ -18,6 +18,7 @@ import configurations from './config/configurations';
     ConfigModule.forRoot({
       load: [configurations],
       isGlobal: true,
+      // NOTE: /usr/src/app/.env 로 사용 가능성
       envFilePath: ['.env'],
     }),
     TypeOrmModule.forRootAsync({
@@ -25,7 +26,12 @@ import configurations from './config/configurations';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         const dbConfig = configService.get('database');
-        console.log(dbConfig);
+        // Create a safe copy of the config without sensitive information
+        const safeConfig = { ...dbConfig };
+        if (safeConfig.password) {
+          safeConfig.password = '********';
+        }
+        console.log(safeConfig);
         return dbConfig;
       },
     }),
