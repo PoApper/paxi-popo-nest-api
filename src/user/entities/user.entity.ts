@@ -66,5 +66,8 @@ export class User extends BaseEntity {
   @OneToMany(() => FcmKey, (fcm_key) => fcm_key.user)
   push_keys: FcmKey[];
 
+  @OneToMany(() => Chat, (chat) => chat.sender)
+  chats: Chat[];
+
   // TODO: 계좌번호 추가
 }
