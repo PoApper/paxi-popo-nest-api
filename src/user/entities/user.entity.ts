@@ -68,6 +68,6 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Chat, (chat) => chat.sender)
   chats: Chat[];
-  
+
   // TODO: 계좌번호 추가
 }
