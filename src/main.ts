@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
+import { initializeApp as initializeFirebaseApp } from 'firebase-admin/app';
+import { credential as firebaseCredential } from 'firebase-admin';
+import * as process from 'node:process';
 
 import { AppModule } from './app.module';
 
@@ -22,6 +25,12 @@ async function bootstrap() {
     swaggerOptions: {
       persistAuthorization: true,
     },
+  });
+
+  initializeFirebaseApp({
+    credential: firebaseCredential.cert(
+      process.env.GOOGLE_APPLICATION_CREDENTIALS as string,
+    ),
   });
 
   await app.listen(process.env.PORT || 4001);
