@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 
+import { FcmModule } from 'src/fcm/fcm.module';
+
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
@@ -34,6 +36,7 @@ import configurations from './config/configurations';
     UserModule,
     GroupModule,
     ChatModule,
+    FcmModule,
   ],
   controllers: [AppController],
   providers: [AppService],

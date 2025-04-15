@@ -8,6 +8,7 @@ import {
   Unique,
 } from 'typeorm';
 
+import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
 import { Group } from 'src/group/entities/group.entity';
 import { GroupUser } from 'src/group/entities/group.user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
