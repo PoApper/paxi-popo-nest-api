@@ -11,9 +11,9 @@ import {
 import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
 import { Group } from 'src/group/entities/group.entity';
 import { GroupUser } from 'src/group/entities/group.user.entity';
+import { Chat } from 'src/chat/entities/chat.entity';
 
 import { UserStatus, UserType } from '../user.meta';
-
 @Entity()
 @Unique(['email'])
 export class User extends BaseEntity {
@@ -65,6 +65,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => FcmKey, (fcm_key) => fcm_key.user)
   push_keys: FcmKey[];
+
+  @OneToMany(() => Chat, (chat) => chat.sender)
+  chats: Chat[];
 
   // TODO: 계좌번호 추가
 }

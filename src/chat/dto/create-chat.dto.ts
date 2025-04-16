@@ -16,6 +16,6 @@ export class CreateChatDto {
   message: string;
 
   @IsEnum(ChatMessageType)
-  @IsNotEmpty()
-  messageType: ChatMessageType;
+  @IsOptional()
+  messageType?: ChatMessageType;
 }

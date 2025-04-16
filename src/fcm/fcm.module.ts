@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
 
 import { FcmService } from './fcm.service';
 import { FcmController } from './fcm.controller';
+import { FcmKey } from './entities/fcm.key.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([FcmKey])],
