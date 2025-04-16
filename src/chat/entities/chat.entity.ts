@@ -34,7 +34,6 @@ export class Chat {
   @Column({
     nullable: true,
     default: ChatMessageType.TEXT,
-    type: 'enum',
     enum: ChatMessageType,
   })
   messageType: ChatMessageType;
