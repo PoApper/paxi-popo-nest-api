@@ -6,7 +6,7 @@ services:
     ports:
       - 6100:4001
     secrets:
-      - source: poapper_paxi_popo_dotenv_dev_1
+      - source: poapper_paxi_dev_popo_dotenv1
         target: /usr/src/app/.env
     deploy:
       placement:
@@ -27,7 +27,7 @@ services:
           - node.role == manager
 
 secrets:
-  poapper_paxi_popo_dotenv_dev_1:
+  poapper_paxi_dev_popo_dotenv1:
     external: true
   poapper_paxi_popo_dotenv_prod_1:
     external: true
