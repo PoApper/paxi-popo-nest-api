@@ -6,7 +6,7 @@ import {
   IsString,
 } from 'class-validator';
 
-export class CreateGroupDto {
+export class CreateRoomDto {
   @IsString()
   @IsOptional()
   readonly description?: string;

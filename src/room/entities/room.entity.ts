@@ -10,11 +10,11 @@ import {
 } from 'typeorm';
 
 import { User } from 'src/user/entities/user.entity';
-import { GroupStatus } from 'src/group/entities/group.meta';
-import { GroupUser } from 'src/group/entities/group.user.entity';
+import { RoomStatus } from 'src/room/entities/room.meta';
+import { RoomUser } from 'src/room/entities/room.user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
 @Entity()
-export class Group {
+export class Room {
   @PrimaryGeneratedColumn('uuid')
   uuid: string;
 
@@ -39,8 +39,8 @@ export class Group {
   @Column({ nullable: false })
   departureTime: Date;
 
-  @Column({ nullable: false, default: GroupStatus.ACTIVATED })
-  status: GroupStatus;
+  @Column({ nullable: false, default: RoomStatus.ACTIVATED })
+  status: RoomStatus;
 
   @Column({ nullable: true, type: 'text' })
   description: string;
@@ -61,21 +61,21 @@ export class Group {
    * Database Relation
    */
 
-  @ManyToOne(() => User, (user) => user.own_groups, {
+  @ManyToOne(() => User, (user) => user.own_rooms, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'ownerUuid' })
   owner: User;
 
-  @ManyToOne(() => User, (user) => user.pay_groups, {
+  @ManyToOne(() => User, (user) => user.pay_rooms, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'payerUuid' })
   payer: User;
 
-  @OneToMany(() => GroupUser, (groupUser) => groupUser.group)
-  group_users: GroupUser[];
+  @OneToMany(() => RoomUser, (room_user) => room_user.room)
+  room_users: RoomUser[];
 
-  @OneToMany(() => Chat, (chat) => chat.group)
+  @OneToMany(() => Chat, (chat) => chat.room)
   chats: Chat[];
 }

@@ -1,4 +1,4 @@
-// TODO: 그룹 소유자 확인 가드
+// TODO: 룸 소유자 확인 가드
 
 import { UserType } from 'src/user/user.meta';
 
