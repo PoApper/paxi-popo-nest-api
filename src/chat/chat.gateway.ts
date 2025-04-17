@@ -51,6 +51,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.user = payload;
       client.data.rooms = new Set<string>();
     } catch (error) {
+      console.error(error);
       throw new WsException(`웹소켓 연결에 실패했습니다. ${error.message}`);
     }
   }
@@ -90,7 +91,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // 룸 참여 메시지 전송
         // 시스템 유저의 경우 senderUuid를 비워둠
         const systemMessage = await this.chatService.create({
-          roomUuid,
+          roomUuid: roomUuid,
           message: `${client.data.user.name} 님이 룸에 참여했습니다.`,
           messageType: ChatMessageType.TEXT,
         });
@@ -103,6 +104,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // TODO: 이미 참여한 룸일 경우 메세지 읽음 처리
       }
     } catch (error) {
+      console.error(error);
       throw new WsException(`룸 참여에 실패했습니다. ${error.message}`);
     }
   }
@@ -141,6 +143,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // 본인을 제외한 룸 유저들에게 메시지 전송
       client.to(roomUuid).emit('newMessage', chatMessage);
     } catch (error) {
+      console.error(error);
       throw new WsException(`메시지 전송에 실패했습니다. ${error.message}`);
     }
   }
@@ -169,6 +172,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       client.to(roomUuid).emit('newMessage', systemMessage);
     } catch (error) {
+      console.error(error);
       throw new WsException(`룸 나가기에 실패했습니다. ${error.message}`);
     }
   }

@@ -31,10 +31,12 @@ export class Chat {
   @Column({ nullable: false, type: 'text' })
   message: string;
 
+  // TODO: varchar를 사용하면 성능 문제가 발생할 수 있음
   @Column({
+    // type: 'enum', // NOTE: enum을 사용할 경우, 아래 문제는 해결되지만 sqlite에서 지원 안함
     nullable: true,
     default: ChatMessageType.TEXT,
-    // enum: ChatMessageType, NOTE: enum을 사용할 경우, SQL syntax error 발생.
+    // enum: ChatMessageType, //NOTE: enum을 사용할 경우, SQL syntax error 발생.
   })
   messageType: ChatMessageType;
 

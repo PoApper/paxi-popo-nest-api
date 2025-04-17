@@ -115,6 +115,7 @@ export class RoomController {
     @Body() updateRoomDto: UpdateRoomDto,
   ) {
     const user = req.user as JwtPayload;
+    // TODO: Update 된 객체 반환하기
     return await this.roomService.update(uuid, updateRoomDto, user);
   }
 
