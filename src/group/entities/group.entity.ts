@@ -12,7 +12,7 @@ import {
 import { User } from 'src/user/entities/user.entity';
 import { GroupStatus } from 'src/group/entities/group.meta';
 import { GroupUser } from 'src/group/entities/group.user.entity';
-
+import { Chat } from 'src/chat/entities/chat.entity';
 @Entity()
 export class Group {
   @PrimaryGeneratedColumn('uuid')
@@ -75,4 +75,7 @@ export class Group {
 
   @OneToMany(() => GroupUser, (groupUser) => groupUser.group)
   group_users: GroupUser[];
+
+  @OneToMany(() => Chat, (chat) => chat.group)
+  chats: Chat[];
 }

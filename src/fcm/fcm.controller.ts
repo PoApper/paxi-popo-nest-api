@@ -8,9 +8,9 @@ import {
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-import { JwtPayload } from 'src/auth/strategies/jwt.payload';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { FcmService } from 'src/fcm/fcm.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtPayload } from '../auth/strategies/jwt.payload';
+import { FcmService } from './fcm.service';
 
 @ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
