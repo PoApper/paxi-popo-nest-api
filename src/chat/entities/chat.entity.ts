@@ -34,7 +34,7 @@ export class Chat {
   @Column({
     nullable: true,
     default: ChatMessageType.TEXT,
-    enum: ChatMessageType,
+    // enum: ChatMessageType, NOTE: enum을 사용할 경우, SQL syntax error 발생.
   })
   messageType: ChatMessageType;
 
