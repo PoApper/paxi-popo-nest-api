@@ -3,7 +3,7 @@ import { Equal, LessThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
-import { GroupService } from 'src/group/group.service';
+import { RoomService } from 'src/room/room.service';
 
 import { Chat } from './entities/chat.entity';
 import { CreateChatDto } from './dto/create-chat.dto';
@@ -12,7 +12,7 @@ export class ChatService {
   constructor(
     @InjectRepository(Chat)
     private readonly chatRepo: Repository<Chat>,
-    private readonly groupService: GroupService,
+    private readonly roomService: RoomService,
   ) {}
 
   async create(createChatDto: CreateChatDto) {
@@ -33,31 +33,31 @@ export class ChatService {
     return message;
   }
 
-  findByGroupUuid(groupUuid: string) {
+  findByRoomUuid(roomUuid: string) {
     return this.chatRepo.find({
-      where: { groupUuid },
+      where: { roomUuid },
     });
   }
 
-  async getAllMessages(groupUuid: string, take: number, skip: number) {
+  async getAllMessages(roomUuid: string, take: number, skip: number) {
     return await this.chatRepo.find({
-      where: { groupUuid },
+      where: { roomUuid },
       take: take,
       skip: skip,
     });
   }
 
   async getMessagesByCursor(
-    groupUuid: string,
+    roomUuid: string,
     before: string | null,
     take: number,
   ) {
-    console.log('groupUuid', groupUuid);
-    if (!(await this.groupService.findOne(groupUuid))) {
-      console.log('그룹을 찾을 수 없습니다.');
-      throw new NotFoundException('그룹을 찾을 수 없습니다.');
+    console.log('roomUuid', roomUuid);
+    if (!(await this.roomService.findOne(roomUuid))) {
+      console.log('룸을 찾을 수 없습니다.');
+      throw new NotFoundException('룸을 찾을 수 없습니다.');
     }
-    console.log(await this.groupService.findOne(groupUuid));
+    console.log(await this.roomService.findOne(roomUuid));
 
     let baseMessage: Chat | null = null;
 
@@ -68,7 +68,7 @@ export class ChatService {
       });
     } else {
       baseMessage = await this.chatRepo.findOne({
-        where: { groupUuid },
+        where: { roomUuid },
         order: { createdAt: 'DESC' },
         select: ['createdAt', 'id'],
       });
@@ -82,14 +82,14 @@ export class ChatService {
     const cursorId = baseMessage.id;
     const where = before
       ? [
-          { groupUuid, createdAt: LessThan(cursorTime) },
+          { roomUuid, createdAt: LessThan(cursorTime) },
           {
-            groupUuid,
+            roomUuid,
             createdAt: Equal(cursorTime),
             id: LessThan(cursorId),
           },
         ]
-      : { groupUuid };
+      : { roomUuid };
 
     return await this.chatRepo.find({
       where,
@@ -99,12 +99,12 @@ export class ChatService {
   }
 
   async updateMessage(
-    groupUuid: string,
+    roomUuid: string,
     messageUuid: string,
     body: { message: string },
   ) {
     const chat = await this.chatRepo.findOne({
-      where: { uuid: messageUuid, groupUuid: groupUuid },
+      where: { uuid: messageUuid, roomUuid: roomUuid },
     });
     if (!chat) {
       throw new NotFoundException('메세지를 찾을 수 없습니다.');
@@ -116,9 +116,9 @@ export class ChatService {
     });
   }
 
-  async deleteMessage(groupUuid: string, messageUuid: string) {
+  async deleteMessage(roomUuid: string, messageUuid: string) {
     const message = await this.chatRepo.findOne({
-      where: { uuid: messageUuid, groupUuid: groupUuid },
+      where: { uuid: messageUuid, roomUuid: roomUuid },
     });
     if (!message) {
       throw new NotFoundException('메세지를 찾을 수 없습니다.');

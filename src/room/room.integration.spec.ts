@@ -10,14 +10,14 @@ import { UserService } from 'src/user/user.service';
 import { UserType } from 'src/user/user.meta';
 import { UserModule } from 'src/user/user.module';
 
-import { GroupController } from './group.controller';
-import { GroupService } from './group.service';
-import { GroupModule } from './group.module';
-import { CreateGroupDto } from './dto/create-group.dto';
-import { Group } from './entities/group.entity';
-import { GroupStatus } from './entities/group.meta';
+import { RoomController } from './room.controller';
+import { RoomService } from './room.service';
+import { RoomModule } from './room.module';
+import { CreateRoomDto } from './dto/create-room.dto';
+import { Room } from './entities/room.entity';
+import { RoomStatus } from './entities/room.meta';
 
-describe('GroupModule - Integration Test', () => {
+describe('RoomModule - Integration Test', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -39,8 +39,8 @@ describe('GroupModule - Integration Test', () => {
     await app.close();
   });
 
-  let groupController: GroupController;
-  let groupService: GroupService;
+  let roomController: RoomController;
+  let roomService: RoomService;
   let userService: UserService;
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -58,23 +58,23 @@ describe('GroupModule - Integration Test', () => {
             return dbConfig;
           },
         }),
-        GroupModule,
+        RoomModule,
         UserModule,
       ],
     }).compile();
 
-    groupController = moduleFixture.get<GroupController>(GroupController);
-    groupService = moduleFixture.get<GroupService>(GroupService);
+    roomController = moduleFixture.get<RoomController>(RoomController);
+    roomService = moduleFixture.get<RoomService>(RoomService);
     userService = moduleFixture.get<UserService>(UserService);
   });
 
   it('should be defined', () => {
-    expect(groupController).toBeDefined();
-    expect(groupService).toBeDefined();
+    expect(roomController).toBeDefined();
+    expect(roomService).toBeDefined();
   });
 
   describe('create', () => {
-    it('should create a group', async () => {
+    it('should create a room', async () => {
       const user = await userService.save({
         email: 'test@test.com',
         password: 'test',
@@ -82,7 +82,7 @@ describe('GroupModule - Integration Test', () => {
         userType: UserType.student,
       });
 
-      const dto: CreateGroupDto = {
+      const dto: CreateRoomDto = {
         description: '캐리어 두 개 있습니다',
         title: '지곡회관 포항역 카풀해요~ 😎',
         departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24),
@@ -95,19 +95,19 @@ describe('GroupModule - Integration Test', () => {
           uuid: user.uuid,
         },
       };
-      const result = await groupController.create(req, dto);
+      const result = await roomController.create(req, dto);
       expect(result).not.toBeNull();
       if (!result) {
-        throw new Error('Group creation failed');
+        throw new Error('Room creation failed');
       }
-      expect(result instanceof Group).toBe(true);
+      expect(result instanceof Room).toBe(true);
       expect(result.title).toBe(dto.title);
       expect(result.departureTime).toEqual(dto.departureTime);
       expect(result.departureLocation).toBe(dto.departureLocation);
       expect(result.destinationLocation).toBe(dto.destinationLocation);
       expect(result.maxParticipant).toBe(dto.maxParticipant);
       expect(result.currentParticipant).toBe(1);
-      expect(result.status).toBe(GroupStatus.ACTIVATED);
+      expect(result.status).toBe(RoomStatus.ACTIVATED);
       expect(result.description).toBe(dto.description);
     });
   });
