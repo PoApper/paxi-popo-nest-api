@@ -38,7 +38,7 @@ import { ChatSenderGuard } from './guards/chat-sender.guard';
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
-  @Get(':roomUuid/messages')
+  @Get(':roomUuid')
   @ApiOperation({
     summary: '채팅방 메세지를 불러옵니다.',
     description: 'before 이전 take개의 메세지를 불러옵니다.',
@@ -79,7 +79,7 @@ export class ChatController {
     return this.chatService.getMessagesByCursor(roomUuid, before, take);
   }
 
-  @Put(':roomUuid/messages/:messageUuid')
+  @Put(':roomUuid/:messageUuid')
   @ApiOperation({
     summary: '채팅 메세지를 수정합니다.',
   })
@@ -120,7 +120,7 @@ export class ChatController {
     return this.chatService.updateMessage(roomUuid, messageUuid, body);
   }
 
-  @Delete(':roomUuid/messages/:messageUuid')
+  @Delete(':roomUuid/:messageUuid')
   @ApiOperation({
     summary: '채팅 메세지를 삭제합니다.',
   })

@@ -16,7 +16,6 @@ import { RoomUserStatus } from 'src/room/entities/room.user.meta';
 
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
-// TODO: WSException 달기
 // TODO: Websocket API Swagger 문서화 할 방법 찾기
 // TODO: 유저가 방을 나갔을 때(Kicked or Leave) 호출되는 API 정리. 웹소켓이 아니라 룸 모듈에서 호출되어야 할 것 같다. 그러면 user socket rooms에서 빠져나가는 룸의 uuid를 어떻게 지울 수 있을까?. roomservice에서?
 
@@ -51,8 +50,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.user = payload;
       client.data.rooms = new Set<string>();
     } catch (error) {
-      console.error(error);
-      throw new WsException(`웹소켓 연결에 실패했습니다. ${error.message}`);
+      console.error(error); // TODO: Exception filter로 빼기
+      client.disconnect();
+      throw new WsException(`웹소켓 연결에 실패했습니다. ${error.message}`); // TODO: Exception filter로 빼기
     }
   }
 
