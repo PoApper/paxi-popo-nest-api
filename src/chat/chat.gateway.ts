@@ -18,8 +18,6 @@ import { RoomUserStatus } from 'src/room/entities/room.user.meta';
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
 import { WsExceptionFilter } from './filters/ws-exception.filter';
-// TODO: Websocket API Swagger 문서화 할 방법 찾기
-// TODO: 유저가 방을 나갔을 때(Kicked or Leave) 호출되는 API 정리. 웹소켓이 아니라 룸 모듈에서 호출되어야 할 것 같다. 그러면 user socket rooms에서 빠져나가는 룸의 uuid를 어떻게 지울 수 있을까?. roomservice에서?
 
 @WebSocketGateway()
 @UseFilters(WsExceptionFilter)
@@ -70,7 +68,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     try {
       const { roomUuid } = data;
-      // 룸 참여 유저 확인
+      // 방에 참여한 유저인지 확인
       const roomUser = await this.roomService.findUsersByRoomUuid(roomUuid);
       if (roomUser.length === 0) {
         throw new WsException('방을 찾을 수 없습니다.');
@@ -92,7 +90,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         await client.join(roomUuid);
         client.data.rooms.add(roomUuid);
 
-        // 룸 참여 메시지 전송
+        // 방 참여 메시지 전송
         // 시스템 유저의 경우 senderUuid를 비워둠
         const systemMessage = await this.chatService.create({
           roomUuid: roomUuid,
@@ -102,7 +100,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         // 내 화면 반영을 위해 본인에게 메시지 전송
         client.emit('newMessage', systemMessage);
-        // 룸 유저들에게 메시지 전송
+        // 방 유저들에게 메시지 전송
         client.to(roomUuid).emit('newMessage', systemMessage);
       } else {
         // TODO: 이미 참여한 방일 경우 메세지 읽음 처리
@@ -120,9 +118,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const { roomUuid, message } = payload;
 
-      // 룸 참여 유저 확인
-      // TODO: 혹은 client.data.rooms.has(roomUuid) 로 확인할 수도 있을까?
-      // 유저가 방을 나간 뒤에도 client.data가 유지된다면 DB 조회가 필요없으므로 이 방법이 나을 것 같다.
+      // 방에 참여한 유저인지 확인
       const roomUser = await this.roomService.findUsersByRoomUuid(roomUuid);
       if (roomUser.length === 0) {
         throw new WsException('방을 찾을 수 없습니다.');
@@ -146,7 +142,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // 내 화면 반영을 위해 본인에게 메시지 전송
       client.emit('newMessage', chatMessage);
-      // 본인을 제외한 룸 유저들에게 메시지 전송
+      // 본인을 제외한 방 유저들에게 메시지 전송
       client.to(roomUuid).emit('newMessage', chatMessage);
     } catch (error) {
       throw new WsException(`메시지 전송에 실패했습니다. ${error.message}`);
@@ -159,7 +155,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() roomUuid: string,
   ) {
     try {
-      // 유저 룸 확인
+      // 방에 참여한 유저인지 확인
       if (!client.data.rooms.has(roomUuid)) {
         throw new WsException('방에 속한 유저가 아닙니다.');
       }
@@ -168,7 +164,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await client.leave(roomUuid);
       client.data.rooms.delete(roomUuid);
 
-      // 룸 나가기 메시지 전송
+      // 방 나가기 메시지 전송
       const systemMessage = await this.chatService.create({
         roomUuid,
         message: `${client.data.user.name} 님이 방에서 나갔습니다.`,
