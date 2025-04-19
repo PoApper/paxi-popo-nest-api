@@ -2,7 +2,6 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -12,7 +11,7 @@ import { ChatMessageType } from 'src/chat/entities/chat.meta';
 import { Room } from 'src/room/entities/room.entity';
 import { User } from 'src/user/entities/user.entity';
 // 커서 기반 채팅 데이터 조회를 위한 복합 인덱스 생성
-@Index(['roomUuid', 'createdAt', 'id'])
+// BaseEntity 상속
 @Entity()
 export class Chat {
   @PrimaryGeneratedColumn('increment')
