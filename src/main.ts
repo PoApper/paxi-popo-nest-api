@@ -17,10 +17,13 @@ async function bootstrap() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Paxi API')
-    .setDescription('Paxi API documentation')
+    .setDescription('Paxi API Documentation')
     .setVersion('1.0')
-    .addTag('paxi')
     .addCookieAuth('Authentication')
+    .setExternalDoc(
+      'Websocket API 문서',
+      'https://github.com/PoApper/paxi-popo-nest-api/blob/main/websocket-api.md',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

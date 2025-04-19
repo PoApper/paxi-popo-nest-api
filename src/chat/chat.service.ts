@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Equal, LessThan, Repository } from 'typeorm';
+import { LessThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -52,49 +52,37 @@ export class ChatService {
     before: string | null,
     take: number,
   ) {
-    console.log('roomUuid', roomUuid);
     if (!(await this.roomService.findOne(roomUuid))) {
-      console.log('룸을 찾을 수 없습니다.');
       throw new NotFoundException('룸을 찾을 수 없습니다.');
     }
-    console.log(await this.roomService.findOne(roomUuid));
 
-    let baseMessage: Chat | null = null;
+    const queryBuilder = this.chatRepo
+      .createQueryBuilder('chat')
+      .select(['chat.id'])
+      .orderBy('chat.id', 'DESC')
+      .limit(1);
 
     if (before) {
-      baseMessage = await this.chatRepo.findOne({
-        where: { uuid: before },
-        select: ['createdAt', 'id'],
-      });
+      queryBuilder.where('chat.uuid = :before', { before });
     } else {
-      baseMessage = await this.chatRepo.findOne({
-        where: { roomUuid },
-        order: { createdAt: 'DESC' },
-        select: ['createdAt', 'id'],
-      });
+      queryBuilder.where('chat.roomUuid = :roomUuid', { roomUuid });
     }
-    console.log('baseMessage', baseMessage);
+
+    const baseMessage = await queryBuilder.getOne();
+
     if (!baseMessage) {
       throw new NotFoundException('기준 메세지를 찾을 수 없습니다.');
     }
 
-    const cursorTime = baseMessage.createdAt;
     const cursorId = baseMessage.id;
     const where = before
-      ? [
-          { roomUuid, createdAt: LessThan(cursorTime) },
-          {
-            roomUuid,
-            createdAt: Equal(cursorTime),
-            id: LessThan(cursorId),
-          },
-        ]
-      : { roomUuid };
+      ? [{ roomUuid: roomUuid, id: LessThan(cursorId) }]
+      : { roomUuid: roomUuid };
 
     return await this.chatRepo.find({
       where,
       take,
-      order: { createdAt: 'DESC', id: 'DESC' },
+      order: { id: 'DESC' },
     });
   }
 
