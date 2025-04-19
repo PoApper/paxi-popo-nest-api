@@ -6,7 +6,6 @@ import {
   ServiceAccount,
 } from 'firebase-admin/app';
 import { credential as firebaseCredential } from 'firebase-admin';
-import * as process from 'node:process';
 import { ConfigService } from '@nestjs/config';
 
 import { AppModule } from './app.module';
