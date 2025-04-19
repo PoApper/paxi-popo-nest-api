@@ -6,7 +6,6 @@ import {
   ServiceAccount,
 } from 'firebase-admin/app';
 import { credential as firebaseCredential } from 'firebase-admin';
-import * as process from 'node:process';
 import { ConfigService } from '@nestjs/config';
 
 import { AppModule } from './app.module';
@@ -37,7 +36,7 @@ async function bootstrap() {
     ),
   });
 
-  await app.listen(process.env.PORT || 4001);
+  await app.listen(4100);
 }
 
 bootstrap();
