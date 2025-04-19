@@ -13,6 +13,7 @@ RUN npm run build
 ARG PAXI_POPO_VERSION
 ENV PAXI_POPO_VERSION ${PAXI_POPO_VERSION}
 
-EXPOSE 4000
+# 4100을 사용한다는 정보
+EXPOSE 4100
 
 CMD ["npm", "run", "start:prod"]
