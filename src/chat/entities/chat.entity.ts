@@ -10,14 +10,12 @@ import {
 import { ChatMessageType } from 'src/chat/entities/chat.meta';
 import { Room } from 'src/room/entities/room.entity';
 import { User } from 'src/user/entities/user.entity';
-// 커서 기반 채팅 데이터 조회를 위한 복합 인덱스 생성
-// BaseEntity 상속
 @Entity()
 export class Chat {
   @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({ type: 'uuid', unique: true /*, length: 36*/ })
+  @Column({ type: 'uuid', unique: true })
   uuid: string;
 
   @Column({ nullable: false })
@@ -32,10 +30,11 @@ export class Chat {
 
   // TODO: varchar를 사용하면 성능 문제가 발생할 수 있음
   @Column({
-    // type: 'enum', // NOTE: enum을 사용할 경우, 아래 문제는 해결되지만 sqlite에서 지원 안함
+    // NOTE: 테스트 시 사용되는 SQLite에서 enum 지원을 안 하기 때문에 테스트 환경에서는 varchar type으로 설정
+    type: process.env.NODE_ENV === 'test' ? 'varchar' : 'enum',
+    enum: process.env.NODE_ENV === 'test' ? undefined : ChatMessageType,
     nullable: true,
     default: ChatMessageType.TEXT,
-    // enum: ChatMessageType, //NOTE: enum을 사용할 경우, SQL syntax error 발생.
   })
   messageType: ChatMessageType;
 
@@ -49,7 +48,6 @@ export class Chat {
   @ManyToOne(() => Room, (room) => room.chats, {
     onDelete: 'CASCADE',
   })
-  // TODO: room uuid 크기 255바이트인데 36바이트로 제한해야 함
   @JoinColumn({ name: 'roomUuid' })
   room: Room;
 
