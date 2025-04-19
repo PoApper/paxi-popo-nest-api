@@ -54,7 +54,7 @@ export class ChatController {
   })
   @ApiParam({
     name: 'roomUuid',
-    description: '룸 UUID',
+    description: '방 UUID',
     required: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
@@ -99,7 +99,7 @@ export class ChatController {
   })
   @ApiParam({
     name: 'roomUuid',
-    description: '수정할 메세지가 속한 룸의 UUID',
+    description: '수정할 메세지가 속한 방의 UUID',
     required: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
@@ -134,7 +134,7 @@ export class ChatController {
   })
   @ApiParam({
     name: 'roomUuid',
-    description: '삭제할 메세지가 속한 룸의 UUID',
+    description: '삭제할 메세지가 속한 방의 UUID',
     required: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
