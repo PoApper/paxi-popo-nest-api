@@ -38,20 +38,35 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ?.find((cookie) => cookie.startsWith('Authentication='))
         ?.split('=')[1];
 
-      console.log('token', token);
       if (!token) {
-        throw new WsException('인증 토큰이 없습니다.');
+        throw new WsException({
+          message: '인증 토큰이 없습니다.',
+        });
       }
 
       const payload: JwtPayload = await this.jwtService.verify(token, {
         secret: process.env.JWT_SECRET_KEY,
       });
 
+      if (!payload) {
+        throw new WsException({
+          message: '인증 토큰이 유효하지 않습니다.',
+        });
+      }
+
       client.data.user = payload;
       client.data.rooms = new Set<string>();
     } catch (error) {
+      // NOTE: @SubscribeMessage() 에노테이션이 붙지 않은 이벤트에서 발생한 에러는 ExceptionFilter에 전달되지 않음
+      // 따라서 여기서 클라이언트에 에러 이벤트를 전송해야 함
+      client.emit('error', {
+        message: `웹소켓 연결에 실패했습니다. ${error.message}`,
+      });
       client.disconnect();
-      throw new WsException(`웹소켓 연결에 실패했습니다. ${error.message}`); // NOTE: 혹시 모를 예외 처리를 위해 예외 필터로 빼지 않음
+      // 서버에 로그남기는 용도
+      throw new WsException({
+        message: `웹소켓 연결에 실패했습니다. ${error.message}`,
+      });
     }
   }
 
@@ -177,7 +192,5 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // TODO: 채팅 메세지 수정 기능 추가 -> HTTP API로 구현
-  // TODO: 채팅 메세지 삭제 기능 추가 -> HTTP API로 구현
   // TODO: 소켓이 끊어지고 다시 연결될 때 소켓 복원 기능 추가
 }
