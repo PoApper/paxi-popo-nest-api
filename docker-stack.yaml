@@ -21,7 +21,7 @@ services:
     ports:
       - 4100:4100
     secrets:
-      # Prod DB를 바라보게 추후 Secrets 변경 
+      # Prod DB를 바라보게 추후 Secrets 변경
       - source: poapper_paxi_dev_popo_dotenv_1
         target: /usr/src/app/.env
     deploy:
