@@ -12,10 +12,11 @@ import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { UserType } from 'src/user/user.meta';
 import { RoomUserStatus } from 'src/room/entities/room.user.meta';
 import { RoomStatus } from 'src/room/entities/room.meta';
+import { UserService } from 'src/user/user.service';
 
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
-
+import { CreateSettlementDto } from './dto/create-settlement.dto';
 @Injectable()
 export class RoomService {
   constructor(
@@ -23,6 +24,7 @@ export class RoomService {
     private readonly roomRepo: Repository<Room>,
     @InjectRepository(RoomUser)
     private readonly roomUserRepo: Repository<RoomUser>,
+    private readonly userService: UserService,
   ) {}
 
   async create(user: JwtPayload, dto: CreateRoomDto) {
@@ -367,5 +369,115 @@ export class RoomService {
     return this.roomUserRepo.count({
       where: { roomUuid: uuid, status: RoomUserStatus.JOINED },
     });
+  }
+
+  async requestSettlement(
+    uuid: string,
+    userUuid: string,
+    dto: CreateSettlementDto,
+  ) {
+    const room = await this.findOne(uuid);
+    if (!room) {
+      throw new BadRequestException('방이 존재하지 않습니다.');
+    }
+
+    // 방 상태별 필터링?
+
+    // 계좌번호는 무조건 전달됨
+    // 만약 update해야 한다면 dto 것으로 db에 넣기
+    // update하지 않기로 했다면 userService 호출하지 않기
+    if (dto.updateAccountNumber) {
+      await this.userService.createOrUpdateAccount(
+        userUuid,
+        dto.payerAccountNumber,
+      );
+    }
+
+    await this.roomRepo.update(
+      { uuid: uuid },
+      {
+        status: RoomStatus.IN_SETTLEMENT,
+        payerUuid: userUuid,
+        payAmount: dto.payAmount,
+      },
+    );
+
+    return await this.roomRepo.findOne({
+      where: { uuid: uuid },
+    });
+  }
+
+  async updateSettlement(
+    uuid: string,
+    userUuid: string,
+    dto: CreateSettlementDto,
+  ) {
+    const room = await this.findOne(uuid);
+    if (!room) {
+      throw new BadRequestException('방이 존재하지 않습니다.');
+    }
+
+    if (room.payerUuid != userUuid) {
+      throw new UnauthorizedException(
+        '정산자가 아니므로 정산 정보를 수정할 수 없습니다.',
+      );
+    }
+
+    // TODO: 이런 필터링 생각해보기
+    // if (room.status != RoomStatus.IN_SETTLEMENT) {
+    //   throw new BadRequestException(
+    //     '정산 정보를 수정할 수 있는 방 상태가 아닙니다.',
+    //   );
+    // }
+
+    if (dto.updateAccountNumber && dto.updateAccountNumber) {
+      await this.userService.createOrUpdateAccount(
+        userUuid,
+        dto.payerAccountNumber,
+      );
+    }
+
+    return await this.roomRepo.update(
+      { uuid: uuid },
+      {
+        status: RoomStatus.COMPLETED,
+        payerUuid: userUuid,
+        payAmount: dto.payAmount,
+      },
+    );
+  }
+
+  async cancelSettlement(uuid: string, userUuid: string) {
+    const room = await this.findOne(uuid);
+    if (!room) {
+      throw new BadRequestException('방이 존재하지 않습니다.');
+    }
+
+    if (room.payerUuid != userUuid) {
+      throw new UnauthorizedException(
+        '정산자가 아니므로 정산 요청을 취소할 수 없습니다.',
+      );
+    }
+
+    if (room.status != RoomStatus.IN_SETTLEMENT) {
+      throw new BadRequestException(
+        '정산이 진행되고 있지 않으므로 정산 요청을 취소할 수 없습니다.',
+      );
+    }
+
+    // TODO: roomUser 상태 변경?
+
+    return await this.roomRepo.update(
+      { uuid: uuid },
+      {
+        status: RoomStatus.ACTIVATED,
+        payerUuid: undefined,
+        payAmount: undefined,
+      },
+    );
+  }
+
+  async getSettlement(userUuid: string) {
+    return this.userService.getAccount(userUuid);
   }
 }

@@ -21,7 +21,7 @@ import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { Room } from './entities/room.entity';
-
+import { CreateSettlementDto } from './dto/create-settlement.dto';
 @ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('room')
@@ -89,6 +89,8 @@ export class RoomController {
     console.log(uuid);
     return this.roomService.findOne(uuid);
   }
+
+  // TODO: 내가 속한 방의 정보 반환
 
   @Patch(':uuid')
   @ApiOperation({
@@ -211,6 +213,77 @@ export class RoomController {
   ) {
     const user = req.user as JwtPayload;
     return await this.roomService.kickRoom(uuid, user.uuid, userUuid);
+  }
+
+  @Post(':roomUuid/settlement')
+  @ApiOperation({
+    summary: '카풀 방의 정산 정보를 등록합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '정산 정보를 등록합니다.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+  })
+  async requestSettlement(
+    @Param('roomUuid') roomUuid: string,
+    @Req() req,
+    @Body() dto: CreateSettlementDto,
+  ) {
+    const user = req.user as JwtPayload;
+    return await this.roomService.requestSettlement(roomUuid, user.uuid, dto);
+  }
+
+  @Put(':roomUuid/settlement')
+  @ApiOperation({
+    summary: '카풀 방의 정산 정보를 수정합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '정산 정보를 수정합니다.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+  })
+  async updateSettlement(
+    @Param('roomUuid') roomUuid: string,
+    @Req() req,
+    @Body() dto: CreateSettlementDto,
+  ) {
+    const user = req.user as JwtPayload;
+    await this.roomService.updateSettlement(roomUuid, user.uuid, dto);
+
+    return await this.roomService.getSettlement(user.uuid);
+  }
+
+  @Delete(':roomUuid/settlement')
+  @ApiOperation({
+    summary: '카풀 방의 정산 요청을 취소합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '정산 요청이 취소되었습니다.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+  })
+  async cancelSettlement(@Param('roomUuid') roomUuid: string, @Req() req) {
+    const user = req.user as JwtPayload;
+    return await this.roomService.cancelSettlement(roomUuid, user.uuid);
+  }
+
+  @Get('/useraccount')
+  @ApiOperation({
+    summary: '[임시] 유저 계좌정보 반환을 위한 엔드포인트',
+  })
+  async getSettlement(@Req() req) {
+    const user = req.user as JwtPayload;
+    console.log('user', user);
+    return await this.roomService.getSettlement(user.uuid);
   }
 }
 
