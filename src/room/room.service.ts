@@ -79,13 +79,13 @@ export class RoomService {
   async update(uuid: string, updateRoomDto: UpdateRoomDto, user: JwtPayload) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('룸이 존재하지 않습니다.');
+      throw new BadRequestException('방이 존재하지 않습니다.');
     }
     if (
       room.status == RoomStatus.COMPLETED ||
       room.status == RoomStatus.DELETED
     ) {
-      throw new BadRequestException('이미 종료된 룸입니다.');
+      throw new BadRequestException('이미 종료된 방입니다.');
     }
 
     if (user.userType == UserType.admin || room?.ownerUuid == user.uuid) {
@@ -105,13 +105,13 @@ export class RoomService {
   }
 
   async remove(uuid: string, userUuid: string) {
-    // TODO: delete 시 리턴 값 지워진 룸의 id를 리턴하도록 변경
+    // TODO: delete 시 리턴 값 지워진 방의 id를 리턴하도록 변경
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('룸이 존재하지 않습니다.');
+      throw new BadRequestException('방이 존재하지 않습니다.');
     }
     if (room.status == RoomStatus.DELETED) {
-      throw new BadRequestException('이미 삭제된 룸입니다.');
+      throw new BadRequestException('이미 삭제된 방입니다.');
     }
     if (room.ownerUuid != userUuid) {
       throw new UnauthorizedException('방장이 아닙니다.');
@@ -123,10 +123,10 @@ export class RoomService {
   async joinRoom(uuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('룸이 존재하지 않습니다.');
+      throw new BadRequestException('방이 존재하지 않습니다.');
     }
     if (room.status != RoomStatus.ACTIVATED) {
-      throw new BadRequestException('현재 룸은 가입할 수 없습니다.');
+      throw new BadRequestException('현재 방은 가입할 수 없습니다.');
     }
 
     const queryRunner = this.roomRepo.manager.connection.createQueryRunner();
@@ -139,7 +139,7 @@ export class RoomService {
     try {
       if (roomUser) {
         if (roomUser.status == RoomUserStatus.JOINED) {
-          throw new BadRequestException('이미 가입된 룸입니다.');
+          throw new BadRequestException('이미 가입된 방입니다.');
         } else if (roomUser.status == RoomUserStatus.LEFT) {
           // 가입 상태로 변경
           await queryRunner.manager.update(
@@ -148,7 +148,7 @@ export class RoomService {
             { status: RoomUserStatus.JOINED },
           );
         } else if (roomUser.status == RoomUserStatus.KICKED) {
-          throw new BadRequestException('강퇴된 룸입니다.');
+          throw new BadRequestException('강퇴된 방입니다.');
         }
       } else {
         // 참여 인원 증가
@@ -156,7 +156,7 @@ export class RoomService {
         if (participantsNumber != room.currentParticipant) {
           // TODO: 로그로 변경
           console.log(
-            'JOINED 상태인 룸 유저 수와 참여 인원 수가 일치하지 않음!!',
+            'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
           );
         }
         await queryRunner.manager.update(
@@ -190,7 +190,7 @@ export class RoomService {
     // });
     // if (roomUser) {
     //   if (roomUser.status == RoomUserStatus.JOINED) {
-    //     throw new BadRequestException('이미 가입된 룸입니다.');
+    //     throw new BadRequestException('이미 가입된 방입니다.');
     //   } else if (roomUser.status == RoomUserStatus.LEFT) {
     //     // 가입 상태로 변경
     //     return this.roomUserRepo.update(
@@ -198,7 +198,7 @@ export class RoomService {
     //       { status: RoomUserStatus.JOINED },
     //     );
     //   } else if (roomUser.status == RoomUserStatus.KICKED) {
-    //     throw new BadRequestException('강퇴된 룸입니다.');
+    //     throw new BadRequestException('강퇴된 방입니다.');
     //   }
     // }
 
@@ -217,7 +217,7 @@ export class RoomService {
   async leaveRoom(uuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('룸이 존재하지 않습니다.');
+      throw new BadRequestException('방이 존재하지 않습니다.');
     }
 
     const roomUser = await this.roomUserRepo.findOne({
@@ -226,7 +226,7 @@ export class RoomService {
     });
 
     if (!roomUser) {
-      throw new BadRequestException('룸에 가입되어 있지 않습니다.');
+      throw new BadRequestException('방에 가입되어 있지 않습니다.');
     }
 
     const queryRunner =
@@ -259,7 +259,7 @@ export class RoomService {
       if (participantsNumber != room.currentParticipant) {
         // TODO: 로그로 변경
         console.log(
-          'JOINED 상태인 룸 유저 수와 참여 인원 수가 일치하지 않음!!',
+          'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
         );
       }
       await this.roomRepo.update(
@@ -273,7 +273,7 @@ export class RoomService {
       );
 
       await queryRunner.commitTransaction();
-      // 탑승 인원을 감소시킨 룸 정보를 반환할수도?
+      // 탑승 인원을 감소시킨 방 정보를 반환할수도?
       return await this.roomUserRepo.findOne({
         where: { roomUuid: uuid, userUuid: userUuid },
         relations: ['room'],
@@ -289,7 +289,7 @@ export class RoomService {
   async kickRoom(uuid: string, ownerUuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('룸이 존재하지 않습니다.');
+      throw new BadRequestException('방이 존재하지 않습니다.');
     }
 
     const roomUser = await this.roomUserRepo.findOne({
@@ -299,7 +299,7 @@ export class RoomService {
 
     if (!roomUser) {
       throw new BadRequestException(
-        '강퇴하려는 사용자가 룸에 가입되어 있지 않습니다.',
+        '강퇴하려는 사용자가 방에 가입되어 있지 않습니다.',
       );
     }
 
@@ -317,7 +317,7 @@ export class RoomService {
       if (participantsNumber != room.currentParticipant) {
         // TODO: 로그로 변경
         console.log(
-          'JOINED 상태인 룸 유저 수와 참여 인원 수가 일치하지 않음!!',
+          'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
         );
       }
       await this.roomRepo.update(
@@ -347,7 +347,7 @@ export class RoomService {
   async completeRoom(uuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('룸이 존재하지 않습니다.');
+      throw new BadRequestException('방이 존재하지 않습니다.');
     }
 
     if (room.ownerUuid != userUuid) {
@@ -355,7 +355,7 @@ export class RoomService {
     }
 
     if (room.status == RoomStatus.COMPLETED) {
-      throw new BadRequestException('이미 종료된 룸입니다.');
+      throw new BadRequestException('이미 종료된 방입니다.');
     }
 
     return this.roomRepo.update(
@@ -430,7 +430,7 @@ export class RoomService {
     //   );
     // }
 
-    if (dto.updateAccountNumber && dto.updateAccountNumber) {
+    if (dto.updateAccountNumber) {
       await this.userService.createOrUpdateAccount(
         userUuid,
         dto.payerAccountNumber,
@@ -478,6 +478,6 @@ export class RoomService {
   }
 
   async getSettlement(userUuid: string) {
-    return this.userService.getAccount(userUuid);
+    return await this.userService.getAccount(userUuid);
   }
 }
