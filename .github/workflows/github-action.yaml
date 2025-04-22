@@ -41,6 +41,7 @@ jobs:
     env:
       NODE_ENV: test
       JWT_SECRET_KEY: test
+      ACCOUNT_ENCRYPTION_KEY: RGqlGFsu9IfhMDpVI+xnNnjrE88GlyrIw5XrhE/dxQw= # random 32 bytes
     steps:
       - name: Checkout
         uses: actions/checkout@v4

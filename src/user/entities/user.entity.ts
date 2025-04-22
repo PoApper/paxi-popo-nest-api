@@ -4,6 +4,7 @@ import {
   CreateDateColumn,
   Entity,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
@@ -14,6 +15,7 @@ import { RoomUser } from 'src/room/entities/room.user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
 
 import { UserStatus, UserType } from '../user.meta';
+import { Account } from './account.entity';
 @Entity()
 @Unique(['email'])
 export class User extends BaseEntity {
@@ -68,6 +70,9 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Chat, (chat) => chat.sender)
   chats: Chat[];
+
+  @OneToOne(() => Account, (account) => account.user)
+  account: Account;
 
   // TODO: 계좌번호 추가
 }
