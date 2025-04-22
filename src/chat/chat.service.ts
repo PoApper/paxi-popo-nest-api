@@ -53,7 +53,7 @@ export class ChatService {
     take: number,
   ) {
     if (!(await this.roomService.findOne(roomUuid))) {
-      throw new NotFoundException('룸을 찾을 수 없습니다.');
+      throw new NotFoundException('방을 찾을 수 없습니다.');
     }
 
     const queryBuilder = this.chatRepo
