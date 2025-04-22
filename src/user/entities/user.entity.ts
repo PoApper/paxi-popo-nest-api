@@ -4,16 +4,18 @@ import {
   CreateDateColumn,
   Entity,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
 
 import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
-import { Group } from 'src/group/entities/group.entity';
-import { GroupUser } from 'src/group/entities/group.user.entity';
+import { Room } from 'src/room/entities/room.entity';
+import { RoomUser } from 'src/room/entities/room.user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
 
 import { UserStatus, UserType } from '../user.meta';
+import { Account } from './account.entity';
 @Entity()
 @Unique(['email'])
 export class User extends BaseEntity {
@@ -54,20 +56,23 @@ export class User extends BaseEntity {
    * Database Relation
    */
 
-  @OneToMany(() => Group, (group) => group.owner)
-  own_groups: Group[];
+  @OneToMany(() => Room, (room) => room.owner)
+  own_rooms: Room[];
 
-  @OneToMany(() => Group, (group) => group.payer)
-  pay_groups: Group[];
+  @OneToMany(() => Room, (room) => room.payer)
+  pay_rooms: Room[];
 
-  @OneToMany(() => GroupUser, (group_user) => group_user.user)
-  group_users: GroupUser[];
+  @OneToMany(() => RoomUser, (room_user) => room_user.user)
+  room_users: RoomUser[];
 
   @OneToMany(() => FcmKey, (fcm_key) => fcm_key.user)
   push_keys: FcmKey[];
 
   @OneToMany(() => Chat, (chat) => chat.sender)
   chats: Chat[];
+
+  @OneToOne(() => Account, (account) => account.user)
+  account: Account;
 
   // TODO: 계좌번호 추가
 }

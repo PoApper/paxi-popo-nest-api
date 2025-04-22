@@ -38,7 +38,7 @@ import { ChatSenderGuard } from './guards/chat-sender.guard';
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
-  @Get(':groupUuid/messages')
+  @Get(':roomUuid')
   @ApiOperation({
     summary: '채팅방 메세지를 불러옵니다.',
     description: 'before 이전 take개의 메세지를 불러옵니다.',
@@ -50,36 +50,36 @@ export class ChatController {
   })
   @ApiResponse({
     status: 400,
-    description: '채팅방 메세지를 불러오지 못했습니다.',
+    description: '메세지를 불러오지 못했습니다.',
   })
   @ApiParam({
-    name: 'groupUuid',
-    description: '채팅방 UUID',
+    name: 'roomUuid',
+    description: '방 UUID',
     required: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiQuery({
     name: 'before',
     description:
-      '불러올 메세지 시작 위치, 없을 시 가장 최근 메세지부터 불러옵니다.',
+      '해당 UUID의 메세지 이전부터 불러옵니다. 값이 없을 시 가장 최근 메세지부터 불러옵니다.',
     required: false,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiQuery({
     name: 'take',
-    description: '불러올 메세지 개수',
+    description: '불러올 메세지 개수, 기본값은 30',
     required: false,
     example: 30,
   })
   async getMessages(
-    @Param('groupUuid') groupUuid: string,
+    @Param('roomUuid') roomUuid: string,
     @Query('before', new DefaultValuePipe(null)) before: string | null,
     @Query('take', new DefaultValuePipe(30), ParseIntPipe) take: number,
   ) {
-    return this.chatService.getMessagesByCursor(groupUuid, before, take);
+    return this.chatService.getMessagesByCursor(roomUuid, before, take);
   }
 
-  @Put(':groupUuid/messages/:messageUuid')
+  @Put(':roomUuid/:messageUuid')
   @ApiOperation({
     summary: '채팅 메세지를 수정합니다.',
   })
@@ -93,13 +93,13 @@ export class ChatController {
   })
   @ApiParam({
     name: 'messageUuid',
-    description: '수정할 메세지 UUID',
+    description: '수정할 메세지의 UUID',
     required: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiParam({
-    name: 'groupUuid',
-    description: '그룹 UUID',
+    name: 'roomUuid',
+    description: '수정할 메세지가 속한 방의 UUID',
     required: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
@@ -113,14 +113,14 @@ export class ChatController {
   })
   @UseGuards(ChatSenderGuard)
   async updateMessage(
-    @Param('groupUuid') groupUuid: string,
+    @Param('roomUuid') roomUuid: string,
     @Param('messageUuid') messageUuid: string,
     @Body() body: { message: string },
   ) {
-    return this.chatService.updateMessage(groupUuid, messageUuid, body);
+    return this.chatService.updateMessage(roomUuid, messageUuid, body);
   }
 
-  @Delete(':groupUuid/messages/:messageUuid')
+  @Delete(':roomUuid/:messageUuid')
   @ApiOperation({
     summary: '채팅 메세지를 삭제합니다.',
   })
@@ -133,22 +133,22 @@ export class ChatController {
     description: '메세지 전송자가 아닙니다.',
   })
   @ApiParam({
-    name: 'groupUuid',
-    description: '그룹 UUID',
+    name: 'roomUuid',
+    description: '삭제할 메세지가 속한 방의 UUID',
     required: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiParam({
     name: 'messageUuid',
-    description: '삭제할 메세지 UUID',
+    description: '삭제할 메세지의 UUID',
     required: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @UseGuards(ChatSenderGuard)
   async deleteMessage(
-    @Param('groupUuid') groupUuid: string,
+    @Param('roomUuid') roomUuid: string,
     @Param('messageUuid') messageUuid: string,
   ) {
-    return this.chatService.deleteMessage(groupUuid, messageUuid);
+    return this.chatService.deleteMessage(roomUuid, messageUuid);
   }
 }

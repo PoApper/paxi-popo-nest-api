@@ -1,9 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Equal, LessThan, Repository } from 'typeorm';
+import { LessThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
-import { GroupService } from 'src/group/group.service';
+import { RoomService } from 'src/room/room.service';
 
 import { Chat } from './entities/chat.entity';
 import { CreateChatDto } from './dto/create-chat.dto';
@@ -12,7 +12,7 @@ export class ChatService {
   constructor(
     @InjectRepository(Chat)
     private readonly chatRepo: Repository<Chat>,
-    private readonly groupService: GroupService,
+    private readonly roomService: RoomService,
   ) {}
 
   async create(createChatDto: CreateChatDto) {
@@ -33,78 +33,66 @@ export class ChatService {
     return message;
   }
 
-  findByGroupUuid(groupUuid: string) {
+  findByRoomUuid(roomUuid: string) {
     return this.chatRepo.find({
-      where: { groupUuid },
+      where: { roomUuid },
     });
   }
 
-  async getAllMessages(groupUuid: string, take: number, skip: number) {
+  async getAllMessages(roomUuid: string, take: number, skip: number) {
     return await this.chatRepo.find({
-      where: { groupUuid },
+      where: { roomUuid },
       take: take,
       skip: skip,
     });
   }
 
   async getMessagesByCursor(
-    groupUuid: string,
+    roomUuid: string,
     before: string | null,
     take: number,
   ) {
-    console.log('groupUuid', groupUuid);
-    if (!(await this.groupService.findOne(groupUuid))) {
-      console.log('그룹을 찾을 수 없습니다.');
-      throw new NotFoundException('그룹을 찾을 수 없습니다.');
+    if (!(await this.roomService.findOne(roomUuid))) {
+      throw new NotFoundException('방을 찾을 수 없습니다.');
     }
-    console.log(await this.groupService.findOne(groupUuid));
 
-    let baseMessage: Chat | null = null;
+    const queryBuilder = this.chatRepo
+      .createQueryBuilder('chat')
+      .select(['chat.id'])
+      .orderBy('chat.id', 'DESC')
+      .limit(1);
 
     if (before) {
-      baseMessage = await this.chatRepo.findOne({
-        where: { uuid: before },
-        select: ['createdAt', 'id'],
-      });
+      queryBuilder.where('chat.uuid = :before', { before });
     } else {
-      baseMessage = await this.chatRepo.findOne({
-        where: { groupUuid },
-        order: { createdAt: 'DESC' },
-        select: ['createdAt', 'id'],
-      });
+      queryBuilder.where('chat.roomUuid = :roomUuid', { roomUuid });
     }
-    console.log('baseMessage', baseMessage);
+
+    const baseMessage = await queryBuilder.getOne();
+
     if (!baseMessage) {
       throw new NotFoundException('기준 메세지를 찾을 수 없습니다.');
     }
 
-    const cursorTime = baseMessage.createdAt;
     const cursorId = baseMessage.id;
     const where = before
-      ? [
-          { groupUuid, createdAt: LessThan(cursorTime) },
-          {
-            groupUuid,
-            createdAt: Equal(cursorTime),
-            id: LessThan(cursorId),
-          },
-        ]
-      : { groupUuid };
+      ? [{ roomUuid: roomUuid, id: LessThan(cursorId) }]
+      : { roomUuid: roomUuid };
 
     return await this.chatRepo.find({
       where,
       take,
-      order: { createdAt: 'DESC', id: 'DESC' },
+      order: { id: 'DESC' },
     });
   }
 
   async updateMessage(
-    groupUuid: string,
+    roomUuid: string,
     messageUuid: string,
     body: { message: string },
   ) {
     const chat = await this.chatRepo.findOne({
-      where: { uuid: messageUuid, groupUuid: groupUuid },
+      where: { uuid: messageUuid, roomUuid: roomUuid },
     });
     if (!chat) {
       throw new NotFoundException('메세지를 찾을 수 없습니다.');
@@ -116,9 +104,9 @@ export class ChatService {
     });
   }
 
-  async deleteMessage(groupUuid: string, messageUuid: string) {
+  async deleteMessage(roomUuid: string, messageUuid: string) {
     const message = await this.chatRepo.findOne({
-      where: { uuid: messageUuid, groupUuid: groupUuid },
+      where: { uuid: messageUuid, roomUuid: roomUuid },
     });
     if (!message) {
       throw new NotFoundException('메세지를 찾을 수 없습니다.');
