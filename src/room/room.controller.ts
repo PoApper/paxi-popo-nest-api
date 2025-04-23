@@ -15,7 +15,6 @@ import { ApiCookieAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import {} from 'src/user/user.meta';
 
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -68,8 +67,26 @@ export class RoomController {
     description: '로그인이 되어 있지 않은 경우',
   })
   findAll() {
-    console.log('findAll');
     return this.roomService.findAll();
+  }
+
+  @Get('my')
+  @ApiOperation({
+    summary: '자신이 참여중인 방의 정보를 반환합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '자신이 참여중인 방을 반환',
+    type: [Room],
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  findMyRoom(@Req() req) {
+    console.log('findMyRoom');
+    const user = req.user as JwtPayload;
+    return this.roomService.findByUserUuid(user.uuid);
   }
 
   @Get(':uuid')
@@ -89,8 +106,6 @@ export class RoomController {
     console.log(uuid);
     return this.roomService.findOne(uuid);
   }
-
-  // TODO: 내가 속한 방의 정보 반환
 
   @Patch(':uuid')
   @ApiOperation({

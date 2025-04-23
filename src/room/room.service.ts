@@ -72,6 +72,12 @@ export class RoomService {
     return this.roomRepo.findOneBy({ uuid: uuid });
   }
 
+  findByUserUuid(userUuid: string) {
+    return this.roomRepo.find({
+      where: { room_users: { userUuid: userUuid } },
+    });
+  }
+
   findUsersByRoomUuid(uuid: string) {
     return this.roomUserRepo.findBy({ roomUuid: uuid });
   }
@@ -273,10 +279,8 @@ export class RoomService {
       );
 
       await queryRunner.commitTransaction();
-      // 탑승 인원을 감소시킨 방 정보를 반환할수도?
-      return await this.roomUserRepo.findOne({
-        where: { roomUuid: uuid, userUuid: userUuid },
-        relations: ['room'],
+      return await this.roomRepo.findOne({
+        where: { uuid: uuid },
       });
     } catch (err) {
       await queryRunner.rollbackTransaction();
