@@ -324,7 +324,7 @@ export class RoomService {
       relations: ['room'],
     });
 
-    if (!roomUser) {
+    if (roomUser?.status != RoomUserStatus.JOINED) {
       throw new BadRequestException(
         '강퇴하려는 사용자가 방에 가입되어 있지 않습니다.',
       );
@@ -332,6 +332,10 @@ export class RoomService {
 
     if (room.ownerUuid != ownerUuid) {
       throw new UnauthorizedException('방장이 아닙니다.');
+    }
+
+    if (room.ownerUuid == userUuid) {
+      throw new BadRequestException('방장은 강퇴할 수 없습니다.');
     }
 
     const queryRunner =

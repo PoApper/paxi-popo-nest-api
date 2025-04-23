@@ -227,7 +227,8 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description: '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우',
+    description:
+      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 또는 자기 자신을 강퇴하는 경우',
   })
   @ApiResponse({
     status: 401,
