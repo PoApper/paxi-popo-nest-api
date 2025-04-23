@@ -127,12 +127,14 @@ export class RoomService {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
 
-    // TODO: update 시 리턴 값 findOne으로 변경
-    return this.roomRepo.update({ uuid: uuid }, { ...updateRoomDto });
+    await this.roomRepo.update({ uuid: uuid }, { ...updateRoomDto });
+
+    return await this.roomRepo.findOne({
+      where: { uuid: uuid },
+    });
   }
 
   async remove(uuid: string, userUuid: string) {
-    // TODO: delete 시 리턴 값 지워진 방의 id를 리턴하도록 변경
     const room = await this.findOne(uuid);
     if (!room) {
       throw new BadRequestException('방이 존재하지 않습니다.');
@@ -264,7 +266,6 @@ export class RoomService {
       if (roomUser.room.ownerUuid == userUuid) {
         const newOwnerRoomUser = await this.roomUserRepo.findOneBy({
           roomUuid: uuid,
-          // TODO: 방장이 특정 유저를 새로운 방장으로 지정할 수 있도록 변경
           userUuid: Not(userUuid),
           status: RoomUserStatus.JOINED,
         });
