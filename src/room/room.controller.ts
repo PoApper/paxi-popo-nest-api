@@ -11,7 +11,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiCookieAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -83,10 +88,17 @@ export class RoomController {
     status: 401,
     description: '로그인이 되어 있지 않은 경우',
   })
-  findMyRoom(@Req() req) {
-    console.log('findMyRoom');
+  @ApiQuery({
+    name: 'all',
+    description:
+      'true인 경우 모든 방을 반환, false인 경우 나가거나 강퇴된 방은 나타나지 않음',
+    required: false,
+    type: Boolean,
+  })
+  findMyRoom(@Req() req, @Query('all') all?: string) {
+    // boolean으로 지정해도 nest에서 string으로 받음(쓰레기같은 프레임워크)
     const user = req.user as JwtPayload;
-    return this.roomService.findByUserUuid(user.uuid);
+    return this.roomService.findByUserUuid(user.uuid, all === 'true');
   }
 
   @Get(':uuid')

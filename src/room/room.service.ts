@@ -17,6 +17,7 @@ import { UserService } from 'src/user/user.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
+
 @Injectable()
 export class RoomService {
   constructor(
@@ -65,16 +66,38 @@ export class RoomService {
   }
 
   findAll() {
-    return this.roomRepo.find();
+    return this.roomRepo.find({
+      where: { status: RoomStatus.ACTIVATED },
+    });
   }
 
   findOne(uuid: string) {
     return this.roomRepo.findOneBy({ uuid: uuid });
   }
 
-  findByUserUuid(userUuid: string) {
+  findByUserUuid(userUuid: string, all?: boolean) {
+    console.debug(all);
+    if (all) {
+      return this.roomRepo.find({
+        where: {
+          room_users: { userUuid: userUuid },
+        },
+        select: {
+          room_users: {
+            userUuid: false,
+            status: true,
+          },
+        },
+        relations: {
+          room_users: true,
+        },
+      });
+    }
+    console.debug(all);
     return this.roomRepo.find({
-      where: { room_users: { userUuid: userUuid } },
+      where: {
+        room_users: { userUuid: userUuid, status: RoomUserStatus.JOINED },
+      },
     });
   }
 
