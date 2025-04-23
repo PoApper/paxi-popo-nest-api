@@ -400,6 +400,44 @@ export class RoomService {
     });
   }
 
+  async delegateRoom(uuid: string, ownerUuid: string, userUuid: string) {
+    const room = await this.findOne(uuid);
+    const roomUser = await this.roomUserRepo.findOne({
+      where: {
+        roomUuid: uuid,
+        userUuid: userUuid,
+        status: RoomUserStatus.JOINED,
+      },
+      relations: ['room'],
+    });
+    if (!room) {
+      throw new BadRequestException('방이 존재하지 않습니다.');
+    }
+
+    if (room.ownerUuid != ownerUuid) {
+      throw new UnauthorizedException('방장이 아닙니다.');
+    }
+
+    if (room.ownerUuid == userUuid) {
+      throw new BadRequestException(
+        '자기 자신에게 방장 권한을 위임할 수 없습니다.',
+      );
+    }
+
+    if (!roomUser) {
+      throw new BadRequestException('유저가 방에 가입되어 있지 않습니다.');
+    }
+
+    await this.roomRepo.update(
+      { uuid: uuid },
+      { ownerUuid: userUuid, status: RoomStatus.ACTIVATED },
+    );
+
+    return await this.roomRepo.findOne({
+      where: { uuid: uuid },
+    });
+  }
+
   async requestSettlement(
     uuid: string,
     userUuid: string,

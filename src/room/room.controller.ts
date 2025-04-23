@@ -243,6 +243,33 @@ export class RoomController {
     return await this.roomService.kickRoom(uuid, user.uuid, userUuid);
   }
 
+  @Post('delegate/:uuid')
+  @ApiOperation({
+    summary: '방장 권한을 위임합니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '위임된 방장과 방 정보를 반환',
+    type: Room,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 아닌 경우, 이미 방장인 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  async delegateRoom(
+    @Req() req,
+    @Param('uuid') uuid: string,
+    @Query('userUuid') userUuid: string,
+  ) {
+    const user = req.user as JwtPayload;
+    return await this.roomService.delegateRoom(uuid, user.uuid, userUuid);
+  }
+
   @Post(':roomUuid/settlement')
   @ApiOperation({
     summary: '카풀 방의 정산 정보를 등록합니다.',
