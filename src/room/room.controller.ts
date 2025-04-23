@@ -96,7 +96,7 @@ export class RoomController {
     type: Boolean,
   })
   findMyRoom(@Req() req, @Query('all') all?: string) {
-    // boolean으로 지정해도 nest에서 string으로 받음(쓰레기같은 프레임워크)
+    // boolean으로 지정해도 nest에서 string으로 받음
     const user = req.user as JwtPayload;
     return this.roomService.findByUserUuid(user.uuid, all === 'true');
   }

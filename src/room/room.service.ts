@@ -76,7 +76,6 @@ export class RoomService {
   }
 
   findByUserUuid(userUuid: string, all?: boolean) {
-    console.debug(all);
     if (all) {
       return this.roomRepo.find({
         where: {
@@ -93,7 +92,6 @@ export class RoomService {
         },
       });
     }
-    console.debug(all);
     return this.roomRepo.find({
       where: {
         room_users: { userUuid: userUuid, status: RoomUserStatus.JOINED },
