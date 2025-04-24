@@ -27,6 +27,9 @@ export class RoomUser {
   @Column({ nullable: false, default: false })
   isPaid: boolean;
 
+  @Column({ nullable: true })
+  kickedReason: string;
+
   /**
    * Database Relation
    */

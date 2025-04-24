@@ -11,11 +11,16 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiCookieAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import {} from 'src/user/user.meta';
 
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -68,8 +73,33 @@ export class RoomController {
     description: '로그인이 되어 있지 않은 경우',
   })
   findAll() {
-    console.log('findAll');
     return this.roomService.findAll();
+  }
+
+  @Get('my')
+  @ApiOperation({
+    summary: '자신이 참여중인 방의 정보를 반환합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '자신이 참여중인 방을 반환',
+    type: [Room],
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  @ApiQuery({
+    name: 'viewKicked',
+    description:
+      'true인 경우 강퇴한 방도 포함하여 반환합니다. 기본값은 false입니다.',
+    required: false,
+    type: Boolean,
+  })
+  findMyRoom(@Req() req, @Query('viewKicked') viewKicked?: string) {
+    // boolean으로 지정해도 nest에서 string으로 받음
+    const user = req.user as JwtPayload;
+    return this.roomService.findByUserUuid(user.uuid, viewKicked === 'true');
   }
 
   @Get(':uuid')
@@ -89,8 +119,6 @@ export class RoomController {
     console.log(uuid);
     return this.roomService.findOne(uuid);
   }
-
-  // TODO: 내가 속한 방의 정보 반환
 
   @Patch(':uuid')
   @ApiOperation({
@@ -116,7 +144,6 @@ export class RoomController {
     @Body() updateRoomDto: UpdateRoomDto,
   ) {
     const user = req.user as JwtPayload;
-    // TODO: Update 된 객체 반환하기
     return await this.roomService.update(uuid, updateRoomDto, user);
   }
 
@@ -193,6 +220,17 @@ export class RoomController {
     summary:
       '사용자를 추방합니다. 방장만 가능하며, 사용자의 상태를 KICKED로 변경합니다.',
   })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          description: '강퇴 사유',
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 200,
     description: '강퇴된 사용자와 방 정보를 반환',
@@ -200,19 +238,53 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description: '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우',
+    description:
+      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 또는 자기 자신을 강퇴하는 경우',
   })
   @ApiResponse({
     status: 401,
     description: '로그인이 되어 있지 않은 경우, 방장이 아닌 경우',
   })
-  async kickRoom(
+  async kickUserFromRoom(
+    @Req() req,
+    @Query('userUuid') userUuid: string,
+    @Param('uuid') uuid: string,
+    @Body('reason') reason?: string,
+  ) {
+    const user = req.user as JwtPayload;
+    return await this.roomService.kickUserFromRoom(
+      uuid,
+      user.uuid,
+      userUuid,
+      reason,
+    );
+  }
+
+  @Post('delegate/:uuid')
+  @ApiOperation({
+    summary: '방장 권한을 위임합니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: '위임된 방장과 방 정보를 반환',
+    type: Room,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 아닌 경우, 이미 방장인 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  async delegateRoom(
     @Req() req,
     @Param('uuid') uuid: string,
     @Query('userUuid') userUuid: string,
   ) {
     const user = req.user as JwtPayload;
-    return await this.roomService.kickRoom(uuid, user.uuid, userUuid);
+    return await this.roomService.delegateRoom(uuid, user.uuid, userUuid);
   }
 
   @Post(':roomUuid/settlement')
