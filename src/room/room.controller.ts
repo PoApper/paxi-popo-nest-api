@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBody,
   ApiCookieAuth,
   ApiOperation,
   ApiQuery,
@@ -143,7 +144,6 @@ export class RoomController {
     @Body() updateRoomDto: UpdateRoomDto,
   ) {
     const user = req.user as JwtPayload;
-    // TODO: Update 된 객체 반환하기
     return await this.roomService.update(uuid, updateRoomDto, user);
   }
 
@@ -220,6 +220,17 @@ export class RoomController {
     summary:
       '사용자를 추방합니다. 방장만 가능하며, 사용자의 상태를 KICKED로 변경합니다.',
   })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          description: '강퇴 사유',
+        },
+      },
+    },
+  })
   @ApiResponse({
     status: 200,
     description: '강퇴된 사용자와 방 정보를 반환',
@@ -236,11 +247,12 @@ export class RoomController {
   })
   async kickRoom(
     @Req() req,
-    @Param('uuid') uuid: string,
     @Query('userUuid') userUuid: string,
+    @Param('uuid') uuid: string,
+    @Body('reason') reason?: string,
   ) {
     const user = req.user as JwtPayload;
-    return await this.roomService.kickRoom(uuid, user.uuid, userUuid);
+    return await this.roomService.kickRoom(uuid, user.uuid, userUuid, reason);
   }
 
   @Post('delegate/:uuid')

@@ -312,7 +312,12 @@ export class RoomService {
     }
   }
 
-  async kickRoom(uuid: string, ownerUuid: string, userUuid: string) {
+  async kickRoom(
+    uuid: string,
+    ownerUuid: string,
+    userUuid: string,
+    reason?: string,
+  ) {
     const room = await this.findOne(uuid);
     if (!room) {
       throw new BadRequestException('방이 존재하지 않습니다.');
@@ -337,6 +342,8 @@ export class RoomService {
       throw new BadRequestException('방장은 강퇴할 수 없습니다.');
     }
 
+    console.debug(reason);
+
     const queryRunner =
       this.roomUserRepo.manager.connection.createQueryRunner();
     await queryRunner.startTransaction();
@@ -357,7 +364,7 @@ export class RoomService {
       // RoomUser 상태 변경
       await this.roomUserRepo.update(
         { roomUuid: uuid, userUuid: userUuid },
-        { status: RoomUserStatus.KICKED },
+        { status: RoomUserStatus.KICKED, kickedReason: reason },
       );
 
       await queryRunner.commitTransaction();
