@@ -245,14 +245,19 @@ export class RoomController {
     status: 401,
     description: '로그인이 되어 있지 않은 경우, 방장이 아닌 경우',
   })
-  async kickRoom(
+  async kickFromRoom(
     @Req() req,
     @Query('userUuid') userUuid: string,
     @Param('uuid') uuid: string,
     @Body('reason') reason?: string,
   ) {
     const user = req.user as JwtPayload;
-    return await this.roomService.kickRoom(uuid, user.uuid, userUuid, reason);
+    return await this.roomService.kickFromRoom(
+      uuid,
+      user.uuid,
+      userUuid,
+      reason,
+    );
   }
 
   @Post('delegate/:uuid')
