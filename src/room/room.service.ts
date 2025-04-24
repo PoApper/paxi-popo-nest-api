@@ -316,7 +316,7 @@ export class RoomService {
     }
   }
 
-  async kickFromRoom(
+  async kickUserFromRoom(
     uuid: string,
     ownerUuid: string,
     userUuid: string,
