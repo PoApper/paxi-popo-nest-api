@@ -90,16 +90,16 @@ export class RoomController {
     description: '로그인이 되어 있지 않은 경우',
   })
   @ApiQuery({
-    name: 'all',
+    name: 'viewKicked',
     description:
-      'true인 경우 모든 방을 반환, false인 경우 나가거나 강퇴된 방은 나타나지 않음',
+      'true인 경우 강퇴한 방도 포함하여 반환합니다. 기본값은 false입니다.',
     required: false,
     type: Boolean,
   })
-  findMyRoom(@Req() req, @Query('all') all?: string) {
+  findMyRoom(@Req() req, @Query('viewKicked') viewKicked?: string) {
     // boolean으로 지정해도 nest에서 string으로 받음
     const user = req.user as JwtPayload;
-    return this.roomService.findByUserUuid(user.uuid, all === 'true');
+    return this.roomService.findByUserUuid(user.uuid, viewKicked === 'true');
   }
 
   @Get(':uuid')

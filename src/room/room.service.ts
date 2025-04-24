@@ -3,7 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Room } from 'src/room/entities/room.entity';
@@ -75,16 +75,20 @@ export class RoomService {
     return this.roomRepo.findOneBy({ uuid: uuid });
   }
 
-  findByUserUuid(userUuid: string, all?: boolean) {
-    if (all) {
+  findByUserUuid(userUuid: string, viewKicked?: boolean) {
+    if (viewKicked) {
       return this.roomRepo.find({
         where: {
-          room_users: { userUuid: userUuid },
+          room_users: {
+            userUuid: userUuid,
+            status: In([RoomUserStatus.JOINED, RoomUserStatus.KICKED]),
+          },
         },
         select: {
           room_users: {
             userUuid: false,
             status: true,
+            kickedReason: true,
           },
         },
         relations: {
