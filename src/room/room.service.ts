@@ -3,7 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Not, Repository } from 'typeorm';
+import { In, MoreThan, Not, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Room } from 'src/room/entities/room.entity';
@@ -17,6 +17,7 @@ import { UserService } from 'src/user/user.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
+
 @Injectable()
 export class RoomService {
   constructor(
@@ -65,11 +66,46 @@ export class RoomService {
   }
 
   findAll() {
-    return this.roomRepo.find();
+    // NOTE: 프론트에서 필터링을 하기 때문에 페이지네이션을 하지 않는다.
+    return this.roomRepo.find({
+      where: {
+        status: RoomStatus.ACTIVATED,
+        departureTime: MoreThan(new Date()),
+      },
+      order: { departureTime: 'ASC' },
+    });
   }
 
   findOne(uuid: string) {
     return this.roomRepo.findOneBy({ uuid: uuid });
+  }
+
+  findByUserUuid(userUuid: string, viewKicked?: boolean) {
+    if (viewKicked) {
+      return this.roomRepo.find({
+        where: {
+          room_users: {
+            userUuid: userUuid,
+            status: In([RoomUserStatus.JOINED, RoomUserStatus.KICKED]),
+          },
+        },
+        select: {
+          room_users: {
+            userUuid: false,
+            status: true,
+            kickedReason: true,
+          },
+        },
+        relations: {
+          room_users: true,
+        },
+      });
+    }
+    return this.roomRepo.find({
+      where: {
+        room_users: { userUuid: userUuid, status: RoomUserStatus.JOINED },
+      },
+    });
   }
 
   findUsersByRoomUuid(uuid: string) {
@@ -100,12 +136,14 @@ export class RoomService {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
 
-    // TODO: update 시 리턴 값 findOne으로 변경
-    return this.roomRepo.update({ uuid: uuid }, { ...updateRoomDto });
+    await this.roomRepo.update({ uuid: uuid }, { ...updateRoomDto });
+
+    return await this.roomRepo.findOne({
+      where: { uuid: uuid },
+    });
   }
 
   async remove(uuid: string, userUuid: string) {
-    // TODO: delete 시 리턴 값 지워진 방의 id를 리턴하도록 변경
     const room = await this.findOne(uuid);
     if (!room) {
       throw new BadRequestException('방이 존재하지 않습니다.');
@@ -237,7 +275,6 @@ export class RoomService {
       if (roomUser.room.ownerUuid == userUuid) {
         const newOwnerRoomUser = await this.roomUserRepo.findOneBy({
           roomUuid: uuid,
-          // TODO: 방장이 특정 유저를 새로운 방장으로 지정할 수 있도록 변경
           userUuid: Not(userUuid),
           status: RoomUserStatus.JOINED,
         });
@@ -273,10 +310,8 @@ export class RoomService {
       );
 
       await queryRunner.commitTransaction();
-      // 탑승 인원을 감소시킨 방 정보를 반환할수도?
-      return await this.roomUserRepo.findOne({
-        where: { roomUuid: uuid, userUuid: userUuid },
-        relations: ['room'],
+      return await this.roomRepo.findOne({
+        where: { uuid: uuid },
       });
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -286,7 +321,12 @@ export class RoomService {
     }
   }
 
-  async kickRoom(uuid: string, ownerUuid: string, userUuid: string) {
+  async kickUserFromRoom(
+    uuid: string,
+    ownerUuid: string,
+    userUuid: string,
+    reason?: string,
+  ) {
     const room = await this.findOne(uuid);
     if (!room) {
       throw new BadRequestException('방이 존재하지 않습니다.');
@@ -297,7 +337,7 @@ export class RoomService {
       relations: ['room'],
     });
 
-    if (!roomUser) {
+    if (roomUser?.status != RoomUserStatus.JOINED) {
       throw new BadRequestException(
         '강퇴하려는 사용자가 방에 가입되어 있지 않습니다.',
       );
@@ -305,6 +345,10 @@ export class RoomService {
 
     if (room.ownerUuid != ownerUuid) {
       throw new UnauthorizedException('방장이 아닙니다.');
+    }
+
+    if (room.ownerUuid == userUuid) {
+      throw new BadRequestException('방장은 강퇴할 수 없습니다.');
     }
 
     const queryRunner =
@@ -327,7 +371,7 @@ export class RoomService {
       // RoomUser 상태 변경
       await this.roomUserRepo.update(
         { roomUuid: uuid, userUuid: userUuid },
-        { status: RoomUserStatus.KICKED },
+        { status: RoomUserStatus.KICKED, kickedReason: reason },
       );
 
       await queryRunner.commitTransaction();
@@ -368,6 +412,44 @@ export class RoomService {
     // STATUS가 JOINED인 ROOM_USER의 개수를 반환
     return this.roomUserRepo.count({
       where: { roomUuid: uuid, status: RoomUserStatus.JOINED },
+    });
+  }
+
+  async delegateRoom(uuid: string, ownerUuid: string, userUuid: string) {
+    const room = await this.findOne(uuid);
+    const roomUser = await this.roomUserRepo.findOne({
+      where: {
+        roomUuid: uuid,
+        userUuid: userUuid,
+        status: RoomUserStatus.JOINED,
+      },
+      relations: ['room'],
+    });
+    if (!room) {
+      throw new BadRequestException('방이 존재하지 않습니다.');
+    }
+
+    if (room.ownerUuid != ownerUuid) {
+      throw new UnauthorizedException('방장이 아닙니다.');
+    }
+
+    if (room.ownerUuid == userUuid) {
+      throw new BadRequestException(
+        '자기 자신에게 방장 권한을 위임할 수 없습니다.',
+      );
+    }
+
+    if (!roomUser) {
+      throw new BadRequestException('유저가 방에 가입되어 있지 않습니다.');
+    }
+
+    await this.roomRepo.update(
+      { uuid: uuid },
+      { ownerUuid: userUuid, status: RoomStatus.ACTIVATED },
+    );
+
+    return await this.roomRepo.findOne({
+      where: { uuid: uuid },
     });
   }
 
