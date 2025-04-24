@@ -3,7 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { In, Not, Repository } from 'typeorm';
+import { In, MoreThan, Not, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Room } from 'src/room/entities/room.entity';
@@ -67,7 +67,11 @@ export class RoomService {
 
   findAll() {
     return this.roomRepo.find({
-      where: { status: RoomStatus.ACTIVATED },
+      where: {
+        status: RoomStatus.ACTIVATED,
+        departureTime: MoreThan(new Date()),
+      },
+      order: { departureTime: 'ASC' },
     });
   }
 
