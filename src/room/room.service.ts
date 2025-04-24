@@ -66,6 +66,7 @@ export class RoomService {
   }
 
   findAll() {
+    // NOTE: 프론트에서 필터링을 하기 때문에 페이지네이션을 하지 않는다.
     return this.roomRepo.find({
       where: {
         status: RoomStatus.ACTIVATED,
@@ -349,8 +350,6 @@ export class RoomService {
     if (room.ownerUuid == userUuid) {
       throw new BadRequestException('방장은 강퇴할 수 없습니다.');
     }
-
-    console.debug(reason);
 
     const queryRunner =
       this.roomUserRepo.manager.connection.createQueryRunner();
