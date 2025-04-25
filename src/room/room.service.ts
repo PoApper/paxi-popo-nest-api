@@ -3,7 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { In, MoreThan, Not, Repository } from 'typeorm';
+import { DataSource, In, MoreThan, Not, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Room } from 'src/room/entities/room.entity';
@@ -27,6 +27,7 @@ export class RoomService {
     @InjectRepository(RoomUser)
     private readonly roomUserRepo: Repository<RoomUser>,
     private readonly userService: UserService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(user: JwtPayload, dto: CreateRoomDto) {
@@ -37,7 +38,8 @@ export class RoomService {
       );
     }
 
-    const queryRunner = this.roomRepo.manager.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
@@ -168,7 +170,8 @@ export class RoomService {
       throw new BadRequestException('현재 방은 가입할 수 없습니다.');
     }
 
-    const queryRunner = this.roomRepo.manager.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
     await queryRunner.startTransaction();
 
     const roomUser = await this.roomUserRepo.findOne({
@@ -268,8 +271,8 @@ export class RoomService {
       throw new BadRequestException('방에 가입되어 있지 않습니다.');
     }
 
-    const queryRunner =
-      this.roomUserRepo.manager.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
@@ -352,8 +355,8 @@ export class RoomService {
       throw new BadRequestException('방장은 강퇴할 수 없습니다.');
     }
 
-    const queryRunner =
-      this.roomUserRepo.manager.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
@@ -471,7 +474,7 @@ export class RoomService {
     // 만약 update해야 한다면 dto 것으로 db에 넣기
     // update하지 않기로 했다면 userService 호출하지 않기
     // 두 가지 레포지토리에 대한 Transaction 처리
-    const queryRunner = this.roomRepo.manager.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
@@ -530,7 +533,7 @@ export class RoomService {
       );
     }
 
-    const queryRunner = this.roomRepo.manager.connection.createQueryRunner();
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
