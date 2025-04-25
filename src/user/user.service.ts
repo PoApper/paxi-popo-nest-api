@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import * as crypto from 'crypto';
+import { Injectable } from '@nestjs/common';
 
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -67,19 +67,28 @@ export class UserService {
 
     const encryptedAccountNumber = accountNumber
       ? this.encryptAccountNumber(accountNumber)
-      : account?.encryptedAccountNumber;
+      : undefined;
 
-    return account
-      ? manager.update(
-          { userUuid },
-          { encryptedAccountNumber, accountHolderName, bankName },
-        )
-      : manager.save({
-          userUuid,
+    if (account) {
+      await manager.update(
+        { userUuid },
+        {
           encryptedAccountNumber,
           accountHolderName,
           bankName,
-        });
+        },
+      );
+    } else {
+      await manager.save({
+        userUuid,
+        encryptedAccountNumber,
+        accountHolderName,
+        bankName,
+      });
+    }
+    return manager.findOne({
+      where: { userUuid },
+    });
   }
 
   async getAccount(userUuid: string) {
@@ -89,9 +98,9 @@ export class UserService {
     if (!account) {
       return null;
     }
-    const decryptedAccountNumber = this.decryptAccountNumber(
-      account.encryptedAccountNumber,
-    );
+    const decryptedAccountNumber = account.encryptedAccountNumber
+      ? this.decryptAccountNumber(account.encryptedAccountNumber)
+      : null;
 
     return {
       accountNumber: decryptedAccountNumber,
