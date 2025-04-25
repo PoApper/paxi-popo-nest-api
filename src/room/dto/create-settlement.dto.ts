@@ -20,6 +20,14 @@ export class CreateSettlementDto {
   payerAccountNumber: string;
 
   @IsNotEmpty()
+  @IsString()
+  payerAccountHolderName: string;
+
+  @IsNotEmpty()
+  @IsString()
+  payerBankName: string;
+
+  @IsNotEmpty()
   @IsBoolean()
   updateAccountNumber: boolean;
 }

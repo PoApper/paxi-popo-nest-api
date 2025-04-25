@@ -30,6 +30,8 @@ export class RoomUser {
   @Column({ nullable: true })
   kickedReason: string;
 
+  // TODO: 유저 별 정산 금액 추가
+
   /**
    * Database Relation
    */

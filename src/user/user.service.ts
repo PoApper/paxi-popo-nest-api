@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import * as crypto from 'crypto';
 
 import { User } from './entities/user.entity';
@@ -20,6 +21,7 @@ export class UserService {
     private readonly accountRepo: Repository<Account>,
   ) {}
 
+  // NOTE: 실제 환경에선 호출 X 테스트 환경에서 유저 생성 시 사용
   async save(dto: CreateUserDto) {
     const cryptoSalt = crypto.randomBytes(64).toString('base64');
     const encryptedPassword = this.encryptPassword(dto.password, cryptoSalt);
@@ -47,16 +49,36 @@ export class UserService {
       .toString('base64');
   }
 
-  async createOrUpdateAccount(userUuid: string, accountNumber: string) {
-    const account = await this.accountRepo.findOne({
+  async createOrUpdateAccount(
+    userUuid: string,
+    accountNumber?: string,
+    accountHolderName?: string,
+    bankName?: string,
+    // NOTE: 트랜잭션 처리를 위해 옵션으로 전달
+    queryRunner?: QueryRunner,
+  ) {
+    const manager = queryRunner
+      ? queryRunner.manager.getRepository(Account)
+      : this.accountRepo;
+
+    const account = await manager.findOne({
       where: { userUuid },
     });
-    const encryptedAccountNumber = this.encryptAccountNumber(accountNumber);
+
+    const encryptedAccountNumber = accountNumber
+      ? this.encryptAccountNumber(accountNumber)
+      : account?.encryptedAccountNumber;
+
     return account
-      ? this.accountRepo.update({ userUuid }, { encryptedAccountNumber })
-      : this.accountRepo.save({
+      ? manager.update(
+          { userUuid },
+          { encryptedAccountNumber, accountHolderName, bankName },
+        )
+      : manager.save({
           userUuid,
           encryptedAccountNumber,
+          accountHolderName,
+          bankName,
         });
   }
 
@@ -64,11 +86,18 @@ export class UserService {
     const account = await this.accountRepo.findOne({
       where: { userUuid },
     });
-    console.log('account', account);
     if (!account) {
       return null;
     }
-    return this.decryptAccountNumber(account.encryptedAccountNumber);
+    const decryptedAccountNumber = this.decryptAccountNumber(
+      account.encryptedAccountNumber,
+    );
+
+    return {
+      accountNumber: decryptedAccountNumber,
+      accountHolderName: account.accountHolderName,
+      bankName: account.bankName,
+    };
   }
 
   private encryptAccountNumber(accountNumber: string) {

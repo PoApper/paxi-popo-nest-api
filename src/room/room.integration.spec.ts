@@ -133,6 +133,8 @@ describe('RoomModule - Integration Test', () => {
         payAmount: 10000,
         payerUuid: user.uuid,
         payerAccountNumber: '123-456-7890-1234',
+        payerAccountHolderName: '포닉스',
+        payerBankName: '농협',
         updateAccountNumber: true,
       };
       const settlement = await roomService.requestSettlement(
@@ -153,7 +155,9 @@ describe('RoomModule - Integration Test', () => {
       if (!account) {
         throw new Error('Account retrieval failed');
       }
-      expect(account).toBe(dto.payerAccountNumber);
+      expect(account.accountNumber).toBe(dto.payerAccountNumber);
+      expect(account.accountHolderName).toBe(dto.payerAccountHolderName);
+      expect(account.bankName).toBe(dto.payerBankName);
     });
   });
 });

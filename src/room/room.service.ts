@@ -17,6 +17,7 @@ import { UserService } from 'src/user/user.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
+import { UpdateSettlementDto } from './dto/update-settlement.dto';
 
 @Injectable()
 export class RoomService {
@@ -388,6 +389,7 @@ export class RoomService {
     }
   }
 
+  // TODO: 로직 변경, 이름도 정산을 완료하면 방이 끝나는게 맞으니 completeSettlement로 바꿔야 할 듯
   async completeRoom(uuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
     if (!room) {
@@ -468,31 +470,48 @@ export class RoomService {
     // 계좌번호는 무조건 전달됨
     // 만약 update해야 한다면 dto 것으로 db에 넣기
     // update하지 않기로 했다면 userService 호출하지 않기
-    if (dto.updateAccountNumber) {
-      await this.userService.createOrUpdateAccount(
-        userUuid,
-        dto.payerAccountNumber,
+    // 두 가지 레포지토리에 대한 Transaction 처리
+    const queryRunner = this.roomRepo.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      if (dto.updateAccountNumber) {
+        await this.userService.createOrUpdateAccount(
+          userUuid,
+          dto.payerAccountNumber,
+          dto.payerAccountHolderName,
+          dto.payerBankName,
+          queryRunner,
+        );
+      }
+
+      await this.roomRepo.update(
+        { uuid: uuid },
+        {
+          status: RoomStatus.IN_SETTLEMENT,
+          payerUuid: userUuid,
+          payAmount: dto.payAmount,
+        },
       );
+
+      await queryRunner.commitTransaction();
+
+      return await this.roomRepo.findOne({
+        where: { uuid: uuid },
+      });
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
     }
-
-    await this.roomRepo.update(
-      { uuid: uuid },
-      {
-        status: RoomStatus.IN_SETTLEMENT,
-        payerUuid: userUuid,
-        payAmount: dto.payAmount,
-      },
-    );
-
-    return await this.roomRepo.findOne({
-      where: { uuid: uuid },
-    });
   }
 
   async updateSettlement(
     uuid: string,
     userUuid: string,
-    dto: CreateSettlementDto,
+    dto: UpdateSettlementDto,
   ) {
     const room = await this.findOne(uuid);
     if (!room) {
@@ -505,28 +524,46 @@ export class RoomService {
       );
     }
 
-    // TODO: 이런 필터링 생각해보기
-    // if (room.status != RoomStatus.IN_SETTLEMENT) {
-    //   throw new BadRequestException(
-    //     '정산 정보를 수정할 수 있는 방 상태가 아닙니다.',
-    //   );
-    // }
-
-    if (dto.updateAccountNumber) {
-      await this.userService.createOrUpdateAccount(
-        userUuid,
-        dto.payerAccountNumber,
+    if (room.status != RoomStatus.IN_SETTLEMENT) {
+      throw new BadRequestException(
+        '정산 정보를 수정할 수 있는 방 상태가 아닙니다.',
       );
     }
 
-    return await this.roomRepo.update(
-      { uuid: uuid },
-      {
-        status: RoomStatus.COMPLETED,
-        payerUuid: userUuid,
-        payAmount: dto.payAmount,
-      },
-    );
+    const queryRunner = this.roomRepo.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      if (dto.updateAccountNumber) {
+        await this.userService.createOrUpdateAccount(
+          userUuid,
+          dto.payerAccountNumber,
+          dto.payerAccountHolderName,
+          dto.payerBankName,
+          queryRunner,
+        );
+      }
+
+      await queryRunner.manager.update(
+        Room,
+        { uuid: uuid },
+        {
+          status: RoomStatus.IN_SETTLEMENT,
+          payAmount: dto.payAmount,
+        },
+      );
+      await queryRunner.commitTransaction();
+
+      return await this.roomRepo.findOne({
+        where: { uuid: uuid },
+      });
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async cancelSettlement(uuid: string, userUuid: string) {
@@ -547,14 +584,15 @@ export class RoomService {
       );
     }
 
-    // TODO: roomUser 상태 변경?
-
+    // TODO: roomUser isPaid 컬럼을 false로 변경 -> 초기화
+    // TODO: 리턴 형식 변경
     return await this.roomRepo.update(
       { uuid: uuid },
       {
         status: RoomStatus.ACTIVATED,
-        payerUuid: undefined,
-        payAmount: undefined,
+        // NOTE: update에 undefined를 넣으면 무시됨, 값을 초기화하고 싶으면 null을 넣어야 함
+        payerUuid: null,
+        payAmount: null,
       },
     );
   }
