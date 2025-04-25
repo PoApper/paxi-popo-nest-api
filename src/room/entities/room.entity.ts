@@ -46,6 +46,7 @@ export class Room {
   description: string;
 
   // 정산관련
+  // NOTE: null 값을 넣기 위해서는 type을 명시해줘야 함
   @Column({ type: 'uuid', nullable: true })
   payerUuid: string | null;
 

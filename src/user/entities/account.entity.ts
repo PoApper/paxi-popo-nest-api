@@ -16,7 +16,7 @@ export class Account extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'uuid', nullable: false })
+  @Column({ type: 'uuid', nullable: false, unique: true })
   userUuid: string;
 
   @Column({ type: 'varchar', nullable: false })

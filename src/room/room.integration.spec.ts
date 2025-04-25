@@ -131,11 +131,10 @@ describe('RoomModule - Integration Test', () => {
 
       const dto: CreateSettlementDto = {
         payAmount: 10000,
-        payerUuid: user.uuid,
         payerAccountNumber: '123-456-7890-1234',
         payerAccountHolderName: '포닉스',
         payerBankName: '농협',
-        updateAccountNumber: true,
+        updateAccount: true,
       };
       const settlement = await roomService.requestSettlement(
         room.uuid,
@@ -146,7 +145,6 @@ describe('RoomModule - Integration Test', () => {
       if (!settlement) {
         throw new Error('Settlement creation failed');
       }
-      expect(settlement.payerUuid).toBe(dto.payerUuid);
       expect(settlement.payAmount).toBe(dto.payAmount);
 
       // 계좌번호 복호화 검증

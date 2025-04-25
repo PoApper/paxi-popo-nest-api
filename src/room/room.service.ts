@@ -479,7 +479,7 @@ export class RoomService {
     await queryRunner.startTransaction();
 
     try {
-      if (dto.updateAccountNumber) {
+      if (dto.updateAccount) {
         await this.userService.createOrUpdateAccount(
           userUuid,
           dto.payerAccountNumber,
@@ -500,9 +500,7 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
-      return await this.roomRepo.findOne({
-        where: { uuid: uuid },
-      });
+      return await this.getSettlement(userUuid, uuid);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -538,7 +536,7 @@ export class RoomService {
     await queryRunner.startTransaction();
 
     try {
-      if (dto.updateAccountNumber) {
+      if (dto.updateAccount) {
         await this.userService.createOrUpdateAccount(
           userUuid,
           dto.payerAccountNumber,
@@ -588,8 +586,7 @@ export class RoomService {
     }
 
     // TODO: roomUser isPaid 컬럼을 false로 변경 -> 초기화
-    // TODO: 리턴 형식 변경
-    return await this.roomRepo.update(
+    await this.roomRepo.update(
       { uuid: uuid },
       {
         status: RoomStatus.ACTIVATED,
@@ -598,9 +595,27 @@ export class RoomService {
         payAmount: null,
       },
     );
+
+    return await this.getSettlement(userUuid, uuid);
   }
 
-  async getSettlement(userUuid: string) {
-    return await this.userService.getAccount(userUuid);
+  async getSettlement(userUuid: string, roomUuid: string) {
+    const account = await this.userService.getAccount(userUuid);
+    const room = await this.roomRepo.findOne({
+      where: {
+        uuid: roomUuid,
+      },
+    });
+
+    // Settlement DTO의 내용을 리턴함
+    const settlement = {
+      payerUuid: room?.payerUuid,
+      payAmount: room?.payAmount,
+      payerAccountNumber: account?.accountNumber,
+      payerAccountHolderName: account?.accountHolderName,
+      payerBankName: account?.bankName,
+    };
+
+    return settlement;
   }
 }

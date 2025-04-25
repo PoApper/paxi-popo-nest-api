@@ -337,7 +337,7 @@ export class RoomController {
     const user = req.user as JwtPayload;
     await this.roomService.updateSettlement(roomUuid, user.uuid, dto);
 
-    return await this.roomService.getSettlement(user.uuid);
+    return await this.roomService.getSettlement(user.uuid, roomUuid);
   }
 
   @Delete(':roomUuid/settlement')
@@ -355,16 +355,6 @@ export class RoomController {
   async cancelSettlement(@Param('roomUuid') roomUuid: string, @Req() req) {
     const user = req.user as JwtPayload;
     return await this.roomService.cancelSettlement(roomUuid, user.uuid);
-  }
-
-  @Get('/useraccount')
-  @ApiOperation({
-    summary: '[임시] 유저 계좌정보 반환을 위한 엔드포인트',
-  })
-  async getSettlement(@Req() req) {
-    const user = req.user as JwtPayload;
-    console.log('user', user);
-    return await this.roomService.getSettlement(user.uuid);
   }
 }
 
