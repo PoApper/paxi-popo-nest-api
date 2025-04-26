@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -7,7 +7,8 @@ import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserStatus } from './user.meta';
 import { Account } from './entities/account.entity';
-
+import { adjectives, nouns } from './nickname.meta';
+import { Nickname } from './entities/nickname.entity';
 // 해당 UserService는 테스트 환경에서 가짜 유저를 만들어내기 위해서만 사용되며, 실제 환경에서는 사용되지 않음
 // 실제 환경에서 Paxi는 유저 정보를 읽기만 함
 // 실제 환경에서 사용되지 않기 때문에 controller 또한 없음
@@ -18,6 +19,8 @@ export class UserService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Account)
     private readonly accountRepo: Repository<Account>,
+    @InjectRepository(Nickname)
+    private readonly nicknameRepo: Repository<Nickname>,
   ) {}
 
   async save(dto: CreateUserDto) {
@@ -93,5 +96,33 @@ export class UserService {
       decipher.final(),
     ]);
     return decrypted.toString('utf8');
+  }
+
+  getRandomNickname() {
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const randomNumber = Math.floor(Math.random() * 10000);
+    return `${adjective}_${noun}_${randomNumber}`;
+  }
+
+  async createNickname(userUuid: string, nickname: string) {
+    const existingNickname = await this.nicknameRepo.findOne({
+      where: { userUuid },
+    });
+    if (existingNickname) {
+      throw new ConflictException(
+        '이미 존재하는 닉네임입니다. 다시 시도해 주세요.',
+      );
+    }
+    return this.nicknameRepo.save({
+      userUuid,
+      nickname,
+    });
+  }
+
+  async getNickname(userUuid: string) {
+    return this.nicknameRepo.findOne({
+      where: { userUuid },
+    });
   }
 }
