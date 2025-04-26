@@ -98,11 +98,24 @@ export class UserService {
     return decrypted.toString('utf8');
   }
 
-  getRandomNickname() {
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const randomNumber = Math.floor(Math.random() * 10000);
-    return `${adjective}_${noun}_${randomNumber}`;
+  async generateRandomNickname() {
+    const maxAttempts = 10;
+    for (let i = 0; i < maxAttempts; i++) {
+      const adjective =
+        adjectives[Math.floor(Math.random() * adjectives.length)];
+      const noun = nouns[Math.floor(Math.random() * nouns.length)];
+      const randomNumber = Math.floor(Math.random() * 10000);
+      const randomNickname = `${adjective}_${noun}_${randomNumber}`;
+      const hasTaken = await this.nicknameRepo.findOne({
+        where: { nickname: randomNickname },
+      });
+      if (!hasTaken) {
+        return randomNickname;
+      }
+    }
+    throw new ConflictException(
+      '랜덤 닉네임을 생성하는 데 실패했습니다. 다시 시도해 주세요.',
+    );
   }
 
   async createNickname(userUuid: string, nickname: string) {
