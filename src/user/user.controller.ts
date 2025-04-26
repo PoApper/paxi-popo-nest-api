@@ -23,6 +23,8 @@ import { Roles } from 'src/auth/authorization/roles.decorator';
 
 import { UserService } from './user.service';
 import { UserType } from './user.meta';
+import { Nickname } from './entities/nickname.entity';
+
 @ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('user')
@@ -79,11 +81,8 @@ export class UserController {
   })
   @ApiResponse({
     status: 201,
-    description: '생성된 닉네임을 반환합니다.',
-    schema: {
-      type: 'string',
-      example: '행복한_포닉스_1234',
-    },
+    description: '유저 UUID와 생성된 닉네임을 반환합니다.',
+    type: Nickname,
   })
   @ApiResponse({
     status: 409,
@@ -104,11 +103,7 @@ export class UserController {
   // TODO: 온보딩에서 유저의 닉네임과 계좌번호까지 같이 받을 수 있게 하면 좋을 것 같음
   async createNickname(@Req() req, @Body() body: { nickname: string }) {
     const user = req.user as JwtPayload;
-    const nickname = await this.userService.createNickname(
-      user.uuid,
-      body.nickname,
-    );
-    return nickname;
+    return await this.userService.createNickname(user.uuid, body.nickname);
   }
 
   @Put('nickname/:userUuid')
@@ -149,6 +144,7 @@ export class UserController {
   @UseGuards(RolesGuard)
   @Roles(UserType.student)
   async updateNickname(
+    @Req() req,
     @Param('userUuid') userUuid: string,
     @Body() body: { nickname: string },
   ) {
