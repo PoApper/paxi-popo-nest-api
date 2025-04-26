@@ -72,7 +72,6 @@ export class UserService {
     const account = await this.accountRepo.findOne({
       where: { userUuid },
     });
-    console.log('account', account);
     if (!account) {
       return null;
     }
