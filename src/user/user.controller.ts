@@ -1,16 +1,28 @@
-import { Controller, Get, Post, Req, UseGuards, Body } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Req,
+  UseGuards,
+  Body,
+  Put,
+  Param,
+} from '@nestjs/common';
 import {
   ApiCookieAuth,
   ApiOperation,
   ApiResponse,
   ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/authorization/roles.guard';
+import { Roles } from 'src/auth/authorization/roles.decorator';
 
 import { UserService } from './user.service';
-
+import { UserType } from './user.meta';
 @ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('user')
@@ -77,6 +89,10 @@ export class UserController {
     status: 409,
     description: '닉네임이 이미 존재하는 경우',
   })
+  @ApiResponse({
+    status: 400,
+    description: '이미 닉네임을 갖고 있는 경우',
+  })
   @ApiBody({
     schema: {
       type: 'object',
@@ -94,4 +110,54 @@ export class UserController {
     );
     return nickname;
   }
+
+  @Put('nickname/:userUuid')
+  @ApiOperation({
+    summary: '유저의 닉네임을 수정합니다. 관리자만 가능합니다',
+    description: '부적절한 닉네임을 수정하기 위한 엔드포인트입니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '수정된 닉네임을 반환합니다.',
+    schema: {
+      type: 'string',
+      example: '행복한_포닉스_1234',
+    },
+  })
+  @ApiResponse({
+    status: 409,
+    description: '닉네임이 이미 존재하는 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '닉네임이 존재하지 않는 경우',
+  })
+  @ApiParam({
+    name: 'userUuid',
+    description: '닉네임을 수정할 유저의 UUID',
+    required: true,
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        nickname: { type: 'string', example: '행복한_포닉스_1234' },
+      },
+    },
+  })
+  @UseGuards(RolesGuard)
+  @Roles(UserType.student)
+  async updateNickname(
+    @Param('userUuid') userUuid: string,
+    @Body() body: { nickname: string },
+  ) {
+    const nickname = await this.userService.updateNickname(
+      userUuid,
+      body.nickname,
+    );
+    return nickname;
+  }
+
+  // NOTE: 온보딩 체크 시 닉네임이 사용되므로 삭제 기능은 없음
 }

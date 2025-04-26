@@ -1,4 +1,9 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as crypto from 'crypto';
@@ -123,9 +128,13 @@ export class UserService {
       where: { userUuid },
     });
     if (existingNickname) {
-      throw new ConflictException(
-        '이미 존재하는 닉네임입니다. 다시 시도해 주세요.',
-      );
+      throw new BadRequestException('이미 닉네임을 갖고 있습니다.');
+    }
+    const hasTaken = await this.nicknameRepo.findOne({
+      where: { nickname },
+    });
+    if (hasTaken) {
+      throw new ConflictException('이미 존재하는 닉네임입니다.');
     }
     return this.nicknameRepo.save({
       userUuid,
@@ -137,5 +146,23 @@ export class UserService {
     return this.nicknameRepo.findOne({
       where: { userUuid },
     });
+  }
+
+  async updateNickname(userUuid: string, nickname: string) {
+    const existingNickname = await this.nicknameRepo.findOne({
+      where: { userUuid },
+    });
+    if (!existingNickname) {
+      throw new NotFoundException('유저의 닉네임이 존재하지 않습니다.');
+    }
+    const hasTaken = await this.nicknameRepo.findOne({
+      where: { nickname },
+    });
+    if (hasTaken) {
+      throw new ConflictException('이미 존재하는 닉네임입니다.');
+    }
+
+    await this.nicknameRepo.update({ userUuid }, { nickname });
+    return nickname;
   }
 }
