@@ -96,10 +96,9 @@ export class RoomController {
     required: false,
     type: Boolean,
   })
-  findMyRoom(@Req() req, @Query('viewKicked') viewKicked?: string) {
-    // boolean으로 지정해도 nest에서 string으로 받음
+  findMyRoom(@Req() req, @Query('viewKicked') viewKicked: boolean) {
     const user = req.user as JwtPayload;
-    return this.roomService.findByUserUuid(user.uuid, viewKicked === 'true');
+    return this.roomService.findByUserUuid(user.uuid, viewKicked);
   }
 
   @Get(':uuid')
