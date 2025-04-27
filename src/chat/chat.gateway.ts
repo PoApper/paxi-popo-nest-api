@@ -31,7 +31,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: Socket) {
     try {
       // NOTE: ReactNative에서 웹소켓 연결 시 쿠키 전달이 불가해 쿼리 파라미터로 토큰 전달
-      const token = client.handshake.query.authentication as string;
+      const token = client.handshake.query.Authentication as string;
 
       if (!token) {
         throw new WsException({
