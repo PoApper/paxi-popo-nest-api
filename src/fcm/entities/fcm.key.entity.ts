@@ -5,12 +5,16 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { ApiHideProperty } from '@nestjs/swagger';
+import { Exclude } from 'class-transformer';
 
 import { User } from 'src/user/entities/user.entity';
-
+import { Base } from 'src/common/base.entity';
 @Entity()
-export class FcmKey {
+export class FcmKey extends Base {
   @PrimaryGeneratedColumn()
+  @ApiHideProperty()
+  @Exclude()
   id: number;
 
   @Column({ nullable: false })
@@ -27,5 +31,6 @@ export class FcmKey {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'userUuid', referencedColumnName: 'uuid' })
+  @ApiHideProperty()
   user: User;
 }

@@ -5,14 +5,18 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { ApiHideProperty } from '@nestjs/swagger';
+import { Exclude } from 'class-transformer';
 
 import { RoomUserStatus } from 'src/room/entities/room.user.meta';
 import { Room } from 'src/room/entities/room.entity';
 import { User } from 'src/user/entities/user.entity';
-
+import { Base } from 'src/common/base.entity';
 @Entity()
-export class RoomUser {
+export class RoomUser extends Base {
   @PrimaryGeneratedColumn()
+  @ApiHideProperty()
+  @Exclude()
   id: number;
 
   @Column({ nullable: false })
@@ -38,11 +42,13 @@ export class RoomUser {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'userUuid', referencedColumnName: 'uuid' })
+  @ApiHideProperty()
   user: User;
 
   @ManyToOne(() => Room, (room) => room.room_users, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'roomUuid', referencedColumnName: 'uuid' })
+  @ApiHideProperty()
   room: Room;
 }
