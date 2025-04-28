@@ -241,6 +241,7 @@ export class RoomController {
   })
   async kickUserFromRoom(
     @Req() req,
+    // TODO: 필터링 기능이 아니라서 쿼리 파라미터를 바디로 변경하는건 어떤지?
     @Query('userUuid') userUuid: string,
     @Param('uuid') uuid: string,
     @Body('reason') reason?: string,
@@ -275,6 +276,7 @@ export class RoomController {
   async delegateRoom(
     @Req() req,
     @Param('uuid') uuid: string,
+    // TODO: 필터링 기능이 아니라서 쿼리 파라미터를 바디로 변경하는건 어떤지?
     @Query('userUuid') userUuid: string,
   ) {
     const user = req.user as JwtPayload;
