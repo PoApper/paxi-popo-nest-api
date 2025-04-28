@@ -15,7 +15,6 @@ import {
   ApiBody,
   ApiCookieAuth,
   ApiOperation,
-  ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
 
@@ -89,17 +88,9 @@ export class RoomController {
     status: 401,
     description: '로그인이 되어 있지 않은 경우',
   })
-  @ApiQuery({
-    name: 'viewKicked',
-    description:
-      'true인 경우 강퇴한 방도 포함하여 반환합니다. 기본값은 false입니다.',
-    required: false,
-    type: Boolean,
-  })
-  findMyRoom(@Req() req, @Query('viewKicked') viewKicked?: string) {
-    // boolean으로 지정해도 nest에서 string으로 받음
+  findMyRoom(@Req() req) {
     const user = req.user as JwtPayload;
-    return this.roomService.findByUserUuid(user.uuid, viewKicked === 'true');
+    return this.roomService.findByUserUuid(user.uuid);
   }
 
   @Get(':uuid')
