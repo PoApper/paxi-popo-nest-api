@@ -1,13 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import * as crypto from 'crypto';
+import { Injectable } from '@nestjs/common';
 
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserStatus } from './user.meta';
 import { Account } from './entities/account.entity';
-
+import { adjectives, nouns } from './nickname.meta';
+import { Nickname } from './entities/nickname.entity';
 // 해당 UserService는 테스트 환경에서 가짜 유저를 만들어내기 위해서만 사용되며, 실제 환경에서는 사용되지 않음
 // 실제 환경에서 Paxi는 유저 정보를 읽기만 함
 // 실제 환경에서 사용되지 않기 때문에 controller 또한 없음
@@ -18,8 +26,11 @@ export class UserService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Account)
     private readonly accountRepo: Repository<Account>,
+    @InjectRepository(Nickname)
+    private readonly nicknameRepo: Repository<Nickname>,
   ) {}
 
+  // NOTE: 실제 환경에선 호출 X 테스트 환경에서 유저 생성 시 사용
   async save(dto: CreateUserDto) {
     const cryptoSalt = crypto.randomBytes(64).toString('base64');
     const encryptedPassword = this.encryptPassword(dto.password, cryptoSalt);
@@ -47,28 +58,64 @@ export class UserService {
       .toString('base64');
   }
 
-  async createOrUpdateAccount(userUuid: string, accountNumber: string) {
-    const account = await this.accountRepo.findOne({
+  async createOrUpdateAccount(
+    userUuid: string,
+    accountNumber?: string,
+    accountHolderName?: string,
+    bankName?: string,
+    // NOTE: 트랜잭션 처리를 위해 옵션으로 전달
+    queryRunner?: QueryRunner,
+  ) {
+    const manager = queryRunner
+      ? queryRunner.manager.getRepository(Account)
+      : this.accountRepo;
+
+    const account = await manager.findOne({
       where: { userUuid },
     });
-    const encryptedAccountNumber = this.encryptAccountNumber(accountNumber);
-    return account
-      ? this.accountRepo.update({ userUuid }, { encryptedAccountNumber })
-      : this.accountRepo.save({
-          userUuid,
+
+    const encryptedAccountNumber = accountNumber
+      ? this.encryptAccountNumber(accountNumber)
+      : undefined;
+
+    if (account) {
+      await manager.update(
+        { userUuid },
+        {
           encryptedAccountNumber,
-        });
+          accountHolderName,
+          bankName,
+        },
+      );
+    } else {
+      await manager.save({
+        userUuid,
+        encryptedAccountNumber,
+        accountHolderName,
+        bankName,
+      });
+    }
+    return manager.findOne({
+      where: { userUuid },
+    });
   }
 
   async getAccount(userUuid: string) {
     const account = await this.accountRepo.findOne({
       where: { userUuid },
     });
-    console.log('account', account);
     if (!account) {
       return null;
     }
-    return this.decryptAccountNumber(account.encryptedAccountNumber);
+    const decryptedAccountNumber = account.encryptedAccountNumber
+      ? this.decryptAccountNumber(account.encryptedAccountNumber)
+      : null;
+
+    return {
+      accountNumber: decryptedAccountNumber,
+      accountHolderName: account.accountHolderName,
+      bankName: account.bankName,
+    };
   }
 
   private encryptAccountNumber(accountNumber: string) {
@@ -93,5 +140,68 @@ export class UserService {
       decipher.final(),
     ]);
     return decrypted.toString('utf8');
+  }
+
+  async generateRandomNickname() {
+    const maxAttempts = 10;
+    for (let i = 0; i < maxAttempts; i++) {
+      const adjective =
+        adjectives[Math.floor(Math.random() * adjectives.length)];
+      const noun = nouns[Math.floor(Math.random() * nouns.length)];
+      const randomNumber = Math.floor(Math.random() * 10000);
+      const randomNickname = `${adjective}_${noun}_${randomNumber}`;
+      const hasTaken = await this.nicknameRepo.findOne({
+        where: { nickname: randomNickname },
+      });
+      if (!hasTaken) {
+        return randomNickname;
+      }
+    }
+    throw new ConflictException(
+      '랜덤 닉네임을 생성하는 데 실패했습니다. 다시 시도해 주세요.',
+    );
+  }
+
+  async createNickname(userUuid: string, nickname: string) {
+    const existingNickname = await this.nicknameRepo.findOne({
+      where: { userUuid },
+    });
+    if (existingNickname) {
+      throw new BadRequestException('이미 닉네임을 갖고 있습니다.');
+    }
+    const hasTaken = await this.nicknameRepo.findOne({
+      where: { nickname },
+    });
+    if (hasTaken) {
+      throw new ConflictException('이미 존재하는 닉네임입니다.');
+    }
+    return this.nicknameRepo.save({
+      userUuid,
+      nickname,
+    });
+  }
+
+  async getNickname(userUuid: string) {
+    return this.nicknameRepo.findOne({
+      where: { userUuid },
+    });
+  }
+
+  async updateNickname(userUuid: string, nickname: string) {
+    const existingNickname = await this.nicknameRepo.findOne({
+      where: { userUuid },
+    });
+    if (!existingNickname) {
+      throw new NotFoundException('유저의 닉네임이 존재하지 않습니다.');
+    }
+    const hasTaken = await this.nicknameRepo.findOne({
+      where: { nickname },
+    });
+    if (hasTaken) {
+      throw new ConflictException('이미 존재하는 닉네임입니다.');
+    }
+
+    await this.nicknameRepo.update({ userUuid }, { nickname });
+    return nickname;
   }
 }

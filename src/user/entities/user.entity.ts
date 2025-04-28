@@ -18,6 +18,7 @@ import { Chat } from 'src/chat/entities/chat.entity';
 
 import { UserStatus, UserType } from '../user.meta';
 import { Account } from './account.entity';
+import { Nickname } from './nickname.entity';
 @Entity()
 @Unique(['email'])
 export class User extends BaseEntity {
@@ -90,5 +91,6 @@ export class User extends BaseEntity {
   @ApiHideProperty()
   account: Account;
 
-  // TODO: 계좌번호 추가
+  @OneToOne(() => Nickname, (nickname) => nickname.user)
+  nickname: Nickname;
 }

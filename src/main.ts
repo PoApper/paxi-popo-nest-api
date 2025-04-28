@@ -8,6 +8,7 @@ import {
 import { credential as firebaseCredential } from 'firebase-admin';
 import { ConfigService } from '@nestjs/config';
 import { ClassSerializerInterceptor } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 
 import { AppModule } from './app.module';
 
@@ -16,6 +17,12 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   app.use(cookieParser());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Paxi API')
