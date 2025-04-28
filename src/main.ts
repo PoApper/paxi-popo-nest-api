@@ -7,8 +7,7 @@ import {
 } from 'firebase-admin/app';
 import { credential as firebaseCredential } from 'firebase-admin';
 import { ConfigService } from '@nestjs/config';
-import { ClassSerializerInterceptor } from '@nestjs/common';
-import { ValidationPipe } from '@nestjs/common';
+import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 
 import { AppModule } from './app.module';
 
