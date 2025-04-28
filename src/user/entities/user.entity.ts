@@ -8,6 +8,8 @@ import {
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
+import { ApiHideProperty } from '@nestjs/swagger';
 
 import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
 import { Room } from 'src/room/entities/room.entity';
@@ -39,18 +41,26 @@ export class User extends BaseEntity {
   // TODO: popo-nest-api에서만 변경할 수 있게 해야함
   // 여기서는 변경될 수 없음
   @Column({ nullable: false })
+  @Exclude()
+  @ApiHideProperty()
   password: string;
 
   // 여기서는 변경될 수 없음
   @Column({ nullable: false })
+  @Exclude()
+  @ApiHideProperty()
   cryptoSalt: string;
 
   // 여기서는 변경될 수 없음
   @CreateDateColumn()
+  @Exclude()
+  @ApiHideProperty()
   createdAt: Date;
 
   // 여기서는 변경될 수 없음
   @Column()
+  @Exclude()
+  @ApiHideProperty()
   lastLoginAt: Date;
 
   /**
@@ -58,21 +68,27 @@ export class User extends BaseEntity {
    */
 
   @OneToMany(() => Room, (room) => room.owner)
+  @ApiHideProperty()
   own_rooms: Room[];
 
   @OneToMany(() => Room, (room) => room.payer)
+  @ApiHideProperty()
   pay_rooms: Room[];
 
   @OneToMany(() => RoomUser, (room_user) => room_user.user)
+  @ApiHideProperty()
   room_users: RoomUser[];
 
   @OneToMany(() => FcmKey, (fcm_key) => fcm_key.user)
+  @ApiHideProperty()
   push_keys: FcmKey[];
 
   @OneToMany(() => Chat, (chat) => chat.sender)
+  @ApiHideProperty()
   chats: Chat[];
 
   @OneToOne(() => Account, (account) => account.user)
+  @ApiHideProperty()
   account: Account;
 
   @OneToOne(() => Nickname, (nickname) => nickname.user)

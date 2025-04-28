@@ -66,7 +66,7 @@ export class RoomController {
   })
   @ApiResponse({
     status: 200,
-    description: '모든 방을 반환',
+    description: '출발 시간이 현재보다 이후이고, 모집 중인 모든 방을 반환',
     type: [Room],
   })
   @ApiResponse({
@@ -93,7 +93,7 @@ export class RoomController {
   @ApiQuery({
     name: 'viewKicked',
     description:
-      'true인 경우 강퇴한 방도 포함하여 반환합니다. 기본값은 false입니다.',
+      'true인 경우 강퇴된 방 포함 및 강퇴된 이유를 함께 반환합니다. 기본값은 false입니다.',
     required: false,
     type: Boolean,
   })
@@ -315,6 +315,7 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '정산 정보를 수정합니다.',
+    type: CreateRoomDto,
   })
   @ApiResponse({
     status: 400,

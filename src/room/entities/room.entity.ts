@@ -1,20 +1,20 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
+import { ApiHideProperty } from '@nestjs/swagger';
 
 import { User } from 'src/user/entities/user.entity';
 import { RoomStatus } from 'src/room/entities/room.meta';
 import { RoomUser } from 'src/room/entities/room.user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
+import { Base } from 'src/common/base.entity';
 @Entity()
-export class Room {
+export class Room extends Base {
   @PrimaryGeneratedColumn('uuid')
   uuid: string;
 
@@ -54,12 +54,6 @@ export class Room {
   @Column({ type: 'int', nullable: true })
   payAmount: number | null;
 
-  @CreateDateColumn({ nullable: false })
-  createdAt: Date;
-
-  @UpdateDateColumn({ nullable: false })
-  updatedAt: Date;
-
   /**
    * Database Relation
    */
@@ -68,17 +62,21 @@ export class Room {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'ownerUuid' })
+  @ApiHideProperty()
   owner: User;
 
   @ManyToOne(() => User, (user) => user.pay_rooms, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'payerUuid' })
+  @ApiHideProperty()
   payer: User;
 
   @OneToMany(() => RoomUser, (room_user) => room_user.room)
+  @ApiHideProperty()
   room_users: RoomUser[];
 
   @OneToMany(() => Chat, (chat) => chat.room)
+  @ApiHideProperty()
   chats: Chat[];
 }
