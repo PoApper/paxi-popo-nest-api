@@ -13,6 +13,7 @@ import { User } from 'src/user/entities/user.entity';
 import { RoomStatus } from 'src/room/entities/room.meta';
 import { RoomUser } from 'src/room/entities/room.user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
+import { Report } from 'src/report/entities/report.entity';
 @Entity()
 export class Room {
   @PrimaryGeneratedColumn('uuid')
@@ -78,4 +79,7 @@ export class Room {
 
   @OneToMany(() => Chat, (chat) => chat.room)
   chats: Chat[];
+
+  @OneToMany(() => Report, (report) => report.targetRoom)
+  reported: Report[];
 }

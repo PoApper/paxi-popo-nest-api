@@ -13,6 +13,7 @@ import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
 import { Room } from 'src/room/entities/room.entity';
 import { RoomUser } from 'src/room/entities/room.user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
+import { Report } from 'src/report/entities/report.entity';
 
 import { UserStatus, UserType } from '../user.meta';
 import { Account } from './account.entity';
@@ -73,6 +74,12 @@ export class User extends BaseEntity {
 
   @OneToOne(() => Account, (account) => account.user)
   account: Account;
+
+  @OneToMany(() => Report, (report) => report.reporter)
+  reports: Report[];
+
+  @OneToMany(() => Report, (report) => report.targetUser)
+  reported: Report[];
 
   // TODO: 계좌번호 추가
 }
