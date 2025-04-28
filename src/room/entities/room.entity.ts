@@ -45,11 +45,14 @@ export class Room {
   @Column({ nullable: true, type: 'text' })
   description: string;
 
-  @Column({ nullable: true }) // , collation: 'utf8mb4_general_ci'
-  payerUuid: string;
+  // 정산관련
+  // NOTE: null 값을 넣기 위해서는 type을 명시해줘야 함
+  @Column({ type: 'uuid', nullable: true })
+  payerUuid: string | null;
 
-  @Column({ nullable: true })
-  payAmount: number;
+  // NOTE: 정산 요청 총 금액은 정수형으로 저장
+  @Column({ type: 'int', nullable: true })
+  payAmount: number | null;
 
   @CreateDateColumn({ nullable: false })
   createdAt: Date;
