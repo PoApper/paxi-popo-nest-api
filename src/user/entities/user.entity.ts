@@ -15,6 +15,7 @@ import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
 import { Room } from 'src/room/entities/room.entity';
 import { RoomUser } from 'src/room/entities/room.user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
+import { Report } from 'src/report/entities/report.entity';
 
 import { UserStatus, UserType } from '../user.meta';
 import { Account } from './account.entity';
@@ -91,6 +92,15 @@ export class User extends BaseEntity {
   @ApiHideProperty()
   account: Account;
 
+  @OneToMany(() => Report, (report) => report.reporter)
+  @ApiHideProperty()
+  reports: Report[];
+
+  @OneToMany(() => Report, (report) => report.targetUser)
+  @ApiHideProperty()
+  reported: Report[];
+
   @OneToOne(() => Nickname, (nickname) => nickname.user)
+  @ApiHideProperty()
   nickname: Nickname;
 }

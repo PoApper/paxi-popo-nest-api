@@ -12,7 +12,9 @@ import { User } from 'src/user/entities/user.entity';
 import { RoomStatus } from 'src/room/entities/room.meta';
 import { RoomUser } from 'src/room/entities/room.user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
+import { Report } from 'src/report/entities/report.entity';
 import { Base } from 'src/common/base.entity';
+
 @Entity()
 export class Room extends Base {
   @PrimaryGeneratedColumn('uuid')
@@ -79,4 +81,7 @@ export class Room extends Base {
   @OneToMany(() => Chat, (chat) => chat.room)
   @ApiHideProperty()
   chats: Chat[];
+
+  @OneToMany(() => Report, (report) => report.targetRoom)
+  reported: Report[];
 }
