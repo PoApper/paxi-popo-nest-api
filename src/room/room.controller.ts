@@ -281,7 +281,7 @@ export class RoomController {
     return await this.roomService.delegateRoom(uuid, user.uuid, userUuid);
   }
 
-  @Post(':roomUuid/settlement')
+  @Post(':uuid/settlement')
   @ApiOperation({
     summary: '카풀 방의 정산 정보를 등록합니다.',
   })
@@ -294,15 +294,15 @@ export class RoomController {
     description: '방이 존재하지 않는 경우, 방이 종료된 경우',
   })
   async requestSettlement(
-    @Param('roomUuid') roomUuid: string,
+    @Param('uuid') uuid: string,
     @Req() req,
     @Body() dto: CreateSettlementDto,
   ) {
     const user = req.user as JwtPayload;
-    return await this.roomService.requestSettlement(roomUuid, user.uuid, dto);
+    return await this.roomService.requestSettlement(uuid, user.uuid, dto);
   }
 
-  @Put(':roomUuid/settlement')
+  @Put(':uuid/settlement')
   @ApiOperation({
     summary: '카풀 방의 정산 정보(정산 금액, 정산 계좌)를 수정합니다.',
   })
@@ -324,17 +324,17 @@ export class RoomController {
     description: '정산이 진행되고 있지 않은 경우',
   })
   async updateSettlement(
-    @Param('roomUuid') roomUuid: string,
+    @Param('uuid') uuid: string,
     @Req() req,
     @Body() dto: UpdateSettlementDto,
   ) {
     const user = req.user as JwtPayload;
-    await this.roomService.updateSettlement(roomUuid, user.uuid, dto);
+    await this.roomService.updateSettlement(uuid, user.uuid, dto);
 
-    return await this.roomService.getSettlement(user.uuid, roomUuid);
+    return await this.roomService.getSettlement(user.uuid, uuid);
   }
 
-  @Delete(':roomUuid/settlement')
+  @Delete(':uuid/settlement')
   @ApiOperation({
     summary: '카풀 방의 정산 요청을 취소합니다.',
   })
@@ -346,12 +346,12 @@ export class RoomController {
     status: 400,
     description: '방이 존재하지 않는 경우, 방이 종료된 경우',
   })
-  async cancelSettlement(@Param('roomUuid') roomUuid: string, @Req() req) {
+  async cancelSettlement(@Param('uuid') uuid: string, @Req() req) {
     const user = req.user as JwtPayload;
-    return await this.roomService.cancelSettlement(roomUuid, user.uuid);
+    return await this.roomService.cancelSettlement(uuid, user.uuid);
   }
 
-  @Patch(':roomUuid/:userUuid/pay')
+  @Patch(':uuid/:userUuid/pay')
   @ApiOperation({
     summary: '카풀 방에 대한 유저의 정산 여부를 수정합니다.',
   })
@@ -380,14 +380,14 @@ export class RoomController {
     },
   })
   async updateIsPaid(
-    @Param('roomUuid') roomUuid: string,
+    @Param('uuid') uuid: string,
     @Param('userUuid') userUuid: string,
     @Req() req,
     @Body() body: { isPaid: boolean },
   ) {
     const user = req.user as JwtPayload;
     return await this.roomService.updateRoomUserIsPaid(
-      roomUuid,
+      uuid,
       userUuid,
       user.uuid,
       body.isPaid,
