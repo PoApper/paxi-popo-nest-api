@@ -24,20 +24,11 @@ export class Account extends Base {
   @Column({ type: 'varchar', nullable: false })
   encryptedAccountNumber: string;
 
-  @Column({ type: 'uuid', nullable: false })
-  userUuid: string;
-
   @Column({ type: 'varchar', nullable: false })
   accountHolderName: string;
 
   @Column({ type: 'varchar', nullable: false })
   bankName: string;
-
-  @CreateDateColumn({ nullable: false })
-  createdAt: Date;
-
-  @UpdateDateColumn({ nullable: false })
-  updatedAt: Date;
 
   @OneToOne(() => User, (user) => user.account, {
     onDelete: 'CASCADE',
