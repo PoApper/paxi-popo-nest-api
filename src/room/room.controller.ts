@@ -315,6 +315,7 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '정산 정보를 수정합니다.',
+    type: CreateRoomDto,
   })
   @ApiResponse({
     status: 400,
