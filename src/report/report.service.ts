@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -6,6 +10,7 @@ import { Report } from 'src/report/entities/report.entity';
 import { CreateReportDto } from 'src/report/dto/create-report.dto';
 import { RoomService } from 'src/room/room.service';
 import { UserService } from 'src/user/user.service';
+import { ReportStatus } from 'src/report/entities/report.meta';
 
 @Injectable()
 export class ReportService {
@@ -43,5 +48,20 @@ export class ReportService {
       where: { reporterUuid: reporterUuid },
       relations: ['reporter', 'targetUser', 'targetRoom'],
     });
+  }
+
+  async updateReportStatus(id: number, status: string) {
+    const report = await this.reportRepository.findOne({ where: { id } });
+    if (!report) {
+      throw new NotFoundException('신고를 찾을 수 없습니다.');
+    }
+    report.status = ReportStatus[status];
+    if (!report.status) {
+      throw new BadRequestException('잘못된 신고 상태입니다.');
+    }
+    await this.reportRepository.update(id, {
+      status: report.status,
+    });
+    return report;
   }
 }

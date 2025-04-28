@@ -2,12 +2,19 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
+  Put,
   Req,
   SetMetadata,
   UseGuards,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiCookieAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 
 import { ReportService } from 'src/report/report.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -80,4 +87,45 @@ export class ReportController {
     const user = req.user as JwtPayload;
     return await this.reportService.findByReporterUuid(user.uuid);
   }
+
+  @Put(':id')
+  @ApiOperation({
+    summary: '신고 상태를 업데이트합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '신고 상태 업데이트 성공',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '관리자 권한이 없는 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '신고를 찾을 수 없는 경우',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          description: '신고 상태',
+        },
+      },
+    },
+  })
+  @SetMetadata('roles', [UserType.admin])
+  async updateReportStatus(
+    @Param('id') id: number,
+    @Body() dto: { status: string },
+  ) {
+    return await this.reportService.updateReportStatus(id, dto.status);
+  }
+
+  // TODO: 메일링
 }
