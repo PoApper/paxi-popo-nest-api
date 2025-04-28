@@ -46,7 +46,7 @@ export class Report {
   @JoinColumn({ name: 'targetUserUuid', referencedColumnName: 'uuid' })
   targetUser: User;
 
-  @ManyToOne(() => User, (user) => user.reported, {
+  @ManyToOne(() => Room, (room) => room.reported, {
     onDelete: 'CASCADE',
   })
   targetRoom: Room;

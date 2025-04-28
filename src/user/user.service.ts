@@ -40,6 +40,10 @@ export class UserService {
     return this.userRepo.find(findOptions);
   }
 
+  findOne(uuid: string) {
+    return this.userRepo.findOneBy({ uuid });
+  }
+
   // password encrypt util
   private encryptPassword(password: string, cryptoSalt: string) {
     return crypto

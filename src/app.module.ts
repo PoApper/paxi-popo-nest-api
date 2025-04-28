@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { FcmModule } from 'src/fcm/fcm.module';
 import { RoomModule } from 'src/room/room.module';
+import { ReportModule } from 'src/report/report.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -43,6 +44,7 @@ import configurations from './config/configurations';
     RoomModule,
     ChatModule,
     FcmModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
