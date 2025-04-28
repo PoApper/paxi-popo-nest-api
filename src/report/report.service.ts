@@ -19,12 +19,12 @@ export class ReportService {
   async create(reporterUuid: string, createReportDto: CreateReportDto) {
     const room = await this.roomService.findOne(createReportDto.targetRoomUuid);
     if (!room) {
-      throw new Error('방을 찾을 수 없습니다.');
+      throw new NotFoundException('방을 찾을 수 없습니다.');
     }
 
     const user = await this.userService.findOne(createReportDto.targetUserUuid);
     if (!user) {
-      throw new Error('유저를 찾을 수 없습니다.');
+      throw new NotFoundException('유저를 찾을 수 없습니다.');
     }
     return await this.reportRepository.save({
       ...createReportDto,
