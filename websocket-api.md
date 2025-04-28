@@ -1,18 +1,24 @@
 # WebSocket API Documentation
 
 ## 연결 정보
-- URL: `ws://localhost:4100`
+- local server URL: `ws://localhost:4100`
+- dev server URL: `wss://api.paxi-dev.popo.poapper.club?Authentication=[토큰값]`
 - 인증: Cookie에 'Authentication' 토큰 필요
-  - 토큰이 없거나 유효하지 않은 경우 연결이 거부됨
-  - **React Native에서 Websocket 연결 시 쿠키를 사용할 수 없다면 다른 인증 방법을 사용해야 함 (TODO)**
+  - ~~토큰이 없거나 유효하지 않은 경우 연결이 거부됨~~
+  - ~~**React Native에서 Websocket 연결 시 쿠키를 사용할 수 없다면 다른 인증 방법을 사용해야 함 (TODO)**~~
+  - React Native에서 웹소켓 연결 시 쿠키를 보내지 못한므로 `Authentication` 토큰 값을 쿼리 파라미터에 실어 보냄
 
 ## 이벤트
+
+### 0. 메세지 받기
+- `newMessage`를 listening 해야 함
+- 이벤트로 채팅 혹은 공지 등 새로운 메세지를 받을 수 있음
 
 ### 1. 연결 (Connection)
 - 자동으로 처리됨
 - 연결 시 인증 토큰 검증
 - 연결 성공 시:
-  - `client.data.user`: JWT 페이로드 정보 저장
+  - `client.data.user`: JWT Payload(유저 uuid, usertype, email, 유저이름) 정보 저장
   - `client.data.rooms`: 참여 중인 방 UUID Set 초기화
 
 ### 2. 연결 해제 (Disconnection)
@@ -74,4 +80,4 @@
 
 ## TODO
 - 소켓이 끊어지고 다시 연결될 때 소켓 복원 기능
--  메시지 읽음 처리 기능
+- 메시지 읽음 처리 기능
