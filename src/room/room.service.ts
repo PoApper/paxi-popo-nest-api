@@ -3,7 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { MoreThan, Not, Repository } from 'typeorm';
+import { MoreThan, Not, Repository, DataSource } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Room } from 'src/room/entities/room.entity';
@@ -18,7 +18,6 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
-
 @Injectable()
 export class RoomService {
   constructor(
@@ -27,6 +26,7 @@ export class RoomService {
     @InjectRepository(RoomUser)
     private readonly roomUserRepo: Repository<RoomUser>,
     private readonly userService: UserService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(user: JwtPayload, dto: CreateRoomDto) {
