@@ -16,16 +16,22 @@ export class Account extends BaseEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ type: 'uuid', nullable: false, unique: true })
+  userUuid: string;
+
   @Column({ type: 'varchar', nullable: false })
   encryptedAccountNumber: string;
 
-  @Column({ type: 'uuid', nullable: false })
-  userUuid: string;
+  @Column({ type: 'varchar', nullable: false })
+  accountHolderName: string;
 
-  @CreateDateColumn()
+  @Column({ type: 'varchar', nullable: false })
+  bankName: string;
+
+  @CreateDateColumn({ nullable: false })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ nullable: false })
   updatedAt: Date;
 
   @OneToOne(() => User, (user) => user.account, {
