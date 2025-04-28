@@ -27,6 +27,7 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { Room } from './entities/room.entity';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
+import { UpdateSettlementDto } from './dto/update-settlement.dto';
 @ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('room')
@@ -65,7 +66,7 @@ export class RoomController {
   })
   @ApiResponse({
     status: 200,
-    description: '모든 방을 반환',
+    description: '출발 시간이 현재보다 이후이고, 모집 중인 모든 방을 반환',
     type: [Room],
   })
   @ApiResponse({
@@ -92,14 +93,13 @@ export class RoomController {
   @ApiQuery({
     name: 'viewKicked',
     description:
-      'true인 경우 강퇴한 방도 포함하여 반환합니다. 기본값은 false입니다.',
+      'true인 경우 강퇴된 방 포함 및 강퇴된 이유를 함께 반환합니다. 기본값은 false입니다.',
     required: false,
     type: Boolean,
   })
-  findMyRoom(@Req() req, @Query('viewKicked') viewKicked?: string) {
-    // boolean으로 지정해도 nest에서 string으로 받음
+  findMyRoom(@Req() req, @Query('viewKicked') viewKicked: boolean) {
     const user = req.user as JwtPayload;
-    return this.roomService.findByUserUuid(user.uuid, viewKicked === 'true');
+    return this.roomService.findByUserUuid(user.uuid, viewKicked);
   }
 
   @Get(':uuid')
@@ -310,25 +310,34 @@ export class RoomController {
 
   @Put(':roomUuid/settlement')
   @ApiOperation({
-    summary: '카풀 방의 정산 정보를 수정합니다.',
+    summary: '카풀 방의 정산 정보(정산 금액, 정산 계좌)를 수정합니다.',
   })
   @ApiResponse({
     status: 200,
     description: '정산 정보를 수정합니다.',
+    type: CreateRoomDto,
   })
   @ApiResponse({
     status: 400,
     description: '방이 존재하지 않는 경우, 방이 종료된 경우',
   })
+  @ApiResponse({
+    status: 401,
+    description: '정산자가 아닌 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '정산이 진행되고 있지 않은 경우',
+  })
   async updateSettlement(
     @Param('roomUuid') roomUuid: string,
     @Req() req,
-    @Body() dto: CreateSettlementDto,
+    @Body() dto: UpdateSettlementDto,
   ) {
     const user = req.user as JwtPayload;
     await this.roomService.updateSettlement(roomUuid, user.uuid, dto);
 
-    return await this.roomService.getSettlement(user.uuid);
+    return await this.roomService.getSettlement(user.uuid, roomUuid);
   }
 
   @Delete(':roomUuid/settlement')
@@ -346,16 +355,6 @@ export class RoomController {
   async cancelSettlement(@Param('roomUuid') roomUuid: string, @Req() req) {
     const user = req.user as JwtPayload;
     return await this.roomService.cancelSettlement(roomUuid, user.uuid);
-  }
-
-  @Get('/useraccount')
-  @ApiOperation({
-    summary: '[임시] 유저 계좌정보 반환을 위한 엔드포인트',
-  })
-  async getSettlement(@Req() req) {
-    const user = req.user as JwtPayload;
-    console.log('user', user);
-    return await this.roomService.getSettlement(user.uuid);
   }
 }
 
