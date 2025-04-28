@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateRoomDto {
   @IsString()
@@ -22,10 +23,11 @@ export class CreateRoomDto {
   })
   readonly title: string;
 
+  @Type(() => Date)
   @IsDate()
   @IsNotEmpty()
   @ApiProperty({
-    example: '2026-01-01T00:00:00.000Z',
+    example: '2026-01-01 12:00:00',
   })
   readonly departureTime: Date;
 
