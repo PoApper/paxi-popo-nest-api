@@ -1,9 +1,11 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { ApiHideProperty } from '@nestjs/swagger';
@@ -11,9 +13,8 @@ import { ApiHideProperty } from '@nestjs/swagger';
 import { ChatMessageType } from 'src/chat/entities/chat.meta';
 import { Room } from 'src/room/entities/room.entity';
 import { User } from 'src/user/entities/user.entity';
-import { Base } from 'src/common/base.entity';
 @Entity()
-export class Chat extends Base {
+export class Chat {
   @PrimaryGeneratedColumn('increment')
   @ApiHideProperty()
   @Exclude()
@@ -41,6 +42,12 @@ export class Chat extends Base {
     default: ChatMessageType.TEXT,
   })
   messageType: ChatMessageType;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   /**
    * Database Relation
