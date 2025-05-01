@@ -1,36 +1,37 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   OneToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { ApiHideProperty } from '@nestjs/swagger';
-import { Exclude } from 'class-transformer';
-
-import { Base } from 'src/common/base.entity';
 
 import { User } from './user.entity';
-@Entity()
-export class Account extends Base {
+
+@Entity('nickname')
+export class Nickname {
   @PrimaryGeneratedColumn()
   @ApiHideProperty()
-  @Exclude()
   id: number;
 
   @Column({ type: 'uuid', nullable: false, unique: true })
   userUuid: string;
 
-  @Column({ type: 'varchar', nullable: false })
-  encryptedAccountNumber: string;
+  @Column({ type: 'varchar', length: 20, nullable: false })
+  nickname: string;
 
-  @Column({ type: 'varchar', nullable: false })
-  accountHolderName: string;
+  @CreateDateColumn()
+  @ApiHideProperty()
+  createdAt: Date;
 
-  @Column({ type: 'varchar', nullable: false })
-  bankName: string;
+  @UpdateDateColumn()
+  @ApiHideProperty()
+  updatedAt: Date;
 
-  @OneToOne(() => User, (user) => user.account, {
+  @OneToOne(() => User, (user) => user.nickname, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'userUuid' })

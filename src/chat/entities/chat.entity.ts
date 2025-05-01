@@ -5,7 +5,10 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
+import { ApiHideProperty } from '@nestjs/swagger';
 
 import { ChatMessageType } from 'src/chat/entities/chat.meta';
 import { Room } from 'src/room/entities/room.entity';
@@ -13,6 +16,8 @@ import { User } from 'src/user/entities/user.entity';
 @Entity()
 export class Chat {
   @PrimaryGeneratedColumn('increment')
+  @ApiHideProperty()
+  @Exclude()
   id: number;
 
   @Column({ type: 'uuid', unique: true })
@@ -41,6 +46,9 @@ export class Chat {
   @CreateDateColumn()
   createdAt: Date;
 
+  @UpdateDateColumn()
+  updatedAt: Date;
+
   /**
    * Database Relation
    */
@@ -49,11 +57,13 @@ export class Chat {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'roomUuid' })
+  @ApiHideProperty()
   room: Room;
 
   @ManyToOne(() => User, (user) => user.chats, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'senderUuid' })
+  @ApiHideProperty()
   sender: User;
 }
