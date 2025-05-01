@@ -71,7 +71,7 @@ export class ChatService {
     const baseMessage = await queryBuilder.getOne();
 
     if (!baseMessage) {
-      throw new NotFoundException('기준 메세지를 찾을 수 없습니다.');
+      return [];
     }
 
     const cursorId = baseMessage.id;
