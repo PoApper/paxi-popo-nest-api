@@ -615,6 +615,8 @@ export class RoomService {
       throw new BadRequestException('방에 가입되어 있지 않습니다.');
     }
 
+    // TODO: 정산자에게 정산 완료 알림 기능 추가
+
     await this.roomUserRepo.update({ roomUuid, userUuid }, { isPaid });
 
     return await this.roomUserRepo.findOne({

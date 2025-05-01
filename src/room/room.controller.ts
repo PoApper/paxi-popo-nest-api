@@ -359,7 +359,8 @@ export class RoomController {
   })
   @ApiResponse({
     status: 200,
-    description: '수정된 정산 정보를 반환합니다.',
+    description:
+      '수정된 정산 정보를 반환합니다. TODO: 정산자에게 정산 완료 알림 기능 추가 필요',
     type: RoomUser,
   })
   // TODO: 400, 401 등 공통적인 예외 처리 컨트롤러 단에 적용
