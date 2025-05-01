@@ -163,11 +163,11 @@ export class RoomController {
 
   @Post('join/:uuid')
   @ApiOperation({
-    summary: '방에 참여합니다.',
+    summary: '방에 참여합니다. 첫 입장 및 재입장 모든 경우에 호출됩니다',
   })
   @ApiResponse({
     status: 200,
-    description: '가입된 방 정보를 반환',
+    description: '참여한 방 정보를 반환',
     type: Room,
   })
   @ApiResponse({

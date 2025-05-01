@@ -167,9 +167,7 @@ export class RoomService {
 
     try {
       if (roomUser) {
-        if (roomUser.status == RoomUserStatus.JOINED) {
-          throw new BadRequestException('이미 가입된 방입니다.');
-        } else if (roomUser.status == RoomUserStatus.LEFT) {
+        if (roomUser.status == RoomUserStatus.LEFT) {
           // 가입 상태로 변경
           await queryRunner.manager.update(
             RoomUser,
@@ -180,7 +178,7 @@ export class RoomService {
           throw new BadRequestException('강퇴된 방입니다.');
         }
       } else {
-        // 참여 인원 증가
+        // NOTE: 방 첫 입장, 참여 인원 증가
         const participantsNumber = await this.getParticipantsNumber(uuid);
         if (participantsNumber != room.currentParticipant) {
           // TODO: 로그로 변경
@@ -202,10 +200,29 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
-      return await this.roomUserRepo.findOne({
-        where: { roomUuid: uuid, userUuid: userUuid },
-        relations: ['room'],
-      });
+      const result = await this.roomUserRepo
+        .createQueryBuilder('room_user')
+        .leftJoinAndSelect('room_user.room', 'room')
+        .leftJoinAndSelect('room.room_users', 'room_users')
+        .where('room_user.roomUuid = :roomUuid', { roomUuid: uuid })
+        .andWhere('room_user.userUuid = :userUuid', { userUuid })
+        .getOne();
+
+      // room_user에 nickname을 붙이는 작업
+      // 실명과 필요하지 않은 데이터인 user, kickedReason은 제외
+      const transformed = {
+        ...result?.room,
+        room_users: result?.room?.room_users.map((ru) => {
+          /* eslint-disable-next-line */
+          const { user, kickedReason, ...rest } = ru;
+          return {
+            ...rest,
+            nickname: user?.nickname?.nickname ?? null,
+          };
+        }),
+      };
+
+      return transformed;
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
