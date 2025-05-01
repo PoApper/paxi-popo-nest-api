@@ -178,25 +178,25 @@ export class RoomService {
           throw new BadRequestException('강퇴된 방입니다.');
         }
       } else {
-        // NOTE: 방 첫 입장, 참여 인원 증가
-        const participantsNumber = await this.getParticipantsNumber(uuid);
-        if (participantsNumber != room.currentParticipant) {
-          // TODO: 로그로 변경
-          console.log(
-            'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
-          );
-        }
-        await queryRunner.manager.update(
-          Room,
-          { uuid: uuid },
-          { currentParticipant: participantsNumber + 1 },
-        );
-
         await queryRunner.manager.save(RoomUser, {
           roomUuid: uuid,
           userUuid: userUuid,
         });
       }
+
+      // 증가된 참여 인원 수를 반영
+      const participantsNumber = await this.getParticipantsNumber(uuid);
+      if (participantsNumber != room.currentParticipant + 1) {
+        // TODO: 로그로 변경
+        console.log(
+          'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
+        );
+      }
+      await queryRunner.manager.update(
+        Room,
+        { uuid: uuid },
+        { currentParticipant: participantsNumber },
+      );
 
       await queryRunner.commitTransaction();
 
