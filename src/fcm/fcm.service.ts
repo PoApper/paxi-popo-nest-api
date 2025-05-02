@@ -43,7 +43,7 @@ export class FcmService {
 
   findByUserUuid(userUuid: string) {
     return this.pushKeyRepository.find({
-      where: { userUuid },
+      where: { userUuid: userUuid },
     });
   }
 
@@ -72,6 +72,7 @@ export class FcmService {
           message: message,
         },
         token: await this.findByUserUuid(userUuid).then((tokens) => {
+          console.debug(`tokens: ${JSON.stringify(tokens)}`);
           if (tokens.length > 0) return tokens[0].pushKey;
           throw new BadRequestException('유저의 푸시 키가 존재하지 않습니다.');
         }),
