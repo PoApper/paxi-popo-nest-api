@@ -91,10 +91,10 @@ export class FcmController {
   })
   async sendPushNotificationToMultipleUsers(
     @Req() req,
-    @Body('uuids') body: { uuids: string[] },
+    @Body('uuids') uuids: string[],
   ) {
-    return await this.pushService.sendMultiPushNotificationByUuids(
-      body.uuids,
+    return await this.pushService.sendPushNotificationByUuid(
+      uuids,
       'Test push notification',
     );
   }
