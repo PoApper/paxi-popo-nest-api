@@ -15,6 +15,7 @@ import {
   ApiBody,
   ApiCookieAuth,
   ApiOperation,
+  ApiParam,
   ApiResponse,
 } from '@nestjs/swagger';
 
@@ -26,6 +27,7 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { Room } from './entities/room.entity';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
+import { RoomUser } from './entities/room.user.entity';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
 import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
 @ApiCookieAuth()
@@ -240,6 +242,7 @@ export class RoomController {
   })
   async kickUserFromRoom(
     @Req() req,
+    // TODO: 필터링 기능이 아니라서 쿼리 파라미터를 바디로 변경하는건 어떤지?
     @Query('userUuid') userUuid: string,
     @Param('uuid') uuid: string,
     @Body('reason') reason?: string,
@@ -274,13 +277,14 @@ export class RoomController {
   async delegateRoom(
     @Req() req,
     @Param('uuid') uuid: string,
+    // TODO: 필터링 기능이 아니라서 쿼리 파라미터를 바디로 변경하는건 어떤지?
     @Query('userUuid') userUuid: string,
   ) {
     const user = req.user as JwtPayload;
     return await this.roomService.delegateRoom(uuid, user.uuid, userUuid);
   }
 
-  @Post(':roomUuid/settlement')
+  @Post(':uuid/settlement')
   @ApiOperation({
     summary: '카풀 방의 정산 정보를 등록합니다.',
   })
@@ -293,15 +297,15 @@ export class RoomController {
     description: '방이 존재하지 않는 경우, 방이 종료된 경우',
   })
   async requestSettlement(
-    @Param('roomUuid') roomUuid: string,
+    @Param('uuid') uuid: string,
     @Req() req,
     @Body() dto: CreateSettlementDto,
   ) {
     const user = req.user as JwtPayload;
-    return await this.roomService.requestSettlement(roomUuid, user.uuid, dto);
+    return await this.roomService.requestSettlement(uuid, user.uuid, dto);
   }
 
-  @Put(':roomUuid/settlement')
+  @Put(':uuid/settlement')
   @ApiOperation({
     summary: '카풀 방의 정산 정보(정산 금액, 정산 계좌)를 수정합니다.',
   })
@@ -323,17 +327,17 @@ export class RoomController {
     description: '정산이 진행되고 있지 않은 경우',
   })
   async updateSettlement(
-    @Param('roomUuid') roomUuid: string,
+    @Param('uuid') uuid: string,
     @Req() req,
     @Body() dto: UpdateSettlementDto,
   ) {
     const user = req.user as JwtPayload;
-    await this.roomService.updateSettlement(roomUuid, user.uuid, dto);
+    await this.roomService.updateSettlement(uuid, user.uuid, dto);
 
-    return await this.roomService.getSettlement(user.uuid, roomUuid);
+    return await this.roomService.getSettlement(user.uuid, uuid);
   }
 
-  @Delete(':roomUuid/settlement')
+  @Delete(':uuid/settlement')
   @ApiOperation({
     summary: '카풀 방의 정산 요청을 취소합니다.',
   })
@@ -345,9 +349,85 @@ export class RoomController {
     status: 400,
     description: '방이 존재하지 않는 경우, 방이 종료된 경우',
   })
-  async cancelSettlement(@Param('roomUuid') roomUuid: string, @Req() req) {
+  async cancelSettlement(@Param('uuid') uuid: string, @Req() req) {
     const user = req.user as JwtPayload;
-    return await this.roomService.cancelSettlement(roomUuid, user.uuid);
+    return await this.roomService.cancelSettlement(uuid, user.uuid);
+  }
+
+  @Patch(':uuid/:userUuid/pay')
+  @ApiOperation({
+    summary: '카풀 방에 대한 유저의 정산 여부를 수정합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      '수정된 정산 정보를 반환합니다. TODO: 정산자에게 정산 완료 알림 기능 추가 필요',
+    type: RoomUser,
+  })
+  // TODO: 400, 401 등 공통적인 예외 처리 컨트롤러 단에 적용
+  @ApiResponse({
+    status: 400,
+    description:
+      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 요청자가 정산자 본인이 아닌 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  @ApiBody({
+    description: '정산 여부를 전달합니다. 기존과 같은 값을 받으면 덮어씁니다.',
+    schema: {
+      type: 'object',
+      properties: {
+        isPaid: { type: 'boolean' },
+      },
+    },
+  })
+  async updateIsPaid(
+    @Param('uuid') uuid: string,
+    @Param('userUuid') userUuid: string,
+    @Req() req,
+    @Body() body: { isPaid: boolean },
+  ) {
+    const user = req.user as JwtPayload;
+    return await this.roomService.updateRoomUserIsPaid(
+      uuid,
+      userUuid,
+      user.uuid,
+      body.isPaid,
+    );
+  }
+
+  @Patch(':uuid/complete')
+  @ApiOperation({
+    summary:
+      '모든 정산이 끝난 후 방을 완료 상태로 바꿉니다. 방장이 아닌 정산 신청자, 관리자만 가능합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '완료된 방 정보를 반환',
+    type: Room,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      '방이 존재하지 않는 경우, 방이 종료된 경우, 정산이 진행되고 있지 않은 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '정산자 혹은 관리자가 아닌 경우',
+  })
+  @ApiParam({
+    name: 'uuid',
+    description: '정산 완료를 요청할 방의 UUID',
+  })
+  async completeRoom(@Param('uuid') uuid: string, @Req() req) {
+    const user = req.user as JwtPayload;
+    return await this.roomService.completeRoom(uuid, user.uuid, user.userType);
   }
 }
 

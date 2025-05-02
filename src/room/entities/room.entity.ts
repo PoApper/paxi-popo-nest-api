@@ -83,5 +83,6 @@ export class Room extends Base {
   chats: Chat[];
 
   @OneToMany(() => Report, (report) => report.targetRoom)
+  @ApiHideProperty()
   reported: Report[];
 }
