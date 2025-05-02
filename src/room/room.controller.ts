@@ -27,6 +27,7 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { Room } from './entities/room.entity';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
+import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
 @ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('room')
@@ -163,12 +164,12 @@ export class RoomController {
 
   @Post('join/:uuid')
   @ApiOperation({
-    summary: '방에 참여합니다.',
+    summary: '방에 참여합니다. 첫 입장 및 재입장 모든 경우에 호출됩니다',
   })
   @ApiResponse({
     status: 200,
-    description: '가입된 방 정보를 반환',
-    type: Room,
+    description: '참여한 방 정보를 반환',
+    type: RoomWithUsersDto,
   })
   @ApiResponse({
     status: 400,
@@ -191,7 +192,7 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '사용자와 방 정보를 반환',
-    type: Room,
+    type: RoomWithUsersDto,
   })
   @ApiResponse({
     status: 400,

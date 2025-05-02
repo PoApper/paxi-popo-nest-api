@@ -5,7 +5,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { ApiHideProperty } from '@nestjs/swagger';
+import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
 
 import { RoomUserStatus } from 'src/room/entities/room.user.meta';
@@ -29,6 +29,7 @@ export class RoomUser extends Base {
   status: RoomUserStatus;
 
   @Column({ nullable: false, default: false })
+  @ApiProperty({ example: false })
   isPaid: boolean;
 
   @Column({ nullable: true })
