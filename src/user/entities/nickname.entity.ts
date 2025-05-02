@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ApiHideProperty } from '@nestjs/swagger';
+import { Exclude } from 'class-transformer';
 
 import { User } from './user.entity';
 
@@ -15,6 +16,7 @@ import { User } from './user.entity';
 export class Nickname {
   @PrimaryGeneratedColumn()
   @ApiHideProperty()
+  @Exclude()
   id: number;
 
   @Column({ type: 'uuid', nullable: false, unique: true })

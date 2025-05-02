@@ -167,9 +167,7 @@ export class RoomService {
 
     try {
       if (roomUser) {
-        if (roomUser.status == RoomUserStatus.JOINED) {
-          throw new BadRequestException('이미 가입된 방입니다.');
-        } else if (roomUser.status == RoomUserStatus.LEFT) {
+        if (roomUser.status == RoomUserStatus.LEFT) {
           // 가입 상태로 변경
           await queryRunner.manager.update(
             RoomUser,
@@ -180,32 +178,51 @@ export class RoomService {
           throw new BadRequestException('강퇴된 방입니다.');
         }
       } else {
-        // 참여 인원 증가
-        const participantsNumber = await this.getParticipantsNumber(uuid);
-        if (participantsNumber != room.currentParticipant) {
-          // TODO: 로그로 변경
-          console.log(
-            'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
-          );
-        }
-        await queryRunner.manager.update(
-          Room,
-          { uuid: uuid },
-          { currentParticipant: participantsNumber + 1 },
-        );
-
         await queryRunner.manager.save(RoomUser, {
           roomUuid: uuid,
           userUuid: userUuid,
         });
       }
 
+      // 증가된 참여 인원 수를 반영
+      const participantsNumber = await this.getParticipantsNumber(uuid);
+      if (participantsNumber != room.currentParticipant + 1) {
+        // TODO: 로그로 변경
+        console.log(
+          'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
+        );
+      }
+      await queryRunner.manager.update(
+        Room,
+        { uuid: uuid },
+        { currentParticipant: participantsNumber },
+      );
+
       await queryRunner.commitTransaction();
 
-      return await this.roomUserRepo.findOne({
-        where: { roomUuid: uuid, userUuid: userUuid },
-        relations: ['room'],
-      });
+      const result = await this.roomUserRepo
+        .createQueryBuilder('room_user')
+        .leftJoinAndSelect('room_user.room', 'room')
+        .leftJoinAndSelect('room.room_users', 'room_users')
+        .where('room_user.roomUuid = :roomUuid', { roomUuid: uuid })
+        .andWhere('room_user.userUuid = :userUuid', { userUuid })
+        .getOne();
+
+      // room_user에 nickname을 붙이는 작업
+      // 실명과 필요하지 않은 데이터인 user, kickedReason은 제외
+      const transformed = {
+        ...result?.room,
+        room_users: result?.room?.room_users.map((ru) => {
+          /* eslint-disable-next-line */
+          const { user, kickedReason, ...rest } = ru;
+          return {
+            ...rest,
+            nickname: user?.nickname?.nickname ?? null,
+          };
+        }),
+      };
+
+      return transformed;
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -377,27 +394,6 @@ export class RoomService {
     } finally {
       await queryRunner.release();
     }
-  }
-
-  // TODO: 로직 변경, 이름도 정산을 완료하면 방이 끝나는게 맞으니 completeSettlement로 바꿔야 할 듯
-  async completeRoom(uuid: string, userUuid: string) {
-    const room = await this.findOne(uuid);
-    if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
-    }
-
-    if (room.ownerUuid != userUuid) {
-      throw new UnauthorizedException('방장이 아닙니다.');
-    }
-
-    if (room.status == RoomStatus.COMPLETED) {
-      throw new BadRequestException('이미 종료된 방입니다.');
-    }
-
-    return this.roomRepo.update(
-      { uuid: uuid },
-      { status: RoomStatus.COMPLETED },
-    );
   }
 
   async getParticipantsNumber(uuid: string) {
@@ -572,7 +568,8 @@ export class RoomService {
       );
     }
 
-    // TODO: roomUser isPaid 컬럼을 false로 변경 -> 초기화
+    // TODO: roomUser isPaid 컬럼을 false로 변경 -> 초기화    // TODO: 정산 요청자의 isPaid를 false로 변경, 그냥 모든 사용자의 isPaid를 false로 변경
+
     await this.roomRepo.update(
       { uuid: uuid },
       {
@@ -604,5 +601,67 @@ export class RoomService {
     };
 
     return settlement;
+  }
+
+  async updateRoomUserIsPaid(
+    roomUuid: string,
+    userUuid: string,
+    requestUserUuid: string,
+    isPaid: boolean,
+  ) {
+    if (requestUserUuid != userUuid) {
+      throw new UnauthorizedException(
+        '정산자가 아니므로 정산 정보를 수정할 수 없습니다.',
+      );
+    }
+
+    const room = await this.findOne(roomUuid);
+    if (!room) {
+      throw new BadRequestException('방이 존재하지 않습니다.');
+    }
+
+    const roomUser = await this.roomUserRepo.findOne({
+      where: { roomUuid, userUuid },
+    });
+
+    if (!roomUser) {
+      throw new BadRequestException('방에 가입되어 있지 않습니다.');
+    }
+
+    if (roomUser.status != RoomUserStatus.JOINED) {
+      throw new BadRequestException('방에 가입되어 있지 않습니다.');
+    }
+
+    // TODO: 정산자에게 정산 완료 알림 기능 추가
+
+    await this.roomUserRepo.update({ roomUuid, userUuid }, { isPaid });
+
+    return await this.roomUserRepo.findOne({
+      where: { roomUuid, userUuid },
+    });
+  }
+
+  async completeRoom(uuid: string, userUuid: string, userType: UserType) {
+    const room = await this.findOne(uuid);
+    if (!room) {
+      throw new BadRequestException('방이 존재하지 않습니다.');
+    }
+
+    if (userUuid != room.payerUuid && userType != UserType.admin) {
+      throw new UnauthorizedException('정산자 또는 관리자가 아닙니다.');
+    }
+
+    if (room.status == RoomStatus.COMPLETED) {
+      throw new BadRequestException('이미 종료된 방입니다.');
+    }
+
+    await this.roomRepo.update(
+      { uuid: uuid },
+      { status: RoomStatus.COMPLETED },
+    );
+
+    return await this.roomRepo.findOne({
+      where: { uuid: uuid },
+    });
   }
 }
