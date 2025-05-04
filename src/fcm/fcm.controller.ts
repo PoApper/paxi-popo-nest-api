@@ -65,7 +65,7 @@ export class FcmController {
     summary: '[테스트]푸시 알림을 전송합니다.',
   })
   async sendPushNotification(@Req() req, @Query('uuid') uuid: string) {
-    return await this.pushService.sendPushNotificationByUuid(
+    return await this.pushService.sendPushNotificationByUserUuid(
       uuid,
       'Test push notification',
     );
@@ -92,7 +92,7 @@ export class FcmController {
     @Req() req,
     @Body('uuids') uuids: string[],
   ) {
-    return await this.pushService.sendPushNotificationByUuid(
+    return await this.pushService.sendPushNotificationByUserUuid(
       uuids,
       'Test push notification',
     );

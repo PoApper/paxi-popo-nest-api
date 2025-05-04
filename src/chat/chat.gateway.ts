@@ -5,15 +5,17 @@ import {
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
+  WebSocketServer,
   WsException,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
+import { Socket, Server } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { UseFilters } from '@nestjs/common';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { RoomService } from 'src/room/room.service';
 import { RoomUserStatus } from 'src/room/entities/room.user.meta';
+import { FcmService } from 'src/fcm/fcm.service';
 
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
@@ -26,7 +28,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly chatService: ChatService,
     private readonly roomService: RoomService,
+    private readonly fcmService: FcmService,
   ) {}
+
+  @WebSocketServer()
+  server: Server;
 
   async handleConnection(client: Socket) {
     try {
@@ -154,6 +160,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('newMessage', chatMessage);
       // 본인을 제외한 방 유저들에게 메시지 전송
       client.to(roomUuid).emit('newMessage', chatMessage);
+
+      // 푸시 알림 전송
+      // 해당 방에 소켓이 연결된 유저의 uuid 불러오기
+      const usersInSocketRoom = Array.from(
+        this.server.sockets.adapter.rooms.get(roomUuid) || [],
+      )
+        .map(
+          (socketId) =>
+            this.server.sockets.sockets.get(socketId)?.data?.user.uuid,
+        )
+        .filter((user) => user !== undefined);
+      // 방에 참여한 유저 중 소켓이 연결되지 않은 유저에게 푸시 알림 전송
+      this.fcmService
+        .sendPushNotificationByUserUuid(
+          roomUser
+            .map((user) => user.userUuid)
+            .filter((uuid) => !usersInSocketRoom.includes(uuid)),
+          message,
+        )
+        .catch(console.error);
     } catch (error) {
       throw new WsException(`메시지 전송에 실패했습니다. ${error.message}`);
     }
