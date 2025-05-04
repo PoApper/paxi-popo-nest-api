@@ -65,7 +65,6 @@ export class FcmController {
     summary: '[테스트]푸시 알림을 전송합니다.',
   })
   async sendPushNotification(@Req() req, @Query('uuid') uuid: string) {
-    console.debug(`sendPushNotification: ${uuid}`);
     return await this.pushService.sendPushNotificationByUuid(
       uuid,
       'Test push notification',
