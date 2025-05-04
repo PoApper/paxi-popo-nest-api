@@ -135,6 +135,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const { roomUuid, message } = payload;
 
       // 방에 참여한 유저인지 확인
+      if (!client.data.rooms.has(roomUuid)) {
+        throw new WsException('방에 속한 유저가 아닙니다.');
+      }
+
+      // 방에 속한 유저인지 확인
       const roomUser = await this.roomService.findUsersByRoomUuid(roomUuid);
       if (roomUser.length === 0) {
         throw new WsException('방을 찾을 수 없습니다.');
