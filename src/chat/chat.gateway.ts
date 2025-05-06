@@ -59,9 +59,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
       client.disconnect();
       // 서버에 로그남기는 용도
-      throw new WsException({
-        message: `웹소켓 연결에 실패했습니다. ${error.message}`,
-      });
+      console.log(`웹소켓 연결에 실패했습니다. ${error.message}`);
     }
   }
 
