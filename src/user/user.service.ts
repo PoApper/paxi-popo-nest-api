@@ -54,6 +54,17 @@ export class UserService {
     return this.userRepo.findOneBy({ uuid });
   }
 
+  getUserName(uuid: string) {
+    return this.userRepo
+      .findOne({
+        where: { uuid },
+        select: ['name'],
+      })
+      .then((user) => {
+        return user?.name;
+      });
+  }
+
   // password encrypt util
   private encryptPassword(password: string, cryptoSalt: string) {
     return crypto

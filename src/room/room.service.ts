@@ -98,6 +98,17 @@ export class RoomService {
     });
   }
 
+  getRoomTitle(uuid: string) {
+    return this.roomRepo
+      .findOne({
+        where: { uuid: uuid },
+        select: { title: true },
+      })
+      .then((room) => {
+        return room?.title;
+      });
+  }
+
   findUsersByRoomUuid(uuid: string) {
     return this.roomUserRepo.findBy({ roomUuid: uuid });
   }

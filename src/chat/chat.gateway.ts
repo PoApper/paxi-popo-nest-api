@@ -16,6 +16,7 @@ import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { RoomService } from 'src/room/room.service';
 import { RoomUserStatus } from 'src/room/entities/room.user.meta';
 import { FcmService } from 'src/fcm/fcm.service';
+import { UserService } from 'src/user/user.service';
 
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
@@ -28,6 +29,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly chatService: ChatService,
     private readonly roomService: RoomService,
+    private readonly userService: UserService,
     private readonly fcmService: FcmService,
   ) {}
 
@@ -118,6 +120,30 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('newMessage', systemMessage);
         // 방 유저들에게 메시지 전송
         client.to(roomUuid).emit('newMessage', systemMessage);
+
+        // 푸시 알림 전송
+        // 해당 방에 소켓이 연결된 유저의 uuid 불러오기
+        const usersInSocketRoom = Array.from(
+          this.server.sockets.adapter.rooms.get(roomUuid) || [],
+        )
+          .map(
+            (socketId) =>
+              this.server.sockets.sockets.get(socketId)?.data?.user.uuid,
+          )
+          .filter((user) => user !== undefined);
+        // 방에 참여한 유저 중 소켓이 연결되지 않은 유저에게 푸시 알림 전송
+        this.fcmService
+          .sendPushNotificationByUserUuid(
+            roomUser
+              .map((user) => user.userUuid)
+              .filter((uuid) => !usersInSocketRoom.includes(uuid)),
+            `${await this.roomService.getRoomTitle(roomUuid)} | ${await this.userService.getUserName(client.data.user.uuid)}`,
+            message,
+            {
+              roomUuid: roomUuid,
+            },
+          )
+          .catch(console.error);
       } else {
         // TODO: 이미 참여한 방일 경우 메세지 읽음 처리
       }
@@ -182,7 +208,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           roomUser
             .map((user) => user.userUuid)
             .filter((uuid) => !usersInSocketRoom.includes(uuid)),
+          `${await this.roomService.getRoomTitle(roomUuid)} | ${await this.userService.getUserName(client.data.user.uuid)}`,
           message,
+          {
+            roomUuid: roomUuid,
+          },
         )
         .catch(console.error);
     } catch (error) {

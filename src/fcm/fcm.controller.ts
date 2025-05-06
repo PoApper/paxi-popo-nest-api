@@ -62,27 +62,34 @@ export class FcmController {
 
   @Post('send')
   @ApiOperation({
-    summary: '[테스트]푸시 알림을 전송합니다.',
-  })
-  async sendPushNotification(@Req() req, @Query('uuid') uuid: string) {
-    return await this.pushService.sendPushNotificationByUserUuid(
-      uuid,
-      'Test push notification',
-    );
-  }
-
-  @Post('send/multiple')
-  @ApiOperation({
     summary: '[테스트]푸시 알림을 여러 사용자에게 전송합니다.',
   })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        uuids: {
+        userUuids: {
           type: 'array',
           items: {
             type: 'string',
+            example: '45281c1e-61e5-4628-8821-6e0cb0940fd3',
+          },
+        },
+        title: {
+          type: 'string',
+          example: 'Test push notification',
+        },
+        body: {
+          type: 'string',
+          example: 'This is a test push notification.',
+        },
+        data: {
+          type: 'object',
+          properties: {
+            roomUuid: {
+              type: 'string',
+              example: '45281c1e-61e5-4628-8821-6e0cb0940fd3',
+            },
           },
         },
       },
@@ -90,11 +97,19 @@ export class FcmController {
   })
   async sendPushNotificationToMultipleUsers(
     @Req() req,
-    @Body('uuids') uuids: string[],
+    @Body()
+    body: {
+      userUuids: string[];
+      title: string;
+      body: string;
+      data?: any;
+    },
   ) {
     return await this.pushService.sendPushNotificationByUserUuid(
-      uuids,
-      'Test push notification',
+      body.userUuids,
+      body.title,
+      body.body,
+      body.data,
     );
   }
 }
