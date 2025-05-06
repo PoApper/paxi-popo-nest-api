@@ -137,8 +137,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             roomUser
               .map((user) => user.userUuid)
               .filter((uuid) => !usersInSocketRoom.includes(uuid)),
-            `${await this.roomService.getRoomTitle(roomUuid)} | ${await this.userService.getUserName(client.data.user.uuid)}`,
-            message,
+            `${await this.roomService.getRoomTitle(roomUuid)}`,
+            systemMessage.message,
             {
               roomUuid: roomUuid,
             },
