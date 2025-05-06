@@ -28,6 +28,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly roomService: RoomService,
   ) {}
 
+  private readonly logger = new Logger(ChatGateway.name);
+
   async handleConnection(client: Socket) {
     try {
       // NOTE: ReactNative에서 웹소켓 연결 시 쿠키 전달이 불가해 쿼리 파라미터로 토큰 전달
@@ -59,7 +61,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
       client.disconnect();
       // 서버에 로그남기는 용도
-      Logger.error(`웹소켓 연결에 실패했습니다. ${error}`);
+      this.logger.error(`웹소켓 연결에 실패했습니다. ${error}`);
     }
   }
 
