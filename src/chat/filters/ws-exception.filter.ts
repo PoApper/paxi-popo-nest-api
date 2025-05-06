@@ -20,6 +20,6 @@ export class WsExceptionFilter implements ExceptionFilter {
     // 클라이언트에게 에러 이벤트 전송
     client.emit('error', errorResponse);
     // 서버 콘솔에 로그 남기기
-    this.logger.error('Websocket 에러 발생:', errorResponse);
+    this.logger.error(exception);
   }
 }
