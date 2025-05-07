@@ -1,12 +1,19 @@
 import {
+  Body,
   Controller,
   Delete,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBody,
+  ApiCookieAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.payload';
@@ -57,7 +64,7 @@ export class FcmController {
   @ApiOperation({
     summary: '[테스트]푸시 알림을 전송합니다.',
   })
-  async sendPushNotification(@Req() req, @Param('uuid') uuid: string) {
+  async sendPushNotification(@Req() req, @Query('uuid') uuid: string) {
     return await this.pushService.sendPushNotificationByUuid(
       uuid,
       'Test push notification',
@@ -68,11 +75,24 @@ export class FcmController {
   @ApiOperation({
     summary: '[테스트]푸시 알림을 여러 사용자에게 전송합니다.',
   })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        uuids: {
+          type: 'array',
+          items: {
+            type: 'string',
+          },
+        },
+      },
+    },
+  })
   async sendPushNotificationToMultipleUsers(
     @Req() req,
-    @Param('uuids') uuids: string[],
+    @Body('uuids') uuids: string[],
   ) {
-    return await this.pushService.sendMultiPushNotificationByUuids(
+    return await this.pushService.sendPushNotificationByUuid(
       uuids,
       'Test push notification',
     );
