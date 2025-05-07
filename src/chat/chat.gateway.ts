@@ -9,8 +9,8 @@ import {
 } from '@nestjs/websockets';
 import { Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { UseFilters } from '@nestjs/common';
 import { instanceToPlain } from 'class-transformer';
+import { Logger, UseFilters } from '@nestjs/common';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { RoomService } from 'src/room/room.service';
@@ -28,6 +28,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chatService: ChatService,
     private readonly roomService: RoomService,
   ) {}
+
+  private readonly logger = new Logger(ChatGateway.name);
 
   async handleConnection(client: Socket) {
     try {
@@ -60,9 +62,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
       client.disconnect();
       // 서버에 로그남기는 용도
-      throw new WsException({
-        message: `웹소켓 연결에 실패했습니다. ${error.message}`,
-      });
+      this.logger.error(`웹소켓 연결에 실패했습니다. ${error}`);
     }
   }
 
