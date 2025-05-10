@@ -10,6 +10,7 @@ import {
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
+import { instanceToPlain } from 'class-transformer';
 import { Logger, UseFilters } from '@nestjs/common';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
@@ -100,8 +101,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new WsException('방에 속한 유저가 아닙니다.');
       }
 
-      // TODO: 채팅방 메세지 불러오기 기능 구현
       // 첫 입장 시 시스템 메시지 전송
+      // TODO: 현재는 휘발 가능성이 있는 메모리에 첫 입장 여부를 판단하고 있음.
+      // 이 상황에서는 서버가 껐다 켜지면 기존에 있던 유저들도 첫 입장으로 판단할 수 있음.
+      // 첫 입장 여부를 판단할 다른 방법 필요
       if (!client.data.rooms.has(roomUuid)) {
         // 유저 소켓의 rooms에 roomUuid 추가
         await client.join(roomUuid);
@@ -116,9 +119,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
 
         // 내 화면 반영을 위해 본인에게 메시지 전송
-        client.emit('newMessage', systemMessage);
+        client.emit('newMessage', instanceToPlain(systemMessage));
         // 방 유저들에게 메시지 전송
-        client.to(roomUuid).emit('newMessage', systemMessage);
+        client.to(roomUuid).emit('newMessage', instanceToPlain(systemMessage));
 
         // 푸시 알림 전송
         // 해당 방에 소켓이 연결된 유저의 uuid 불러오기
@@ -187,9 +190,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       // 내 화면 반영을 위해 본인에게 메시지 전송
-      client.emit('newMessage', chatMessage);
+      // instanceToPlain()으로 id를 제외한 객체를 반환
+      client.emit('newMessage', instanceToPlain(chatMessage));
       // 본인을 제외한 방 유저들에게 메시지 전송
-      client.to(roomUuid).emit('newMessage', chatMessage);
+      client.to(roomUuid).emit('newMessage', instanceToPlain(chatMessage));
 
       // 푸시 알림 전송
       // 해당 방에 소켓이 연결된 유저의 uuid 불러오기
@@ -241,11 +245,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         messageType: ChatMessageType.TEXT,
       });
 
-      client.to(roomUuid).emit('newMessage', systemMessage);
+      client.to(roomUuid).emit('newMessage', instanceToPlain(systemMessage));
     } catch (error) {
       throw new WsException(`방 나가기에 실패했습니다. ${error.message}`);
     }
   }
-
-  // TODO: 소켓이 끊어지고 다시 연결될 때 소켓 복원 기능 추가
 }
