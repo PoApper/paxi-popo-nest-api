@@ -41,15 +41,11 @@ export class FcmService {
     }
   }
 
-  findByUserUuid(userUuid: string) {
+  findByUserUuids(userUuids: string | string[]) {
     return this.pushKeyRepository.find({
-      where: { userUuid: userUuid },
-    });
-  }
-
-  findByMultipleUserUuid(userUuids: string[]) {
-    return this.pushKeyRepository.find({
-      where: { userUuid: In(userUuids) },
+      where: {
+        userUuid: In(Array.isArray(userUuids) ? userUuids : [userUuids]),
+      },
     });
   }
 
@@ -65,73 +61,61 @@ export class FcmService {
     });
   }
 
-  async sendPushNotificationByUuid(userUuid: string, message: string) {
-    await getMessaging()
-      .send({
-        data: {
-          message: message,
-        },
-        token: await this.findByUserUuid(userUuid).then((tokens) => {
-          console.debug(`tokens: ${JSON.stringify(tokens)}`);
-          if (tokens.length > 0) return tokens[0].pushKey;
-          throw new BadRequestException('유저의 푸시 키가 존재하지 않습니다.');
-        }),
-      })
-      .then((response) => {
-        return response;
-      });
-  }
-
-  async sendPushNotificationByToken(token: string, message: string) {
-    await getMessaging()
-      .send({
-        data: {
-          message: message,
-        },
-        token: token,
-      })
-      .then((response) => {
-        return response;
-      });
-  }
-
-  async sendMultiPushNotificationByUuids(userUuids: string[], message: string) {
-    const tokens = await this.findByMultipleUserUuid(userUuids);
-    if (tokens.length === 0) {
-      throw new BadRequestException('No push keys found for users');
-    }
-
-    getMessaging()
+  async sendPushNotificationByUserUuid(
+    userUuids: string | string[],
+    title: string,
+    body: string,
+    data?: any,
+  ) {
+    const tokens = await this.findByUserUuids(userUuids);
+    return getMessaging()
       .sendEachForMulticast({
-        data: {
-          message: message,
+        tokens: tokens.map((token) => token.pushKey),
+        notification: {
+          title: title,
+          body: body,
         },
-        tokens: await this.findByMultipleUserUuid(userUuids).then((tokens) => {
-          return tokens.map((token) => token.pushKey);
-        }),
-      })
-      .then((response) => {
-        if (response.failureCount > 0) {
-          throw new BadRequestException('유저의 푸시 키가 존재하지 않습니다.');
-        }
+        // Intent를 통해 전달할 데이터
+        data: data,
+        // iOS
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true, // 백그라운드 푸시 알림을 위한 설정
+            },
+          },
+        },
       })
       .then((response) => {
         return response;
       });
   }
 
-  async sendMultiPushNotificationByTokens(tokens: string[], message: string) {
-    await getMessaging()
+  async sendPushNotificationByToken(
+    tokens: string | string[],
+    title: string,
+    body: string,
+    data?: any,
+  ) {
+    return getMessaging()
       .sendEachForMulticast({
-        data: {
-          message: message,
+        tokens: Array.isArray(tokens) ? tokens : [tokens],
+        notification: {
+          title: title,
+          body: body,
         },
-        tokens: tokens,
+        data: data,
+        // iOS
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true, // 백그라운드 푸시 알림을 위한 설정
+            },
+          },
+        },
       })
       .then((response) => {
         return response;
       });
   }
-
-  // TODO: message 형식 정하기
 }

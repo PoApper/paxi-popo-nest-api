@@ -9,5 +9,6 @@ import { FcmKey } from './entities/fcm.key.entity';
   imports: [TypeOrmModule.forFeature([FcmKey])],
   providers: [FcmService],
   controllers: [FcmController],
+  exports: [FcmService],
 })
 export class FcmModule {}
