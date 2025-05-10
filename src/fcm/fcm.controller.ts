@@ -2,8 +2,8 @@ import {
   Body,
   Controller,
   Delete,
-  Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -24,9 +24,21 @@ import { FcmService } from './fcm.service';
 export class FcmController {
   constructor(private readonly pushService: FcmService) {}
 
-  @Post('key/:key')
+  @Post('key')
   @ApiOperation({
     summary: '푸시 키를 등록합니다.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        key: {
+          type: 'string',
+          example:
+            'f--Nyw4kpLeTUwB2My2HCq:APA91bFOcbLl7jyVvlGJUx59aXdRFwQdwjPg2oP4iekHKdz7G0AkJ6CexBzHv4gglondgYa2rw2CIIPoRmZjBdu-HuQwZd9nYUhdhyiTc1234cIMmMjdies',
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 201,
@@ -37,12 +49,12 @@ export class FcmController {
     status: 400,
     description: '푸시 키 등록 실패',
   })
-  async registerPushKey(@Req() req, @Param('key') key: string) {
+  async registerPushKey(@Req() req, @Body('key') key: string) {
     const user = req.user as JwtPayload;
     return await this.pushService.createPushKey(key, user);
   }
 
-  @Delete('key/:key')
+  @Delete('key')
   @ApiOperation({
     summary: '푸시 키를 삭제합니다.',
   })
@@ -54,7 +66,7 @@ export class FcmController {
     status: 400,
     description: '푸시 키 또는 유저가 존재하지 않는 경우 삭제 실패',
   })
-  async deletePushKey(@Req() req, @Param('key') key: string) {
+  async deletePushKey(@Req() req, @Query('key') key: string) {
     const user = req.user as JwtPayload;
     return await this.pushService.deletePushKey(key, user);
   }
