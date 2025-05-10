@@ -68,7 +68,6 @@ export class FcmService {
     data?: any,
   ) {
     const tokens = await this.findByUserUuids(userUuids);
-
     return getMessaging()
       .sendEachForMulticast({
         tokens: tokens.map((token) => token.pushKey),

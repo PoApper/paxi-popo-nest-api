@@ -146,6 +146,7 @@ export class FcmController {
       body.title,
       body.body,
       body.data,
+
     );
   }
 }
