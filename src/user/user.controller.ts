@@ -49,7 +49,7 @@ export class UserController {
       type: 'object',
       properties: {
         onboardingStatus: { type: 'boolean', example: true },
-        nickname: { type: 'string', example: '행복한_포닉스_1234' },
+        nickname: { type: 'string', example: '행복한_수소_1234' },
       },
     },
   })
@@ -96,7 +96,7 @@ export class UserController {
     schema: {
       type: 'object',
       properties: {
-        nickname: { type: 'string', example: '행복한_포닉스_1234' },
+        nickname: { type: 'string', example: '행복한_수소_1234' },
       },
     },
   })
@@ -116,7 +116,7 @@ export class UserController {
     description: '수정된 닉네임을 반환합니다.',
     schema: {
       type: 'string',
-      example: '행복한_포닉스_1234',
+      example: '행복한_수소_1234',
     },
   })
   @ApiResponse({
@@ -137,7 +137,7 @@ export class UserController {
     schema: {
       type: 'object',
       properties: {
-        nickname: { type: 'string', example: '행복한_포닉스_1234' },
+        nickname: { type: 'string', example: '행복한_수소_1234' },
       },
     },
   })

@@ -61,20 +61,30 @@ export class FcmService {
     });
   }
 
-  async sendPushNotificationByUuid(
+  async sendPushNotificationByUserUuid(
     userUuids: string | string[],
-    message: string,
+    title: string,
+    body: string,
+    data?: any,
   ) {
     const tokens = await this.findByUserUuids(userUuids);
-    if (tokens.length === 0) {
-      throw new BadRequestException('No push keys found');
-    }
     return getMessaging()
       .sendEachForMulticast({
-        data: {
-          message: message,
-        },
         tokens: tokens.map((token) => token.pushKey),
+        notification: {
+          title: title,
+          body: body,
+        },
+        // Intent를 통해 전달할 데이터
+        data: data,
+        // iOS
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true, // 백그라운드 푸시 알림을 위한 설정
+            },
+          },
+        },
       })
       .then((response) => {
         return response;
@@ -83,19 +93,29 @@ export class FcmService {
 
   async sendPushNotificationByToken(
     tokens: string | string[],
-    message: string,
+    title: string,
+    body: string,
+    data?: any,
   ) {
-    await getMessaging()
+    return getMessaging()
       .sendEachForMulticast({
-        data: {
-          message: message,
-        },
         tokens: Array.isArray(tokens) ? tokens : [tokens],
+        notification: {
+          title: title,
+          body: body,
+        },
+        data: data,
+        // iOS
+        apns: {
+          payload: {
+            aps: {
+              contentAvailable: true, // 백그라운드 푸시 알림을 위한 설정
+            },
+          },
+        },
       })
       .then((response) => {
         return response;
       });
   }
-
-  // TODO: message 형식 정하기
 }

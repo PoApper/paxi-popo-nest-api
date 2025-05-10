@@ -5,9 +5,10 @@ import {
   OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
+  WebSocketServer,
   WsException,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
+import { Socket, Server } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { instanceToPlain } from 'class-transformer';
 import { Logger, UseFilters } from '@nestjs/common';
@@ -15,6 +16,8 @@ import { Logger, UseFilters } from '@nestjs/common';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { RoomService } from 'src/room/room.service';
 import { RoomUserStatus } from 'src/room/entities/room.user.meta';
+import { FcmService } from 'src/fcm/fcm.service';
+import { UserService } from 'src/user/user.service';
 
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
@@ -27,8 +30,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly jwtService: JwtService,
     private readonly chatService: ChatService,
     private readonly roomService: RoomService,
+    private readonly userService: UserService,
+    private readonly fcmService: FcmService,
   ) {}
 
+  @WebSocketServer()
+  server: Server;
   private readonly logger = new Logger(ChatGateway.name);
 
   async handleConnection(client: Socket) {
@@ -115,6 +122,30 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('newMessage', instanceToPlain(systemMessage));
         // 방 유저들에게 메시지 전송
         client.to(roomUuid).emit('newMessage', instanceToPlain(systemMessage));
+
+        // 푸시 알림 전송
+        // 해당 방에 소켓이 연결된 유저의 uuid 불러오기
+        const usersInSocketRoom = Array.from(
+          this.server.sockets.adapter.rooms.get(roomUuid) || [],
+        )
+          .map(
+            (socketId) =>
+              this.server.sockets.sockets.get(socketId)?.data?.user.uuid,
+          )
+          .filter((user) => user !== undefined);
+        // 방에 참여한 유저 중 소켓이 연결되지 않은 유저에게 푸시 알림 전송
+        this.fcmService
+          .sendPushNotificationByUserUuid(
+            roomUser
+              .map((user) => user.userUuid)
+              .filter((uuid) => !usersInSocketRoom.includes(uuid)),
+            `${await this.roomService.getRoomTitle(roomUuid)}`,
+            systemMessage.message,
+            {
+              roomUuid: roomUuid,
+            },
+          )
+          .catch(console.error);
       } else {
         // TODO: 이미 참여한 방일 경우 메세지 읽음 처리
       }
@@ -132,6 +163,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const { roomUuid, message } = payload;
 
       // 방에 참여한 유저인지 확인
+      if (!client.data.rooms.has(roomUuid)) {
+        throw new WsException('방에 속한 유저가 아닙니다.');
+      }
+
+      // 방에 속한 유저인지 확인
       const roomUser = await this.roomService.findUsersByRoomUuid(roomUuid);
       if (roomUser.length === 0) {
         throw new WsException('방을 찾을 수 없습니다.');
@@ -158,6 +194,30 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('newMessage', instanceToPlain(chatMessage));
       // 본인을 제외한 방 유저들에게 메시지 전송
       client.to(roomUuid).emit('newMessage', instanceToPlain(chatMessage));
+
+      // 푸시 알림 전송
+      // 해당 방에 소켓이 연결된 유저의 uuid 불러오기
+      const usersInSocketRoom = Array.from(
+        this.server.sockets.adapter.rooms.get(roomUuid) || [],
+      )
+        .map(
+          (socketId) =>
+            this.server.sockets.sockets.get(socketId)?.data?.user.uuid,
+        )
+        .filter((user) => user !== undefined);
+      // 방에 참여한 유저 중 소켓이 연결되지 않은 유저에게 푸시 알림 전송
+      this.fcmService
+        .sendPushNotificationByUserUuid(
+          roomUser
+            .map((user) => user.userUuid)
+            .filter((uuid) => !usersInSocketRoom.includes(uuid)),
+          `${await this.roomService.getRoomTitle(roomUuid)} | ${await this.userService.getUserName(client.data.user.uuid)}`,
+          message,
+          {
+            roomUuid: roomUuid,
+          },
+        )
+        .catch(console.error);
     } catch (error) {
       throw new WsException(`메시지 전송에 실패했습니다. ${error.message}`);
     }

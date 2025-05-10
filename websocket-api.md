@@ -14,7 +14,19 @@
 - `newMessage`를 listening 해야 함
 - 이벤트로 채팅 혹은 공지 등 새로운 메세지를 받을 수 있음
 - SenderUuid: null인 경우는 시스템 메세지임
-  - 현재 joinRoom(유저 첫 입장일 때만), leaveRoom 이벤트에서 시스템 메세지를 보내고 있음
+  - 현재 joinRoom(유저 첫 입장일 때만), leaveRoom 이벤트에서 시스템 메세지를 보내고 있음(해당 게이트웨이를 controller로 병합 예정)
+- 메시지 예시:
+```json
+{
+  "uuid": "12e18adf-9a25-42e7-b0b9-88d222542c5e",
+  "roomUuid": "45281c1e-61e5-4628-8821-6e0cb0940fd3",
+  "senderUuid": null,
+  "message": "나태양 님이 방에 참여했습니다.",
+  "messageType": "TEXT",
+  "createdAt": "2025-05-10T11:27:41.045Z",
+  "updatedAt": "2025-05-10T11:27:41.045Z"
+}
+```
 
 ### 1. 연결 (Connection)
 - 자동으로 처리됨
