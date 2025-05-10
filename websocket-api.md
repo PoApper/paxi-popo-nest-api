@@ -13,6 +13,19 @@
 ### 0. 메세지 받기
 - `newMessage`를 listening 해야 함
 - 이벤트로 채팅 혹은 공지 등 새로운 메세지를 받을 수 있음
+- 메시지 예시:
+```json
+{
+  "id": 9,
+  "uuid": "12e18adf-9a25-42e7-b0b9-88d222542c5e",
+  "roomUuid": "45281c1e-61e5-4628-8821-6e0cb0940fd3",
+  "senderUuid": null,
+  "message": "나태양 님이 방에 참여했습니다.",
+  "messageType": "TEXT",
+  "createdAt": "2025-05-10T11:27:41.045Z",
+  "updatedAt": "2025-05-10T11:27:41.045Z"
+}
+```
 
 ### 1. 연결 (Connection)
 - 자동으로 처리됨
