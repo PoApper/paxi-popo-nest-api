@@ -94,6 +94,31 @@ export class FcmController {
       },
     },
   })
+  @ApiResponse({
+    status: 201,
+    description: '푸시 알림 전송 결과',
+    schema: {
+      type: 'object',
+      properties: {
+        responses: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean', example: true },
+              messageId: {
+                type: 'string',
+                example:
+                  'projects/paxi-dev-3d474/messages/b7bb4c86-d195-41f0-8cff-1a21e70f2fc6',
+              },
+            },
+          },
+        },
+        successCount: { type: 'number', example: 2 },
+        failureCount: { type: 'number', example: 0 },
+      },
+    },
+  })
   async sendPushNotificationToMultipleUsers(
     @Req() req,
     @Body()
