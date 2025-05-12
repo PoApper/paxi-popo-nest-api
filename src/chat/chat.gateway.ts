@@ -11,7 +11,7 @@ import {
 import { Socket, Server } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { instanceToPlain } from 'class-transformer';
-import { Logger, UseFilters } from '@nestjs/common';
+import { Logger, UseFilters, Injectable } from '@nestjs/common';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { RoomService } from 'src/room/room.service';
@@ -22,7 +22,8 @@ import { UserService } from 'src/user/user.service';
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
 import { WsExceptionFilter } from './filters/ws-exception.filter';
-
+import { Chat } from './entities/chat.entity';
+@Injectable()
 @WebSocketGateway()
 @UseFilters(WsExceptionFilter)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -60,7 +61,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       client.data.user = payload;
-      client.data.rooms = new Set<string>();
+      // userUuid를 키로 하는 소켓 방 생성, controller에서 userUuid를 받아 메세지를 보낼 때 사용
+      await client.join(`user-${payload.uuid}`);
     } catch (error) {
       // NOTE: @SubscribeMessage() 에노테이션이 붙지 않은 이벤트에서 발생한 에러는 ExceptionFilter에 전달되지 않음
       // 따라서 여기서 클라이언트에 에러 이벤트를 전송해야 함
@@ -152,6 +154,39 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       throw new WsException(`방 참여에 실패했습니다. ${error.message}`);
     }
+  }
+
+  async sendMessage(roomUuid: string, message: Chat) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    // sockets.adapter.rooms 에서 `user-${userUuid}` 키가 있는지 확인하고 active user 필터링
+    const activeUserUuids: string[] = [];
+    for (const user of roomUsers) {
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        activeUserUuids.push(user.userUuid);
+        this.server
+          .to(`user-${user.userUuid}`)
+          .emit('newMessage', instanceToPlain(message));
+      }
+    }
+
+    // 현재 방에 없는 유저에게 푸시 알림 전송
+    const inactiveUserUuids: string[] = roomUsers
+      .filter((user) => !activeUserUuids.includes(user.userUuid))
+      .map((user) => user.userUuid);
+    this.fcmService
+      .sendPushNotificationByUserUuid(
+        inactiveUserUuids,
+        `${await this.roomService.getRoomTitle(roomUuid)}`,
+        message.message,
+        {
+          roomUuid: roomUuid,
+        },
+      )
+      .catch((error) => this.logger.error(error));
   }
 
   @SubscribeMessage('sendMessage')
