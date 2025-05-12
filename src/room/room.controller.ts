@@ -120,7 +120,6 @@ export class RoomController {
     description: '로그인이 되어 있지 않은 경우',
   })
   findOne(@Param('uuid') uuid: string) {
-    console.log(uuid);
     return this.roomService.findOne(uuid);
   }
 
@@ -337,6 +336,64 @@ export class RoomController {
       userUuid,
       reason,
     );
+  }
+
+  @Put('kick2/:uuid')
+  @ApiOperation({
+    summary:
+      '[웹소켓 통합 버전-개발 중] 사용자를 추방합니다. 방장만 가능하며, 사용자의 상태를 KICKED로 변경합니다.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          description: '강퇴 사유',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      '강퇴된 사용자와 방 정보를 반환, 방에 강퇴 메세지를 전송합니다.',
+    type: Room,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 또는 자기 자신을 강퇴하는 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우, 방장이 아닌 경우',
+  })
+  async kickUserFromRoom2(
+    @Req() req,
+    // TODO: 필터링 기능이 아니라서 쿼리 파라미터를 바디로 변경하는건 어떤지?
+    @Query('userUuid') userUuid: string,
+    @Param('uuid') uuid: string,
+    @Body('reason') reason?: string,
+  ) {
+    const user = req.user as JwtPayload;
+    const room = await this.roomService.kickUserFromRoom(
+      uuid,
+      user.uuid,
+      userUuid,
+      reason,
+    );
+
+    const nickname = await this.userService.getNickname(userUuid);
+    const message = `방장에 의해 ${nickname?.nickname} 님이 방에서 강제퇴장 되었습니다.`;
+    const chat = await this.chatService.create({
+      roomUuid: uuid,
+      message: message,
+      messageType: ChatMessageType.TEXT,
+    });
+    this.chatGateway.sendMessage(uuid, chat);
+
+    return room;
   }
 
   @Post('delegate/:uuid')
