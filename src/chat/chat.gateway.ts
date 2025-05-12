@@ -189,6 +189,36 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .catch((error) => this.logger.error(error));
   }
 
+  async sendUpdatedMessage(chat: Chat) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      chat.roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    for (const user of roomUsers) {
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        this.server
+          .to(`user-${user.userUuid}`)
+          .emit('updatedMessage', instanceToPlain(chat));
+      }
+    }
+  }
+
+  async sendDeletedMessage(roomUuid: string, chatUuid: string) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    for (const user of roomUsers) {
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        this.server
+          .to(`user-${user.userUuid}`)
+          .emit('deletedMessage', { uuid: chatUuid });
+      }
+    }
+  }
+
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
