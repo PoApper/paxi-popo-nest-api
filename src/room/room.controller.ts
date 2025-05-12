@@ -21,6 +21,10 @@ import {
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { ChatGateway } from 'src/chat/chat.gateway';
+import { ChatMessageType } from 'src/chat/entities/chat.meta';
+import { ChatService } from 'src/chat/chat.service';
+import { UserService } from 'src/user/user.service';
 
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -34,7 +38,12 @@ import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('room')
 export class RoomController {
-  constructor(private readonly roomService: RoomService) {}
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly userService: UserService,
+    private readonly chatGateway: ChatGateway,
+    private readonly chatService: ChatService,
+  ) {}
 
   @Post()
   @ApiOperation({
@@ -169,7 +178,7 @@ export class RoomController {
     summary: '방에 참여합니다. 첫 입장 및 재입장 모든 경우에 호출됩니다',
   })
   @ApiResponse({
-    status: 200,
+    status: 201,
     description: '참여한 방 정보를 반환',
     type: RoomWithUsersDto,
   })
@@ -185,6 +194,45 @@ export class RoomController {
   async joinRoom(@Req() req, @Param('uuid') uuid: string) {
     const user = req.user as JwtPayload;
     return await this.roomService.joinRoom(uuid, user.uuid);
+  }
+
+  @Post('join2/:uuid')
+  @ApiOperation({
+    summary:
+      '[웹소켓 통합 버전-개발 중] 방에 참여합니다. 첫 입장 및 재입장 모든 경우에 호출됩니다',
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      '참여한 방 정보를 반환, 첫 입장 혹은 퇴장 후 입장의 경우 방 전체에 채팅 메시지와 푸시 알림을 전송합니다.',
+    type: RoomWithUsersDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      '방이 존재하지 않는 경우, 방에 가입할 수 없는 상태(방이 활성화되지 않은 경우, 이미 가입된 방, 강퇴된 방)인 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  async joinRoom2(@Req() req, @Param('uuid') uuid: string) {
+    const user = req.user as JwtPayload;
+    const { sendMessage, room } = await this.roomService.joinRoom(
+      uuid,
+      user.uuid,
+    );
+    if (sendMessage) {
+      const nickname = await this.userService.getNickname(user.uuid);
+      const message = `${nickname?.nickname} 님이 방에 참여했습니다.`;
+      const chat = await this.chatService.create({
+        roomUuid: uuid,
+        message: message,
+        messageType: ChatMessageType.TEXT,
+      });
+      this.chatGateway.sendMessage(uuid, chat);
+    }
+    return room;
   }
 
   @Put('leave/:uuid')
@@ -207,6 +255,7 @@ export class RoomController {
   })
   async leaveRoom(@Req() req, @Param('uuid') uuid: string) {
     const user = req.user as JwtPayload;
+    // TODO: 방에서 나간 후 emit
     return await this.roomService.leaveRoom(uuid, user.uuid);
   }
 
@@ -247,6 +296,7 @@ export class RoomController {
     @Param('uuid') uuid: string,
     @Body('reason') reason?: string,
   ) {
+    // TODO: 강퇴 후 emit
     const user = req.user as JwtPayload;
     return await this.roomService.kickUserFromRoom(
       uuid,
@@ -281,6 +331,7 @@ export class RoomController {
     @Query('userUuid') userUuid: string,
   ) {
     const user = req.user as JwtPayload;
+    // TODO: 방장 권한 위임 후 emit
     return await this.roomService.delegateRoom(uuid, user.uuid, userUuid);
   }
 
@@ -301,6 +352,7 @@ export class RoomController {
     @Req() req,
     @Body() dto: CreateSettlementDto,
   ) {
+    // TODO: 정산 요청 후 emit
     const user = req.user as JwtPayload;
     return await this.roomService.requestSettlement(uuid, user.uuid, dto);
   }
@@ -332,6 +384,7 @@ export class RoomController {
     @Body() dto: UpdateSettlementDto,
   ) {
     const user = req.user as JwtPayload;
+    // TODO: 정산 수정 후 emit
     await this.roomService.updateSettlement(uuid, user.uuid, dto);
 
     return await this.roomService.getSettlement(user.uuid, uuid);
@@ -351,6 +404,7 @@ export class RoomController {
   })
   async cancelSettlement(@Param('uuid') uuid: string, @Req() req) {
     const user = req.user as JwtPayload;
+    // TODO: 정산 요청 취소 후 emit
     return await this.roomService.cancelSettlement(uuid, user.uuid);
   }
 
@@ -427,6 +481,7 @@ export class RoomController {
   })
   async completeRoom(@Param('uuid') uuid: string, @Req() req) {
     const user = req.user as JwtPayload;
+    // TODO: 방 완료 후 emit
     return await this.roomService.completeRoom(uuid, user.uuid, user.userType);
   }
 }

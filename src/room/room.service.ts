@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { MoreThan, Not, Repository, DataSource } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { instanceToPlain } from 'class-transformer';
 
 import { Room } from 'src/room/entities/room.entity';
 import { RoomUser } from 'src/room/entities/room.user.entity';
@@ -113,6 +114,10 @@ export class RoomService {
     return this.roomUserRepo.findBy({ roomUuid: uuid });
   }
 
+  findUsersByRoomUuidAndStatus(uuid: string, status: RoomUserStatus) {
+    return this.roomUserRepo.findBy({ roomUuid: uuid, status: status });
+  }
+
   async update(uuid: string, updateRoomDto: UpdateRoomDto, user: JwtPayload) {
     const room = await this.findOne(uuid);
     if (!room) {
@@ -160,13 +165,19 @@ export class RoomService {
   }
 
   async joinRoom(uuid: string, userUuid: string) {
+    let sendMessage = false;
     const room = await this.findOne(uuid);
     if (!room) {
       throw new BadRequestException('방이 존재하지 않습니다.');
     }
-    if (room.status != RoomStatus.ACTIVATED) {
-      throw new BadRequestException('현재 방은 가입할 수 없습니다.');
+    if (
+      room.status == RoomStatus.DELETED ||
+      room.status == RoomStatus.DEACTIVATED
+    ) {
+      throw new BadRequestException('입장할 수 없는 상태의 방입니다.');
     }
+
+    // TODO: 정원 체크
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -179,6 +190,7 @@ export class RoomService {
     try {
       if (roomUser) {
         if (roomUser.status == RoomUserStatus.LEFT) {
+          sendMessage = true;
           // 가입 상태로 변경
           await queryRunner.manager.update(
             RoomUser,
@@ -189,6 +201,7 @@ export class RoomService {
           throw new BadRequestException('강퇴된 방입니다.');
         }
       } else {
+        sendMessage = true;
         await queryRunner.manager.save(RoomUser, {
           roomUuid: uuid,
           userUuid: userUuid,
@@ -196,6 +209,7 @@ export class RoomService {
       }
 
       // 증가된 참여 인원 수를 반영
+      // TODO: 정말 인원이 바뀌어야 할 상황(첫 입장, LEFT 후 입장 시)에만 DB 콜 하도록 변경
       const participantsNumber = await this.getParticipantsNumber(uuid);
       if (participantsNumber != room.currentParticipant + 1) {
         // TODO: 로그로 변경
@@ -211,29 +225,28 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
-      const result = await this.roomUserRepo
-        .createQueryBuilder('room_user')
-        .leftJoinAndSelect('room_user.room', 'room')
-        .leftJoinAndSelect('room.room_users', 'room_users')
-        .where('room_user.roomUuid = :roomUuid', { roomUuid: uuid })
-        .andWhere('room_user.userUuid = :userUuid', { userUuid })
-        .getOne();
-
       // room_user에 nickname을 붙이는 작업
       // 실명과 필요하지 않은 데이터인 user, kickedReason은 제외
+      const result = await this.roomRepo.findOne({
+        where: { uuid: uuid },
+        relations: ['room_users', 'room_users.user.nickname'],
+      });
+
+      // id, createdAt, updatedAt 제외하기 위함
+      const plainResult = instanceToPlain(result);
       const transformed = {
-        ...result?.room,
-        room_users: result?.room?.room_users.map((ru) => {
+        ...plainResult,
+        room_users: plainResult?.room_users.map((ru) => {
           /* eslint-disable-next-line */
           const { user, kickedReason, ...rest } = ru;
           return {
             ...rest,
-            nickname: user?.nickname?.nickname ?? null,
+            nickname: user.nickname?.nickname ?? null,
           };
         }),
       };
 
-      return transformed;
+      return { sendMessage, room: transformed };
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -273,6 +286,7 @@ export class RoomService {
 
   async leaveRoom(uuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
+    console.log(room);
     if (!room) {
       throw new BadRequestException('방이 존재하지 않습니다.');
     }
