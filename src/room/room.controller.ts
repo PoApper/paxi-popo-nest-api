@@ -602,7 +602,7 @@ export class RoomController {
     return await this.roomService.cancelSettlement(uuid, user.uuid);
   }
 
-  @Patch(':uuid/:userUuid/pay')
+  @Patch(':uuid/pay')
   @ApiOperation({
     summary: '카풀 방에 대한 유저의 정산 여부를 수정합니다.',
   })
