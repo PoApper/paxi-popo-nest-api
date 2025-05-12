@@ -26,6 +26,7 @@ export class RoomUser extends Base {
   roomUuid: string;
 
   @Column({ nullable: false, default: RoomUserStatus.JOINED })
+  @ApiProperty({ example: RoomUserStatus.JOINED })
   status: RoomUserStatus;
 
   @Column({ nullable: false, default: false })
