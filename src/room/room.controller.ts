@@ -259,6 +259,39 @@ export class RoomController {
     return await this.roomService.leaveRoom(uuid, user.uuid);
   }
 
+  @Put('leave2/:uuid')
+  @ApiOperation({
+    summary:
+      '[웹소켓 통합 버전-개발 중] 방에서 나갑니다. 사용자의 상태가 LEFT로 변경됩니다. 방에 퇴장 메세지를 전송합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '방 정보를 반환, 퇴장 메세지를 전송합니다.',
+    type: RoomWithUsersDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 탈퇴하는 경우에 다른 방장을 지정할 수 없는 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  async leaveRoom2(@Req() req, @Param('uuid') uuid: string) {
+    const user = req.user as JwtPayload;
+    const room = await this.roomService.leaveRoom(uuid, user.uuid);
+    const nickname = await this.userService.getNickname(user.uuid);
+    const message = `${nickname?.nickname} 님이 방에서 나갔습니다.`;
+    const chat = await this.chatService.create({
+      roomUuid: uuid,
+      message: message,
+      messageType: ChatMessageType.TEXT,
+    });
+    this.chatGateway.sendMessage(uuid, chat);
+    return room;
+  }
+
   @Put('kick/:uuid')
   @ApiOperation({
     summary:

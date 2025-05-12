@@ -286,7 +286,6 @@ export class RoomService {
 
   async leaveRoom(uuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
-    console.log(room);
     if (!room) {
       throw new BadRequestException('방이 존재하지 않습니다.');
     }
@@ -332,20 +331,39 @@ export class RoomService {
           'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
         );
       }
-      await this.roomRepo.update(
+      await queryRunner.manager.update(
+        Room,
         { uuid: uuid },
         { currentParticipant: participantsNumber - 1 },
       );
       // RoomUser 상태 변경
-      await this.roomUserRepo.update(
+      await queryRunner.manager.update(
+        RoomUser,
         { roomUuid: uuid, userUuid: userUuid },
         { status: RoomUserStatus.LEFT },
       );
 
       await queryRunner.commitTransaction();
-      return await this.roomRepo.findOne({
+      const result = await this.roomRepo.findOne({
         where: { uuid: uuid },
+        relations: ['room_users', 'room_users.user.nickname'],
       });
+
+      // id, createdAt, updatedAt 제외하기 위함
+      const plainResult = instanceToPlain(result);
+      const transformed = {
+        ...plainResult,
+        room_users: plainResult?.room_users.map((ru) => {
+          /* eslint-disable-next-line */
+          const { user, kickedReason, ...rest } = ru;
+          return {
+            ...rest,
+            nickname: user.nickname?.nickname ?? null,
+          };
+        }),
+      };
+
+      return transformed;
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
