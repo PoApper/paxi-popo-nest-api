@@ -649,29 +649,22 @@ export class RoomService {
   async updateRoomUserIsPaid(
     roomUuid: string,
     userUuid: string,
-    requestUserUuid: string,
     isPaid: boolean,
   ) {
-    if (requestUserUuid != userUuid) {
-      throw new UnauthorizedException(
-        '정산자가 아니므로 정산 정보를 수정할 수 없습니다.',
-      );
-    }
-
     const room = await this.findOne(roomUuid);
     if (!room) {
       throw new BadRequestException('방이 존재하지 않습니다.');
+    }
+
+    if (room.status != RoomStatus.IN_SETTLEMENT) {
+      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
     }
 
     const roomUser = await this.roomUserRepo.findOne({
       where: { roomUuid, userUuid },
     });
 
-    if (!roomUser) {
-      throw new BadRequestException('방에 가입되어 있지 않습니다.');
-    }
-
-    if (roomUser.status != RoomUserStatus.JOINED) {
+    if (!roomUser || roomUser.status != RoomUserStatus.JOINED) {
       throw new BadRequestException('방에 가입되어 있지 않습니다.');
     }
 

@@ -633,14 +633,12 @@ export class RoomController {
   })
   async updateIsPaid(
     @Param('uuid') uuid: string,
-    @Param('userUuid') userUuid: string,
     @Req() req,
     @Body() body: { isPaid: boolean },
   ) {
     const user = req.user as JwtPayload;
     return await this.roomService.updateRoomUserIsPaid(
       uuid,
-      userUuid,
       user.uuid,
       body.isPaid,
     );
