@@ -656,7 +656,7 @@ export class RoomService {
       throw new BadRequestException('방이 존재하지 않습니다.');
     }
 
-    if (room.status != RoomStatus.IN_SETTLEMENT) {
+    if (room.status != RoomStatus.IN_SETTLEMENT || room.payerUuid == null) {
       throw new BadRequestException('정산이 진행되고 있지 않습니다.');
     }
 
@@ -668,13 +668,13 @@ export class RoomService {
       throw new BadRequestException('방에 가입되어 있지 않습니다.');
     }
 
-    // TODO: 정산자에게 정산 완료 알림 기능 추가
-
     await this.roomUserRepo.update({ roomUuid, userUuid }, { isPaid });
 
-    return await this.roomUserRepo.findOne({
+    const result = await this.roomUserRepo.findOne({
       where: { roomUuid, userUuid },
     });
+
+    return { payerUuid: room.payerUuid, roomUser: result };
   }
 
   async completeRoom(uuid: string, userUuid: string, userType: UserType) {
