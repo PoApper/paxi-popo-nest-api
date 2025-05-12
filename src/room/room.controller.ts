@@ -447,6 +447,37 @@ export class RoomController {
     return await this.roomService.requestSettlement(uuid, user.uuid, dto);
   }
 
+  @Post(':uuid/settlement2')
+  @ApiOperation({
+    summary: '[웹소켓 통합 버전-개발 중] 카풀 방의 정산 정보를 등록합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '정산 정보를 등록합니다. 방에 정산 메세지를 전송합니다.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+  })
+  async requestSettlement2(
+    @Param('uuid') uuid: string,
+    @Req() req,
+    @Body() dto: CreateSettlementDto,
+  ) {
+    const user = req.user as JwtPayload;
+    const room = await this.roomService.requestSettlement(uuid, user.uuid, dto);
+    const nickname = await this.userService.getNickname(user.uuid);
+    // TODO: DB 부하 줄이기 위해 유저 닉네임을 JwtPayload에서 가져오는 방식으로 변경해보는 것 생각
+    const message = `결제자 ${nickname?.nickname} 님이 정산 요청을 했습니다.`;
+    const chat = await this.chatService.create({
+      roomUuid: uuid,
+      message: message,
+      messageType: ChatMessageType.TEXT,
+    });
+    this.chatGateway.sendMessage(uuid, chat);
+    return room;
+  }
+
   @Put(':uuid/settlement')
   @ApiOperation({
     summary: '카풀 방의 정산 정보(정산 금액, 정산 계좌)를 수정합니다.',
@@ -480,6 +511,50 @@ export class RoomController {
     return await this.roomService.getSettlement(user.uuid, uuid);
   }
 
+  @Put(':uuid/settlement2')
+  @ApiOperation({
+    summary:
+      '[웹소켓 통합 버전-개발 중] 카풀 방의 정산 정보(정산 금액, 정산 계좌)를 수정합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      '정산 정보를 수정합니다. 방에 정산 정보가 수정되었다고 알리는 메세지를 전송합니다.',
+    type: CreateRoomDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '정산자가 아닌 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '정산이 진행되고 있지 않은 경우',
+  })
+  async updateSettlement2(
+    @Param('uuid') uuid: string,
+    @Req() req,
+    @Body() dto: UpdateSettlementDto,
+  ) {
+    const user = req.user as JwtPayload;
+    // TODO: 정산 수정 후 emit
+    await this.roomService.updateSettlement(uuid, user.uuid, dto);
+
+    const nickname = await this.userService.getNickname(user.uuid);
+    const message = `결제자 ${nickname?.nickname} 님이 정산 정보를 수정했습니다.`;
+    const chat = await this.chatService.create({
+      roomUuid: uuid,
+      message: message,
+      messageType: ChatMessageType.TEXT,
+    });
+    this.chatGateway.sendMessage(uuid, chat);
+
+    return await this.roomService.getSettlement(user.uuid, uuid);
+  }
+
   @Delete(':uuid/settlement')
   @ApiOperation({
     summary: '카풀 방의 정산 요청을 취소합니다.',
@@ -495,6 +570,35 @@ export class RoomController {
   async cancelSettlement(@Param('uuid') uuid: string, @Req() req) {
     const user = req.user as JwtPayload;
     // TODO: 정산 요청 취소 후 emit
+    return await this.roomService.cancelSettlement(uuid, user.uuid);
+  }
+
+  @Delete(':uuid/settlement2')
+  @ApiOperation({
+    summary: '[웹소켓 통합 버전-개발 중] 카풀 방의 정산 요청을 취소합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '정산 요청이 취소되었다고 알리는 메세지를 전송합니다.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+  })
+  async cancelSettlement2(@Param('uuid') uuid: string, @Req() req) {
+    const user = req.user as JwtPayload;
+    // TODO: 정산 요청 취소 후 emit
+    await this.roomService.cancelSettlement(uuid, user.uuid);
+
+    const nickname = await this.userService.getNickname(user.uuid);
+    const message = `결제자 ${nickname?.nickname} 님이 정산 요청을 취소했습니다. 다시 정산을 진행해 주세요.`;
+    const chat = await this.chatService.create({
+      roomUuid: uuid,
+      message: message,
+      messageType: ChatMessageType.TEXT,
+    });
+    this.chatGateway.sendMessage(uuid, chat);
+
     return await this.roomService.cancelSettlement(uuid, user.uuid);
   }
 
