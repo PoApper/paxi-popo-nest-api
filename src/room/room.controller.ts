@@ -515,9 +515,7 @@ export class RoomController {
       user.uuid,
       dto,
     );
-    const nickname = await this.userService.getNickname(user.uuid);
-    // TODO: DB 부하 줄이기 위해 유저 닉네임을 JwtPayload에서 가져오는 방식으로 변경해보는 것 생각
-    const message = `결제자 ${nickname?.nickname} 님이 정산 요청을 했습니다.`;
+    const message = `결제자 ${responseSettlement.payerNickname} 님이 정산 요청을 했습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
@@ -612,9 +610,8 @@ export class RoomController {
       user.uuid,
       dto,
     );
-    // TODO: 닉네임 dto에서 가져오기
-    const nickname = await this.userService.getNickname(user.uuid);
-    const message = `결제자 ${nickname?.nickname} 님이 정산 정보를 수정했습니다.`;
+
+    const message = `결제자 ${responseSettlement.payerNickname} 님이 정산 정보를 수정했습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
