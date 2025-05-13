@@ -583,9 +583,7 @@ export class RoomService {
       );
       await queryRunner.commitTransaction();
 
-      return await this.roomRepo.findOne({
-        where: { uuid: uuid },
-      });
+      return await this.getSettlement(userUuid, uuid);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -624,7 +622,9 @@ export class RoomService {
       },
     );
 
-    return await this.getSettlement(userUuid, uuid);
+    return await this.roomRepo.findOne({
+      where: { uuid: uuid },
+    });
   }
 
   async getSettlement(userUuid: string, roomUuid: string) {
