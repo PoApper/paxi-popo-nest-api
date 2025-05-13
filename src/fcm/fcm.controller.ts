@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Post,
   Query,
   Req,
@@ -13,6 +14,8 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
+
+import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.payload';
@@ -147,5 +150,23 @@ export class FcmController {
       body.body,
       body.data,
     );
+  }
+
+  @Get('my/key')
+  @ApiOperation({
+    summary: '[테스트]내 푸시 키를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '푸시 키 목록',
+    type: [FcmKey],
+  })
+  @ApiResponse({
+    status: 400,
+    description: '푸시 키 조회 실패',
+  })
+  async getMyPushKeys(@Req() req) {
+    const user = req.user as JwtPayload;
+    return await this.pushService.findByUserUuids(user.uuid);
   }
 }
