@@ -495,6 +495,10 @@ export class RoomService {
       throw new BadRequestException('방이 존재하지 않습니다.');
     }
 
+    if (room.status == RoomStatus.IN_SETTLEMENT) {
+      throw new BadRequestException('이미 정산이 진행되고 있습니다.');
+    }
+
     // 방 상태별 필터링?
 
     // 계좌번호는 무조건 전달됨
@@ -516,13 +520,20 @@ export class RoomService {
         );
       }
 
-      await this.roomRepo.update(
+      await queryRunner.manager.update(
+        Room,
         { uuid: uuid },
         {
           status: RoomStatus.IN_SETTLEMENT,
           payerUuid: userUuid,
           payAmount: dto.payAmount,
         },
+      );
+
+      await queryRunner.manager.update(
+        RoomUser,
+        { roomUuid: uuid, userUuid: userUuid },
+        { isPaid: true },
       );
 
       await queryRunner.commitTransaction();
@@ -581,6 +592,12 @@ export class RoomService {
           payAmount: dto.payAmount,
         },
       );
+
+      await this.roomUserRepo.update(
+        { roomUuid: uuid, status: RoomUserStatus.JOINED },
+        { isPaid: false },
+      );
+
       await queryRunner.commitTransaction();
 
       return await this.getSettlement(userUuid, uuid);
@@ -610,21 +627,37 @@ export class RoomService {
       );
     }
 
-    // TODO: roomUser isPaid 컬럼을 false로 변경 -> 초기화    // TODO: 정산 요청자의 isPaid를 false로 변경, 그냥 모든 사용자의 isPaid를 false로 변경
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    await this.roomRepo.update(
-      { uuid: uuid },
-      {
-        status: RoomStatus.ACTIVATED,
-        // NOTE: update에 undefined를 넣으면 무시됨, 값을 초기화하고 싶으면 null을 넣어야 함
-        payerUuid: null,
-        payAmount: null,
-      },
-    );
+    try {
+      await queryRunner.manager.update(
+        RoomUser,
+        { roomUuid: uuid, status: RoomUserStatus.JOINED },
+        { isPaid: false },
+      );
+      await queryRunner.manager.update(
+        Room,
+        { uuid: uuid },
+        {
+          status: RoomStatus.ACTIVATED,
+          // NOTE: update에 undefined를 넣으면 무시됨, 값을 초기화하고 싶으면 null을 넣어야 함
+          payerUuid: null,
+          payAmount: null,
+        },
+      );
+      await queryRunner.commitTransaction();
 
-    return await this.roomRepo.findOne({
-      where: { uuid: uuid },
-    });
+      return await this.roomRepo.findOne({
+        where: { uuid: uuid },
+      });
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async getSettlement(userUuid: string, roomUuid: string) {
