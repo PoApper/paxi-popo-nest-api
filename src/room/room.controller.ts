@@ -471,7 +471,7 @@ export class RoomController {
     summary: '카풀 방의 정산 정보를 등록합니다.',
   })
   @ApiResponse({
-    status: 200,
+    status: 201,
     description: '정산 정보를 등록합니다.',
   })
   @ApiResponse({
@@ -492,7 +492,7 @@ export class RoomController {
     summary: '[웹소켓 통합 버전-개발 중] 카풀 방의 정산 정보를 등록합니다.',
   })
   @ApiResponse({
-    status: 200,
+    status: 201,
     description: '정산 정보를 등록합니다. 방에 정산 메세지를 전송합니다.',
   })
   @ApiResponse({

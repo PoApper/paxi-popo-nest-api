@@ -162,7 +162,7 @@ export class ChatController {
     summary: '[웹소켓 통합 버전-개발 중] 방에 채팅을 전송합니다.',
   })
   @ApiResponse({
-    status: 200,
+    status: 201,
     description:
       '생성된 메세지를 반환합니다. 채팅 메세지 생성 후 방 전체에 메시지와 푸시 알림을 전송합니다.',
     type: Chat,
