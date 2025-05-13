@@ -164,7 +164,8 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description: '방이 존재하지 않는 경우, 이미 삭제된 방인 경우',
+    description:
+      '방이 존재하지 않는 경우, 이미 삭제된 방인 경우, 이미 정산이 진행되고 있는 경우',
   })
   @ApiResponse({
     status: 401,
@@ -274,7 +275,7 @@ export class RoomController {
   @ApiResponse({
     status: 400,
     description:
-      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 탈퇴하는 경우에 다른 방장을 지정할 수 없는 경우',
+      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 탈퇴하는 경우에 다른 방장을 지정할 수 없는 경우, 이미 정산이 진행되고 있는 경우',
   })
   @ApiResponse({
     status: 401,

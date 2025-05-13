@@ -158,6 +158,9 @@ export class RoomService {
     if (room.status == RoomStatus.DELETED) {
       throw new BadRequestException('이미 삭제된 방입니다.');
     }
+    if (room.status == RoomStatus.IN_SETTLEMENT) {
+      throw new BadRequestException('이미 정산이 진행되고 있습니다.');
+    }
     if (room.ownerUuid != userUuid) {
       throw new UnauthorizedException('방장이 아닙니다.');
     }
@@ -298,6 +301,10 @@ export class RoomService {
 
     if (!roomUser) {
       throw new BadRequestException('방에 가입되어 있지 않습니다.');
+    }
+
+    if (room.status == RoomStatus.IN_SETTLEMENT) {
+      throw new BadRequestException('이미 정산이 진행되고 있습니다.');
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
