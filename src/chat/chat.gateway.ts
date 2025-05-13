@@ -165,28 +165,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // sockets.adapter.rooms 에서 `user-${userUuid}` 키가 있는지 확인하고 active user 필터링
     const activeUserUuids: string[] = [];
     for (const user of roomUsers) {
+      // 유저가 소켓에 연결되어 있다면 메시지 전송
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
         activeUserUuids.push(user.userUuid);
         this.server
           .to(`user-${user.userUuid}`)
           .emit('newMessage', instanceToPlain(message));
+      } else {
+        // 유저가 소켓에 연결되어 있지 않다면 푸시 알림 전송
+        this.fcmService
+          .sendPushNotificationByUserUuid(
+            [user.userUuid],
+            `${await this.roomService.getRoomTitle(roomUuid)}`,
+            message.message,
+            {
+              roomUuid: roomUuid,
+            },
+          )
+          .catch(console.error);
       }
     }
-
-    // 현재 방에 없는 유저에게 푸시 알림 전송
-    const inactiveUserUuids: string[] = roomUsers
-      .filter((user) => !activeUserUuids.includes(user.userUuid))
-      .map((user) => user.userUuid);
-    this.fcmService
-      .sendPushNotificationByUserUuid(
-        inactiveUserUuids,
-        `${await this.roomService.getRoomTitle(roomUuid)}`,
-        message.message,
-        {
-          roomUuid: roomUuid,
-        },
-      )
-      .catch((error) => this.logger.error(error));
   }
 
   async sendUpdatedMessage(chat: Chat) {
