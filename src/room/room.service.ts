@@ -601,7 +601,11 @@ export class RoomService {
       );
 
       await this.roomUserRepo.update(
-        { roomUuid: uuid, status: RoomUserStatus.JOINED },
+        {
+          roomUuid: uuid,
+          status: RoomUserStatus.JOINED,
+          userUuid: Not(userUuid),
+        },
         { isPaid: false },
       );
 
