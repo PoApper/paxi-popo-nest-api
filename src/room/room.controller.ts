@@ -500,7 +500,8 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+    description:
+      '방이 존재하지 않는 경우, 방이 종료된 경우, 이미 정산이 진행되고 있는 경우',
   })
   async requestSettlement2(
     @Param('uuid') uuid: string,
