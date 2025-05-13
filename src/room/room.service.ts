@@ -19,6 +19,7 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
+import { ResponseSettlementDto } from './dto/response-settlement.dto';
 @Injectable()
 export class RoomService {
   constructor(
@@ -634,16 +635,45 @@ export class RoomService {
       },
     });
 
-    // Settlement DTO의 내용을 리턴함
-    const settlement = {
-      payerUuid: room?.payerUuid,
-      payAmount: room?.payAmount,
-      payerAccountNumber: account?.accountNumber,
-      payerAccountHolderName: account?.accountHolderName,
-      payerBankName: account?.bankName,
-    };
+    if (!room) {
+      throw new BadRequestException('방이 존재하지 않습니다.');
+    }
 
-    return settlement;
+    if (!room.payAmount || !room.payerUuid) {
+      throw new BadRequestException('정산 내역이 없습니다.');
+    }
+
+    if (
+      !account ||
+      !account.accountNumber ||
+      !account.accountHolderName ||
+      !account.bankName
+    ) {
+      throw new BadRequestException('계좌 정보가 없습니다.');
+    }
+
+    const payAmountPerPerson = this.calculatePayAmountPerPerson(
+      room.payAmount,
+      room.currentParticipant,
+    );
+
+    const payerNickname = await this.userService.getNickname(room.payerUuid);
+    if (!payerNickname) {
+      throw new BadRequestException('정산자 닉네임을 찾을 수 없습니다.');
+    }
+
+    // Settlement DTO의 내용을 리턴함
+    const responseSettlement = new ResponseSettlementDto();
+    responseSettlement.roomUuid = roomUuid;
+    responseSettlement.payerUuid = room.payerUuid;
+    responseSettlement.payerNickname = payerNickname.nickname;
+    responseSettlement.payerAccountNumber = account.accountNumber;
+    responseSettlement.payerAccountHolderName = account.accountHolderName;
+    responseSettlement.payerBankName = account.bankName;
+    responseSettlement.payAmount = room.payAmount;
+    responseSettlement.payAmountPerPerson = payAmountPerPerson;
+    responseSettlement.currentParticipant = room.currentParticipant;
+    return responseSettlement;
   }
 
   async updateRoomUserIsPaid(
@@ -699,5 +729,11 @@ export class RoomService {
     return await this.roomRepo.findOne({
       where: { uuid: uuid },
     });
+  }
+
+  calculatePayAmountPerPerson(payAmount: number, currentParticipant: number) {
+    // NOTE: 서비스 이용약관에 따라 소수점은 올려서 계산함
+    // 정산자가 정산 금액보다 최대 (currentParticipant-1)원 더 받을 수 있음
+    return Math.ceil(payAmount / currentParticipant);
   }
 }
