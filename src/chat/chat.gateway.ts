@@ -10,7 +10,8 @@ import {
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { Logger, UseFilters } from '@nestjs/common';
+import { instanceToPlain } from 'class-transformer';
+import { Logger, UseFilters, Injectable } from '@nestjs/common';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { RoomService } from 'src/room/room.service';
@@ -21,7 +22,8 @@ import { UserService } from 'src/user/user.service';
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
 import { WsExceptionFilter } from './filters/ws-exception.filter';
-
+import { Chat } from './entities/chat.entity';
+@Injectable()
 @WebSocketGateway()
 @UseFilters(WsExceptionFilter)
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -59,7 +61,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       client.data.user = payload;
-      client.data.rooms = new Set<string>();
+      // userUuid를 키로 하는 소켓 방 생성, controller에서 userUuid를 받아 메세지를 보낼 때 사용
+      await client.join(`user-${payload.uuid}`);
     } catch (error) {
       // NOTE: @SubscribeMessage() 에노테이션이 붙지 않은 이벤트에서 발생한 에러는 ExceptionFilter에 전달되지 않음
       // 따라서 여기서 클라이언트에 에러 이벤트를 전송해야 함
@@ -100,8 +103,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new WsException('방에 속한 유저가 아닙니다.');
       }
 
-      // TODO: 채팅방 메세지 불러오기 기능 구현
       // 첫 입장 시 시스템 메시지 전송
+      // TODO: 현재는 휘발 가능성이 있는 메모리에 첫 입장 여부를 판단하고 있음.
+      // 이 상황에서는 서버가 껐다 켜지면 기존에 있던 유저들도 첫 입장으로 판단할 수 있음.
+      // 첫 입장 여부를 판단할 다른 방법 필요
       if (!client.data.rooms.has(roomUuid)) {
         // 유저 소켓의 rooms에 roomUuid 추가
         await client.join(roomUuid);
@@ -116,9 +121,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         });
 
         // 내 화면 반영을 위해 본인에게 메시지 전송
-        client.emit('newMessage', systemMessage);
+        client.emit('newMessage', instanceToPlain(systemMessage));
         // 방 유저들에게 메시지 전송
-        client.to(roomUuid).emit('newMessage', systemMessage);
+        client.to(roomUuid).emit('newMessage', instanceToPlain(systemMessage));
 
         // 푸시 알림 전송
         // 해당 방에 소켓이 연결된 유저의 uuid 불러오기
@@ -148,6 +153,67 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     } catch (error) {
       throw new WsException(`방 참여에 실패했습니다. ${error.message}`);
+    }
+  }
+
+  async sendMessage(roomUuid: string, message: Chat) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    // sockets.adapter.rooms 에서 `user-${userUuid}` 키가 있는지 확인하고 active user 필터링
+    const activeUserUuids: string[] = [];
+    for (const user of roomUsers) {
+      // 유저가 소켓에 연결되어 있다면 메시지 전송
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        activeUserUuids.push(user.userUuid);
+        this.server
+          .to(`user-${user.userUuid}`)
+          .emit('newMessage', instanceToPlain(message));
+      } else {
+        // 유저가 소켓에 연결되어 있지 않다면 푸시 알림 전송
+        this.fcmService
+          .sendPushNotificationByUserUuid(
+            [user.userUuid],
+            `${await this.roomService.getRoomTitle(roomUuid)}`,
+            message.message,
+            {
+              roomUuid: roomUuid,
+            },
+          )
+          .catch(console.error);
+      }
+    }
+  }
+
+  async sendUpdatedMessage(chat: Chat) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      chat.roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    for (const user of roomUsers) {
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        this.server
+          .to(`user-${user.userUuid}`)
+          .emit('updatedMessage', instanceToPlain(chat));
+      }
+    }
+  }
+
+  async sendDeletedMessage(roomUuid: string, chatUuid: string) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    for (const user of roomUsers) {
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        this.server
+          .to(`user-${user.userUuid}`)
+          .emit('deletedMessage', { uuid: chatUuid });
+      }
     }
   }
 
@@ -187,9 +253,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       // 내 화면 반영을 위해 본인에게 메시지 전송
-      client.emit('newMessage', chatMessage);
+      // instanceToPlain()으로 id를 제외한 객체를 반환
+      client.emit('newMessage', instanceToPlain(chatMessage));
       // 본인을 제외한 방 유저들에게 메시지 전송
-      client.to(roomUuid).emit('newMessage', chatMessage);
+      client.to(roomUuid).emit('newMessage', instanceToPlain(chatMessage));
 
       // 푸시 알림 전송
       // 해당 방에 소켓이 연결된 유저의 uuid 불러오기
@@ -241,11 +308,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         messageType: ChatMessageType.TEXT,
       });
 
-      client.to(roomUuid).emit('newMessage', systemMessage);
+      client.to(roomUuid).emit('newMessage', instanceToPlain(systemMessage));
     } catch (error) {
       throw new WsException(`방 나가기에 실패했습니다. ${error.message}`);
     }
   }
-
-  // TODO: 소켓이 끊어지고 다시 연결될 때 소켓 복원 기능 추가
 }
