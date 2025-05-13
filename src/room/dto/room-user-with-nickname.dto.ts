@@ -7,13 +7,10 @@ import { Room } from '../entities/room.entity';
 
 // TODO: Swagger 문서화 간편하게 하는 개선방안 필요
 export class RoomUserWithNicknameDto extends PickType(RoomUser, [
-  'id',
   'userUuid',
   'roomUuid',
   'status',
   'isPaid',
-  'createdAt',
-  'updatedAt',
 ]) {
   @ApiProperty({ nullable: false })
   nickname: string;
@@ -32,8 +29,6 @@ export class RoomWithUsersDto extends PickType(Room, [
   'description',
   'payerUuid',
   'payAmount',
-  'createdAt',
-  'updatedAt',
 ]) {
   @ApiProperty({
     type: [RoomUserWithNicknameDto],
