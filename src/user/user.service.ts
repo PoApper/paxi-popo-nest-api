@@ -85,7 +85,7 @@ export class UserService {
       : this.accountRepo;
 
     const account = await manager.findOne({
-      where: { userUuid },
+      where: { userUuid: userUuid },
     });
 
     const encryptedAccountNumber = accountNumber
@@ -110,7 +110,7 @@ export class UserService {
       });
     }
     return manager.findOne({
-      where: { userUuid },
+      where: { userUuid: userUuid },
     });
   }
 
