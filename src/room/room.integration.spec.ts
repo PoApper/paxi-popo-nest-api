@@ -115,6 +115,8 @@ describe('RoomModule - Integration Test', () => {
         userType: UserType.student,
       });
 
+      await userService.createNickname(user.uuid, '포닉스');
+
       const room = await roomService.create(user, {
         description: '캐리어 두 개 있습니다',
         title: '지곡회관 포항역 카풀해요~ 😎',
