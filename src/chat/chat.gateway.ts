@@ -18,6 +18,7 @@ import { RoomService } from 'src/room/room.service';
 import { RoomUserStatus } from 'src/room/entities/room.user.meta';
 import { FcmService } from 'src/fcm/fcm.service';
 import { UserService } from 'src/user/user.service';
+import { ResponseSettlementDto } from 'src/room/dto/response-settlement.dto';
 
 import { ChatMessageType } from './entities/chat.meta';
 import { ChatService } from './chat.service';
@@ -311,6 +312,54 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.to(roomUuid).emit('newMessage', instanceToPlain(systemMessage));
     } catch (error) {
       throw new WsException(`방 나가기에 실패했습니다. ${error.message}`);
+    }
+  }
+
+  async sendNewSettlement(roomUuid: string, settlement: ResponseSettlementDto) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    for (const user of roomUsers) {
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        this.server
+          .to(`user-${user.userUuid}`)
+          .emit('newSettlement', settlement);
+      }
+    }
+  }
+
+  async sendUpdatedSettlement(
+    roomUuid: string,
+    settlement: ResponseSettlementDto,
+  ) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    for (const user of roomUsers) {
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        this.server
+          .to(`user-${user.userUuid}`)
+          .emit('updatedSettlement', settlement);
+      }
+    }
+  }
+
+  async sendDeletedSettlement(roomUuid: string) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    for (const user of roomUsers) {
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        this.server
+          .to(`user-${user.userUuid}`)
+          .emit('deletedSettlement', { roomUuid: roomUuid });
+      }
     }
   }
 }
