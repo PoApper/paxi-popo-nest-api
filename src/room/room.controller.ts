@@ -3,14 +3,12 @@ import {
   Controller,
   Delete,
   Get,
-  HttpStatus,
   Param,
   Patch,
   Post,
   Put,
   Query,
   Req,
-  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -20,7 +18,6 @@ import {
   ApiParam,
   ApiResponse,
 } from '@nestjs/swagger';
-import { Response } from 'express';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -919,7 +916,7 @@ export class RoomController {
     const user = req.user as JwtPayload;
 
     const uuid = this.chatGateway.getUserFocus(user.uuid);
-    if (!uuid) throw new NoContentException();
+    if (typeof uuid !== 'string') throw new NoContentException();
 
     this.chatGateway.updateUserFocus(user.uuid);
     return await this.roomService.saveLastReadChat(uuid, user.uuid);
