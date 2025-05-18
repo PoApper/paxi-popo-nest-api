@@ -3,12 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  HttpStatus,
   Param,
   Patch,
   Post,
   Put,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,6 +20,7 @@ import {
   ApiParam,
   ApiResponse,
 } from '@nestjs/swagger';
+import { Response } from 'express';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -26,6 +29,7 @@ import { ChatMessageType } from 'src/chat/entities/chat.meta';
 import { ChatService } from 'src/chat/chat.service';
 import { UserService } from 'src/user/user.service';
 import { FcmService } from 'src/fcm/fcm.service';
+import { NoContentException } from 'src/common/exception';
 
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -98,7 +102,43 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '자신이 참여중인 방을 반환',
-    type: [Room],
+    example: [
+      // TODO: 예시 데이터 수정
+      {
+        uuid: '45281c1e-61e5-4628-8821-6e0cb0940fd3',
+        title: '포항역 가는 택시 같이 타요 🚕',
+        ownerUuid: '2cda53d2-baf7-4434-90cb-ff82d3345ad2',
+        departureLocation: '지곡회관',
+        destinationLocation: '포항역',
+        maxParticipant: 4,
+        currentParticipant: 2,
+        departureTime: '2026-01-01T00:00:00.000Z',
+        status: 'ACTIVE',
+        description: '캐리어 두개 있습니다',
+        payerUuid: null,
+        payAmount: null,
+        room_users: [
+          {
+            userUuid: '2cda53d2-baf7-4434-90cb-ff82d3345ad2',
+            roomUuid: '45281c1e-61e5-4628-8821-6e0cb0940fd3',
+            status: 'JOINED',
+            isPaid: false,
+            kickedReason: null,
+            lastReadChatUuid: '66bc2b73-2031-4309-a52d-692072cf0f23',
+          },
+        ],
+        lastChat: {
+          uuid: '66bc2b73-2031-4309-a52d-692072cf0f23',
+          roomUuid: '45281c1e-61e5-4628-8821-6e0cb0940fd3',
+          senderUuid: '2cda53d2-baf7-4434-90cb-ff82d3345ad2',
+          message: 'string',
+          messageType: 'TEXT',
+          createdAt: '2025-05-18T11:17:42.711Z',
+          updatedAt: '2025-05-18T11:17:42.711Z',
+        },
+        hasNewChat: true,
+      },
+    ],
   })
   @ApiResponse({
     status: 401,
@@ -864,6 +904,10 @@ export class RoomController {
     type: RoomUser,
   })
   @ApiResponse({
+    status: 204,
+    description: '마지막으로 읽은 채팅이 없거나 소켓에 연결되지 않은 경우',
+  })
+  @ApiResponse({
     status: 400,
     description: '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우',
   })
@@ -875,7 +919,8 @@ export class RoomController {
     const user = req.user as JwtPayload;
 
     const uuid = this.chatGateway.getUserFocus(user.uuid);
-    console.debug(`unfocus: ${uuid}`);
+    if (!uuid) throw new NoContentException();
+
     this.chatGateway.updateUserFocus(user.uuid);
     return await this.roomService.saveLastReadChat(uuid, user.uuid);
   }
