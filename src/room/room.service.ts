@@ -545,7 +545,7 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
-      return await this.getSettlement(userUuid, uuid);
+      return await this.getSettlement(uuid);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -611,7 +611,7 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
-      return await this.getSettlement(userUuid, uuid);
+      return await this.getSettlement(uuid);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -671,8 +671,7 @@ export class RoomService {
     }
   }
 
-  async getSettlement(userUuid: string, roomUuid: string) {
-    const account = await this.userService.getAccount(userUuid);
+  async getSettlement(roomUuid: string) {
     const room = await this.roomRepo.findOne({
       where: {
         uuid: roomUuid,
@@ -683,9 +682,15 @@ export class RoomService {
       throw new BadRequestException('방이 존재하지 않습니다.');
     }
 
+    if (room.status != RoomStatus.IN_SETTLEMENT) {
+      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
+    }
+
     if (!room.payAmount || !room.payerUuid) {
       throw new BadRequestException('정산 내역이 없습니다.');
     }
+
+    const account = await this.userService.getAccount(room.payerUuid);
 
     if (
       !account ||
@@ -693,7 +698,7 @@ export class RoomService {
       !account.accountHolderName ||
       !account.bankName
     ) {
-      throw new BadRequestException('계좌 정보가 없습니다.');
+      throw new BadRequestException('정산자의 계좌 정보가 없습니다.');
     }
 
     const payAmountPerPerson = this.calculatePayAmountPerPerson(

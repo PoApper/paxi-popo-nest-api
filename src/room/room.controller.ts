@@ -537,11 +537,11 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+    description:
+      '방이 존재하지 않는 경우, 방이 종료된 경우, 정산이 진행되고 있지 않은 경우, 정산자의 계좌 정보가 없는 경우',
   })
-  async getSettlement(@Param('uuid') uuid: string, @Req() req) {
-    const user = req.user as JwtPayload;
-    return await this.roomService.getSettlement(user.uuid, uuid);
+  async getSettlement(@Param('uuid') uuid: string) {
+    return await this.roomService.getSettlement(uuid);
   }
 
   @Put(':uuid/settlement')
@@ -573,7 +573,7 @@ export class RoomController {
     const user = req.user as JwtPayload;
     await this.roomService.updateSettlement(uuid, user.uuid, dto);
 
-    return await this.roomService.getSettlement(user.uuid, uuid);
+    return await this.roomService.getSettlement(uuid);
   }
 
   @Put(':uuid/settlement2')
@@ -589,7 +589,8 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+    description:
+      '방이 존재하지 않는 경우, 방이 종료된 경우, 정산이 진행되고 있지 않은 경우, 정산자의 계좌 정보가 없는 경우',
   })
   @ApiResponse({
     status: 401,
@@ -651,7 +652,8 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+    description:
+      '방이 존재하지 않는 경우, 방이 종료된 경우, 정산이 진행되고 있지 않은 경우, 정산자의 계좌 정보가 없는 경우',
   })
   async cancelSettlement2(@Param('uuid') uuid: string, @Req() req) {
     const user = req.user as JwtPayload;
