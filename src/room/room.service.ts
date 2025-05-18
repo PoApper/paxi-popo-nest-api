@@ -90,19 +90,25 @@ export class RoomService {
   }
 
   findByUserUuid(userUuid: string) {
-    return this.roomRepo.find({
-      where: {
-        room_users: { userUuid: userUuid, status: Not(RoomUserStatus.LEFT) },
-      },
-      select: {
-        room_users: {
-          userUuid: false,
-          status: true,
-          kickedReason: true,
+    return this.roomRepo
+      .find({
+        where: {
+          room_users: { userUuid: userUuid, status: Not(RoomUserStatus.LEFT) },
         },
-      },
-      relations: ['room_users'],
-    });
+        relations: ['room_users', 'chats'],
+      })
+      .then((rooms: any) => {
+        return rooms.map((room) => {
+          if (room.chats && room.chats.length > 0) {
+            // id가 가장 큰 채팅(최신 채팅) 선택
+            room.lastChat = room.chats.sort((a, b) => b.id - a.id)[0];
+            room.hasNewChat =
+              room.room_users[0].lastReadChatUuid == room.lastChat.uuid;
+            delete room.chats;
+          }
+          return room;
+        });
+      });
   }
 
   getRoomTitle(uuid: string) {
