@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -14,6 +16,7 @@ import { UserType } from 'src/user/user.meta';
 import { RoomUserStatus } from 'src/room/entities/room.user.meta';
 import { RoomStatus } from 'src/room/entities/room.meta';
 import { UserService } from 'src/user/user.service';
+import { ChatService } from 'src/chat/chat.service';
 
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
@@ -28,6 +31,8 @@ export class RoomService {
     @InjectRepository(RoomUser)
     private readonly roomUserRepo: Repository<RoomUser>,
     private readonly userService: UserService,
+    @Inject(forwardRef(() => ChatService)) // 순환 참조 해결
+    private readonly chatService: ChatService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -775,17 +780,17 @@ export class RoomService {
     });
   }
 
-  async saveLastReadChat(
-    roomUuid: string,
-    userUuid: string,
-    lastReadMessageUuid: string,
-  ) {
+  async saveLastReadChat(roomUuid: string, userUuid: string) {
     const roomUser = await this.roomUserRepo.findOne({
       where: { roomUuid, userUuid },
     });
     if (!roomUser) {
       throw new BadRequestException('방에 가입되어 있지 않습니다.');
     }
+
+    const lastReadMessageUuid = await this.chatService
+      .getLastMessageOfRoom(roomUuid)
+      .then((message) => message.uuid);
 
     await this.roomUserRepo.update(
       { roomUuid, userUuid },

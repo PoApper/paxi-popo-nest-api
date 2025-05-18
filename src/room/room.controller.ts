@@ -235,13 +235,8 @@ export class RoomController {
       });
       this.chatGateway.sendMessage(uuid, chat);
     }
-    await this.roomService.saveLastReadChat(
-      uuid,
-      user.uuid,
-      await this.chatService
-        .getLastMessageOfRoom(uuid)
-        .then((message) => message.uuid),
-    );
+    this.chatGateway.updateUserFocus(user.uuid, uuid);
+    await this.roomService.saveLastReadChat(uuid, user.uuid);
     return room;
   }
 
@@ -856,6 +851,33 @@ export class RoomController {
     });
     this.chatGateway.sendMessage(uuid, chat);
     return room;
+  }
+
+  @Post('unfocus')
+  @ApiOperation({
+    summary:
+      '사용자가 채팅방에서 나갈때(뒤로가기 등) 호출되어 마지막으로 읽은 채팅의 위치를 기억합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'RoomUser 정보를 반환',
+    type: RoomUser,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  async unfocus(@Req() req) {
+    const user = req.user as JwtPayload;
+
+    const uuid = this.chatGateway.getUserFocus(user.uuid);
+    console.debug(`unfocus: ${uuid}`);
+    this.chatGateway.updateUserFocus(user.uuid);
+    return await this.roomService.saveLastReadChat(uuid, user.uuid);
   }
 }
 
