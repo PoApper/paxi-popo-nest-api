@@ -177,7 +177,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.fcmService
           .sendPushNotificationByUserUuid(
             [user.userUuid],
-            `${await this.roomService.getRoomTitle(roomUuid)}`,
+            `${await this.roomService.getRoomTitle(roomUuid)}`, // TODO: 닉네임
             message.message,
             {
               roomUuid: roomUuid,

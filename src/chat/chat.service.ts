@@ -110,4 +110,15 @@ export class ChatService {
     await this.chatRepo.delete(chat.id);
     return { roomUuid: chat.roomUuid, deletedChatUuid: chat.uuid };
   }
+
+  async getLastMessageOfRoom(roomUuid: string) {
+    const lastMessage = await this.chatRepo.findOne({
+      where: { roomUuid },
+      order: { createdAt: 'DESC' },
+    });
+    if (!lastMessage) {
+      throw new NotFoundException('방에 메세지가 없습니다.');
+    }
+    return lastMessage;
+  }
 }

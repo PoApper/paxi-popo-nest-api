@@ -235,6 +235,13 @@ export class RoomController {
       });
       this.chatGateway.sendMessage(uuid, chat);
     }
+    await this.roomService.saveLastReadChat(
+      uuid,
+      user.uuid,
+      await this.chatService
+        .getLastMessageOfRoom(uuid)
+        .then((message) => message.uuid),
+    );
     return room;
   }
 

@@ -775,6 +775,28 @@ export class RoomService {
     });
   }
 
+  async saveLastReadChat(
+    roomUuid: string,
+    userUuid: string,
+    lastReadMessageUuid: string,
+  ) {
+    const roomUser = await this.roomUserRepo.findOne({
+      where: { roomUuid, userUuid },
+    });
+    if (!roomUser) {
+      throw new BadRequestException('방에 가입되어 있지 않습니다.');
+    }
+
+    await this.roomUserRepo.update(
+      { roomUuid, userUuid },
+      { lastReadChatUuid: lastReadMessageUuid },
+    );
+
+    return await this.roomUserRepo.findOne({
+      where: { roomUuid, userUuid },
+    });
+  }
+
   calculatePayAmountPerPerson(payAmount: number, currentParticipant: number) {
     // NOTE: 서비스 이용약관에 따라 소수점은 올려서 계산함
     // 정산자가 정산 금액보다 최대 (currentParticipant-1)원 더 받을 수 있음
