@@ -54,6 +54,57 @@
 }
 ```
 
+### 4. 정산 요청
+- `newSettlement`를 통해 **정산 요청 정보가 담긴 메세지**를 받을 수 있음
+- `POST /:uuid/settlement` 엔드포인트에서 사용됨
+- 정산 요청 공지를 위해 사용
+- 응답 메세지 예시:
+```json
+{
+  "roomUuid": "45281c1e-61e5-4628-8821-6e0cb0940fd3",
+  "payerUuid": "12e18adf-9a25-42e7-b0b9-88d222542c5e",
+  "payerNickname": "포닉스",
+  "payerAccountNumber": "1234-5678-9012-3456",
+  "payerAccountHolderName": "포닉스",
+  "payerBankName": "국민은행",
+  "payAmount": 10000,
+  "currentParticipant": 3,
+  "payAmountPerPerson": 3334 // 정산자 제외 참여자가 내야할 금액(=ceil(payAmount / currentParticipant))
+}
+```
+
+### 5. 정산 정보 수정
+- `updatedSettlement`를 통해 **수정된 정산 정보가 담긴 메세지**를 받을 수 있음
+- `PUT /:uuid/settlement` 엔드포인트에서 사용됨
+- 정산 정보 수정 공지를 위해 사용
+- 응답 메세지 예시:
+```json
+{
+  "roomUuid": "45281c1e-61e5-4628-8821-6e0cb0940fd3",
+  "payerUuid": "12e18adf-9a25-42e7-b0b9-88d222542c5e",
+  "payerNickname": "포닉스",
+  "payerAccountNumber": "1234-5678-9012-3456",
+  "payerAccountHolderName": "포닉스",
+  "payerBankName": "국민은행",
+  "payAmount": 15000,
+  "currentParticipant": 3,
+  "payAmountPerPerson": 5000
+}
+```
+
+### 6. 정산 취소
+- `deletedSettlement`를 통해 **정산이 취소된 방의 UUID**를 받을 수 있음
+- `DELETE /:uuid/settlement` 엔드포인트에서 사용됨
+- 정산 취소 공지를 위해 사용
+- 응답 메세지 예시:
+```json
+{
+  "roomUuid": "45281c1e-61e5-4628-8821-6e0cb0940fd3",
+}
+```
+
+
+
 ## 이벤트 발생
 
 ### 1. 연결 해제 (Disconnection)
