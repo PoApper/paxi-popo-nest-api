@@ -758,14 +758,18 @@ export class RoomController {
       const nickname = await this.userService.getNickname(user.uuid);
       const roomTitle = await this.roomService.getRoomTitle(uuid);
       const message = `${nickname?.nickname} 님이 정산 여부를 수정했습니다. 확인해 보세요!`;
-      this.fcmService.sendPushNotificationByUserUuid(
-        payerUuid,
-        `${roomTitle} 카풀 정산 완료 알림`,
-        message,
-        {
-          roomUuid: uuid,
-        },
-      );
+      this.fcmService
+        .sendPushNotificationByUserUuid(
+          payerUuid,
+          `${roomTitle} 카풀 정산 완료 알림`,
+          message,
+          {
+            roomUuid: uuid,
+          },
+        )
+        .catch((error) => {
+          console.error(error);
+        });
     }
     return roomUser;
   }
