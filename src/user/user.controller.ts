@@ -155,5 +155,39 @@ export class UserController {
     return nickname;
   }
 
-  // NOTE: 온보딩 체크 시 닉네임이 사용되므로 삭제 기능은 없음
+  @Get('my')
+  @ApiOperation({
+    summary: '유저의 정보를 반환합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      '닉네임, 계좌번호, 계좌주 이름, 은행명을 반환합니다. 닉네임, 계좌 정보가 없다면 아무것도 반환하지 않습니다.',
+    schema: {
+      type: 'object',
+      properties: {
+        uuid: {
+          type: 'string',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
+        nickname: {
+          type: 'string',
+          example: '행복한_수소_1234',
+        },
+        accountNumber: {
+          type: 'string',
+          example: '1234-5678-9012-3456',
+        },
+        accountHolderName: {
+          type: 'string',
+          example: '포닉스',
+        },
+        bankName: { type: 'string', example: '국민은행' },
+      },
+    },
+  })
+  async getUserInfo(@Req() req) {
+    const user = req.user as JwtPayload;
+    return await this.userService.getUserInfo(user.uuid);
+  }
 }

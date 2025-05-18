@@ -218,4 +218,17 @@ export class UserService {
     await this.nicknameRepo.update({ userUuid }, { nickname });
     return nickname;
   }
+
+  async getUserInfo(userUuid: string) {
+    const account = await this.getAccount(userUuid);
+    const nickname = await this.getNickname(userUuid);
+
+    return {
+      uuid: userUuid,
+      nickname: nickname?.nickname,
+      accountNumber: account?.accountNumber,
+      accountHolderName: account?.accountHolderName,
+      bankName: account?.bankName,
+    };
+  }
 }
