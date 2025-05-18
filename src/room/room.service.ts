@@ -105,6 +105,9 @@ export class RoomService {
             room.hasNewChat =
               room.room_users[0].lastReadChatUuid == room.lastChat.uuid;
             delete room.chats;
+          } else {
+            room.lastChat = null;
+            room.hasNewChat = false;
           }
           return room;
         });
