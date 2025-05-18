@@ -9,6 +9,7 @@ import { getMessaging } from 'firebase-admin/messaging';
 
 import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
+import { NoContentException } from 'src/common/exception';
 
 @Injectable()
 export class FcmService {
@@ -26,7 +27,7 @@ export class FcmService {
       return pushKey;
     } catch (err) {
       if (err.code === 'ER_DUP_ENTRY')
-        throw new BadRequestException('Push key already exists');
+        throw new NoContentException('Push key already exists'); // 204
       throw new InternalServerErrorException('Failed to create push key');
     }
   }
