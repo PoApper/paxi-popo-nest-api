@@ -35,6 +35,7 @@ import { CreateSettlementDto } from './dto/create-settlement.dto';
 import { RoomUser } from './entities/room.user.entity';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
 import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
+import { ResponseSettlementDto } from './dto/response-settlement.dto';
 @ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('room')
@@ -163,7 +164,8 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description: '방이 존재하지 않는 경우, 이미 삭제된 방인 경우',
+    description:
+      '방이 존재하지 않는 경우, 이미 삭제된 방인 경우, 이미 정산이 진행되고 있는 경우',
   })
   @ApiResponse({
     status: 401,
@@ -273,7 +275,7 @@ export class RoomController {
   @ApiResponse({
     status: 400,
     description:
-      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 탈퇴하는 경우에 다른 방장을 지정할 수 없는 경우',
+      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 탈퇴하는 경우에 다른 방장을 지정할 수 없는 경우, 이미 정산이 진행되고 있는 경우',
   })
   @ApiResponse({
     status: 401,
@@ -493,11 +495,14 @@ export class RoomController {
   })
   @ApiResponse({
     status: 201,
-    description: '정산 정보를 등록합니다. 방에 정산 메세지를 전송합니다.',
+    description:
+      '등록된 정산 정보를 반환합니다. `newMessage`이벤트로 방에 정산 메세지를 전송합니다. `newSettlement`이벤트로 방에 정산 정보를 전송합니다.',
+    type: ResponseSettlementDto,
   })
   @ApiResponse({
     status: 400,
-    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+    description:
+      '방이 존재하지 않는 경우, 방이 종료된 경우, 이미 정산이 진행되고 있는 경우',
   })
   async requestSettlement2(
     @Param('uuid') uuid: string,
@@ -505,17 +510,38 @@ export class RoomController {
     @Body() dto: CreateSettlementDto,
   ) {
     const user = req.user as JwtPayload;
-    const room = await this.roomService.requestSettlement(uuid, user.uuid, dto);
-    const nickname = await this.userService.getNickname(user.uuid);
-    // TODO: DB 부하 줄이기 위해 유저 닉네임을 JwtPayload에서 가져오는 방식으로 변경해보는 것 생각
-    const message = `결제자 ${nickname?.nickname} 님이 정산 요청을 했습니다.`;
+    const responseSettlement = await this.roomService.requestSettlement(
+      uuid,
+      user.uuid,
+      dto,
+    );
+    const message = `결제자 ${responseSettlement.payerNickname} 님이 정산 요청을 했습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
       messageType: ChatMessageType.TEXT,
     });
     this.chatGateway.sendMessage(uuid, chat);
-    return room;
+    this.chatGateway.sendNewSettlement(uuid, responseSettlement);
+    return responseSettlement;
+  }
+
+  @Get(':uuid/settlement')
+  @ApiOperation({
+    summary: '카풀 방의 정산 정보를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '정산 정보를 조회합니다.',
+    type: ResponseSettlementDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '방이 존재하지 않는 경우, 방이 종료된 경우',
+  })
+  async getSettlement(@Param('uuid') uuid: string, @Req() req) {
+    const user = req.user as JwtPayload;
+    return await this.roomService.getSettlement(user.uuid, uuid);
   }
 
   @Put(':uuid/settlement')
@@ -558,8 +584,8 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description:
-      '정산 정보를 수정합니다. 방에 정산 정보가 수정되었다고 알리는 메세지를 전송합니다.',
-    type: CreateRoomDto,
+      '수정된 정산 정보를 반환합니다. `newMessage`이벤트로 방에 정산 정보가 수정되었다고 알리는 메세지를 전송합니다. `updatedSettlement`이벤트로 방에 정산 정보를 전송합니다.',
+    type: ResponseSettlementDto,
   })
   @ApiResponse({
     status: 400,
@@ -579,18 +605,21 @@ export class RoomController {
     @Body() dto: UpdateSettlementDto,
   ) {
     const user = req.user as JwtPayload;
-    await this.roomService.updateSettlement(uuid, user.uuid, dto);
+    const responseSettlement = await this.roomService.updateSettlement(
+      uuid,
+      user.uuid,
+      dto,
+    );
 
-    const nickname = await this.userService.getNickname(user.uuid);
-    const message = `결제자 ${nickname?.nickname} 님이 정산 정보를 수정했습니다.`;
+    const message = `결제자 ${responseSettlement.payerNickname} 님이 정산 정보를 수정했습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
       messageType: ChatMessageType.TEXT,
     });
     this.chatGateway.sendMessage(uuid, chat);
-
-    return await this.roomService.getSettlement(user.uuid, uuid);
+    this.chatGateway.sendUpdatedSettlement(uuid, responseSettlement);
+    return responseSettlement;
   }
 
   @Delete(':uuid/settlement')
@@ -616,7 +645,9 @@ export class RoomController {
   })
   @ApiResponse({
     status: 200,
-    description: '정산 요청이 취소되었다고 알리는 메세지를 전송합니다.',
+    description:
+      '정산이 취소된 방의 정보를 반환. `newMessage`이벤트로 방에 정산 요청이 취소되었다고 알리는 메세지를 전송합니다. `deletedSettlement`이벤트로 방에 정산 정보를 전송합니다.',
+    type: Room,
   })
   @ApiResponse({
     status: 400,
@@ -624,7 +655,7 @@ export class RoomController {
   })
   async cancelSettlement2(@Param('uuid') uuid: string, @Req() req) {
     const user = req.user as JwtPayload;
-    await this.roomService.cancelSettlement(uuid, user.uuid);
+    const room = await this.roomService.cancelSettlement(uuid, user.uuid);
 
     const nickname = await this.userService.getNickname(user.uuid);
     const message = `결제자 ${nickname?.nickname} 님이 정산 요청을 취소했습니다. 다시 정산을 진행해 주세요.`;
@@ -634,8 +665,9 @@ export class RoomController {
       messageType: ChatMessageType.TEXT,
     });
     this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendDeletedSettlement(uuid);
 
-    return await this.roomService.cancelSettlement(uuid, user.uuid);
+    return room;
   }
 
   @Patch(':uuid/pay')
@@ -726,14 +758,18 @@ export class RoomController {
       const nickname = await this.userService.getNickname(user.uuid);
       const roomTitle = await this.roomService.getRoomTitle(uuid);
       const message = `${nickname?.nickname} 님이 정산 여부를 수정했습니다. 확인해 보세요!`;
-      this.fcmService.sendPushNotificationByUserUuid(
-        payerUuid,
-        `${roomTitle} 카풀 정산 완료 알림`,
-        message,
-        {
-          roomUuid: uuid,
-        },
-      );
+      this.fcmService
+        .sendPushNotificationByUserUuid(
+          payerUuid,
+          `${roomTitle} 카풀 정산 완료 알림`,
+          message,
+          {
+            roomUuid: uuid,
+          },
+        )
+        .catch((error) => {
+          console.error(error);
+        });
     }
     return roomUser;
   }
