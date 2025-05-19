@@ -82,6 +82,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     delete client.data.rooms;
   }
 
+  // NOTE: 삭제 예정
   @SubscribeMessage('joinRoom')
   async handleJoinRoom(
     @ConnectedSocket() client: Socket,
@@ -164,28 +165,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
 
     // sockets.adapter.rooms 에서 `user-${userUuid}` 키가 있는지 확인하고 active user 필터링
-    const activeUserUuids: string[] = [];
     for (const user of roomUsers) {
       // 유저가 소켓에 연결되어 있다면 메시지 전송
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
-        activeUserUuids.push(user.userUuid);
         this.server
           .to(`user-${user.userUuid}`)
           .emit('newMessage', instanceToPlain(message));
-      } else {
-        // 유저가 소켓에 연결되어 있지 않다면 푸시 알림 전송
-        this.fcmService
-          .sendPushNotificationByUserUuid(
-            [user.userUuid],
-            `${await this.roomService.getRoomTitle(roomUuid)}`,
-            message.message,
-            {
-              roomUuid: roomUuid,
-            },
-          )
-          .catch(console.error);
       }
     }
+    // 모든 유저에게 알림 전송
+    this.fcmService
+      .sendPushNotificationByUserUuid(
+        roomUsers.map((user) => user.userUuid),
+        `${await this.roomService.getRoomTitle(roomUuid)}`,
+        message.message,
+        {
+          roomUuid: roomUuid,
+        },
+      )
+      .catch(console.error);
   }
 
   async sendUpdatedMessage(chat: Chat) {
@@ -218,6 +216,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  // NOTE: 삭제 예정
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
@@ -287,6 +286,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  // NOTE: 삭제 예정
   @SubscribeMessage('leaveRoom')
   async handleLeaveRoom(
     @ConnectedSocket() client: Socket,

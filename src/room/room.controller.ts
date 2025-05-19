@@ -515,7 +515,7 @@ export class RoomController {
       user.uuid,
       dto,
     );
-    const message = `결제자 ${responseSettlement.payerNickname} 님이 정산 요청을 했습니다.`;
+    const message = `결제자 ${responseSettlement.payerNickname} 님이 정산 정보를 등록했습니다. 확인 후 송금을 진행해 주세요.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
@@ -759,7 +759,7 @@ export class RoomController {
     if (body.isPaid) {
       const nickname = await this.userService.getNickname(user.uuid);
       const roomTitle = await this.roomService.getRoomTitle(uuid);
-      const message = `${nickname?.nickname} 님이 정산 여부를 수정했습니다. 확인해 보세요!`;
+      const message = `${nickname?.nickname} 님이 정산을 완료했다고 알립니다. 확인해 보세요!`;
       this.fcmService
         .sendPushNotificationByUserUuid(
           payerUuid,
