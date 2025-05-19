@@ -405,7 +405,6 @@ export class RoomController {
     @Req() req,
     @Body() dto: UpdateSettlementDto,
   ) {
-    console.log('updateSettlement2');
     const user = req.user as JwtPayload;
     const responseSettlement = await this.roomService.updateSettlement(
       uuid,
