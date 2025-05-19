@@ -37,6 +37,14 @@ import { UpdateSettlementDto } from './dto/update-settlement.dto';
 import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
 import { ResponseSettlementDto } from './dto/response-settlement.dto';
 @ApiCookieAuth()
+@ApiResponse({
+  status: 401,
+  description: '로그인이 되어 있지 않은 경우',
+})
+@ApiResponse({
+  status: 404,
+  description: '방이 존재하지 않는 경우',
+})
 @UseGuards(JwtAuthGuard)
 @Controller('room')
 export class RoomController {
@@ -62,10 +70,6 @@ export class RoomController {
     description: '출발 시간이 현재보다 이전인 경우',
   })
   @ApiResponse({
-    status: 401,
-    description: '로그인이 되어 있지 않은 경우',
-  })
-  @ApiResponse({
     status: 500,
     description: '내부 트랜잭션 오류 등으로 방 생성이 실패할 경우',
   })
@@ -83,10 +87,6 @@ export class RoomController {
     description: '출발 시간이 현재보다 이후이고, 모집 중인 모든 방을 반환',
     type: [Room],
   })
-  @ApiResponse({
-    status: 401,
-    description: '로그인이 되어 있지 않은 경우',
-  })
   findAll() {
     return this.roomService.findAll();
   }
@@ -97,12 +97,9 @@ export class RoomController {
   })
   @ApiResponse({
     status: 200,
-    description: '자신이 참여중인 방을 반환',
+    description:
+      '자신이 참여중인 방을 반환, 참여중인 방이 없을 경우 빈 배열 반환',
     type: [Room],
-  })
-  @ApiResponse({
-    status: 401,
-    description: '로그인이 되어 있지 않은 경우',
   })
   findMyRoom(@Req() req) {
     const user = req.user as JwtPayload;
@@ -117,10 +114,6 @@ export class RoomController {
     status: 200,
     description: '특정 방을 반환, 방이 존재하지 않을 경우 null 반환',
     type: Room,
-  })
-  @ApiResponse({
-    status: 401,
-    description: '로그인이 되어 있지 않은 경우',
   })
   findOne(@Param('uuid') uuid: string) {
     return this.roomService.findOne(uuid);
@@ -137,8 +130,7 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      '방이 존재하지 않는 경우, 이미 종료된 방인 경우, 출발 시간이 현재보다 이전인 경우',
+    description: '이미 종료된 방인 경우, 출발 시간이 현재보다 이전인 경우',
   })
   @ApiResponse({
     status: 401,
@@ -164,8 +156,7 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      '방이 존재하지 않는 경우, 이미 삭제된 방인 경우, 이미 정산이 진행되고 있는 경우',
+    description: '이미 삭제된 방인 경우, 이미 정산이 진행되고 있는 경우',
   })
   @ApiResponse({
     status: 401,
@@ -190,10 +181,6 @@ export class RoomController {
     description:
       '방이 존재하지 않는 경우, 방에 가입할 수 없는 상태(방이 활성화되지 않은 경우, 이미 가입된 방, 강퇴된 방)인 경우',
   })
-  @ApiResponse({
-    status: 401,
-    description: '로그인이 되어 있지 않은 경우',
-  })
   async joinRoom(@Req() req, @Param('uuid') uuid: string) {
     const user = req.user as JwtPayload;
     return await this.roomService.joinRoom(uuid, user.uuid);
@@ -213,11 +200,7 @@ export class RoomController {
   @ApiResponse({
     status: 400,
     description:
-      '방이 존재하지 않는 경우, 방에 가입할 수 없는 상태(방이 활성화되지 않은 경우, 이미 가입된 방, 강퇴된 방)인 경우',
-  })
-  @ApiResponse({
-    status: 401,
-    description: '로그인이 되어 있지 않은 경우',
+      '방에 가입할 수 없는 상태(방이 활성화되지 않은 경우, 이미 가입된 방, 강퇴된 방)인 경우',
   })
   async joinRoom2(@Req() req, @Param('uuid') uuid: string) {
     const user = req.user as JwtPayload;
@@ -250,11 +233,15 @@ export class RoomController {
   @ApiResponse({
     status: 400,
     description:
-      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 탈퇴하는 경우에 다른 방장을 지정할 수 없는 경우',
+      '방에 가입되어 있지 않은 경우, 방장이 탈퇴하는 경우에 다른 방장을 지정할 수 없는 경우',
   })
   @ApiResponse({
     status: 401,
     description: '로그인이 되어 있지 않은 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '방이 존재하지 않는 경우',
   })
   async leaveRoom(@Req() req, @Param('uuid') uuid: string) {
     const user = req.user as JwtPayload;
@@ -275,11 +262,7 @@ export class RoomController {
   @ApiResponse({
     status: 400,
     description:
-      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 탈퇴하는 경우에 다른 방장을 지정할 수 없는 경우, 이미 정산이 진행되고 있는 경우',
-  })
-  @ApiResponse({
-    status: 401,
-    description: '로그인이 되어 있지 않은 경우',
+      '방에 가입되어 있지 않은 경우, 방장이 탈퇴하는 경우에 다른 방장을 지정할 수 없는 경우, 이미 정산이 진행되고 있는 경우',
   })
   async leaveRoom2(@Req() req, @Param('uuid') uuid: string) {
     const user = req.user as JwtPayload;
@@ -366,8 +349,7 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 또는 자기 자신을 강퇴하는 경우',
+    description: '방에 가입되어 있지 않은 경우, 자기 자신을 강퇴하는 경우',
   })
   @ApiResponse({
     status: 401,
@@ -414,10 +396,6 @@ export class RoomController {
     description:
       '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 아닌 경우, 이미 방장인 경우',
   })
-  @ApiResponse({
-    status: 401,
-    description: '로그인이 되어 있지 않은 경우',
-  })
   async delegateRoom(
     @Req() req,
     @Param('uuid') uuid: string,
@@ -442,11 +420,7 @@ export class RoomController {
   @ApiResponse({
     status: 400,
     description:
-      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 방장이 아닌 경우, 이미 방장인 경우',
-  })
-  @ApiResponse({
-    status: 401,
-    description: '로그인이 되어 있지 않은 경우',
+      '방에 가입되어 있지 않은 경우, 방장이 아닌 경우, 이미 방장인 경우',
   })
   async delegateRoom2(
     @Req() req,
@@ -501,8 +475,7 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      '방이 존재하지 않는 경우, 방이 종료된 경우, 이미 정산이 진행되고 있는 경우',
+    description: '방이 종료된 경우, 이미 정산이 진행되고 있는 경우',
   })
   async requestSettlement2(
     @Param('uuid') uuid: string,
@@ -537,8 +510,12 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
+    description: '방이 종료된 경우, 정산이 진행되고 있지 않은 경우',
+  })
+  @ApiResponse({
+    status: 404,
     description:
-      '방이 존재하지 않는 경우, 방이 종료된 경우, 정산이 진행되고 있지 않은 경우, 정산자의 계좌 정보가 없는 경우',
+      '방이 존재하지 않는 경우, 정산 내역이 없는 경우, 정산자의 계좌 정보가 없는 경우',
   })
   async getSettlement(@Param('uuid') uuid: string) {
     return await this.roomService.getSettlement(uuid);
@@ -589,16 +566,11 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      '방이 존재하지 않는 경우, 방이 종료된 경우, 정산이 진행되고 있지 않은 경우, 정산자의 계좌 정보가 없는 경우',
+    description: '방이 종료된 경우, 정산이 진행되고 있지 않은 경우',
   })
   @ApiResponse({
     status: 401,
     description: '정산자가 아닌 경우',
-  })
-  @ApiResponse({
-    status: 404,
-    description: '정산이 진행되고 있지 않은 경우',
   })
   async updateSettlement2(
     @Param('uuid') uuid: string,
@@ -652,8 +624,11 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      '방이 존재하지 않는 경우, 방이 종료된 경우, 정산이 진행되고 있지 않은 경우, 정산자의 계좌 정보가 없는 경우',
+    description: '정산이 진행되고 있지 않은 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우, 정산자가 아닌 경우',
   })
   async cancelSettlement2(@Param('uuid') uuid: string, @Req() req) {
     const user = req.user as JwtPayload;
@@ -730,11 +705,7 @@ export class RoomController {
   @ApiResponse({
     status: 400,
     description:
-      '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우, 요청자가 정산자 본인이 아닌 경우',
-  })
-  @ApiResponse({
-    status: 401,
-    description: '로그인이 되어 있지 않은 경우',
+      '방에 가입되어 있지 않은 경우, 요청자가 정산자 본인이 아닌 경우, 정산이 진행되고 있지 않은 경우',
   })
   @ApiBody({
     description: '정산 여부를 전달합니다. 기존과 같은 값을 받으면 덮어씁니다.',
@@ -821,16 +792,11 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description:
-      '방이 존재하지 않는 경우, 방이 종료된 경우, 정산이 진행되고 있지 않은 경우',
+    description: '방이 종료된 경우, 정산이 진행되고 있지 않은 경우',
   })
   @ApiResponse({
     status: 401,
-    description: '로그인이 되어 있지 않은 경우',
-  })
-  @ApiResponse({
-    status: 403,
-    description: '정산자 혹은 관리자가 아닌 경우',
+    description: '로그인이 되어 있지 않은 경우, 정산자 혹은 관리자가 아닌 경우',
   })
   @ApiParam({
     name: 'uuid',
