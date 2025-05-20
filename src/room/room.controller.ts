@@ -103,7 +103,7 @@ export class RoomController {
   })
   findMyRoom(@Req() req) {
     const user = req.user as JwtPayload;
-    return this.roomService.findByUserUuid(user.uuid);
+    return this.roomService.findMyRoomByUserUuid(user.uuid);
   }
 
   @Get(':uuid')

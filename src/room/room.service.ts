@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { MoreThan, Not, Repository, DataSource } from 'typeorm';
+import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import { InjectRepository } from '@nestjs/typeorm';
 import { instanceToPlain } from 'class-transformer';
 
@@ -212,21 +213,23 @@ export class RoomService {
           status: RoomUserStatus.JOINED,
         });
 
-        await queryRunner.manager.update(
-          Room,
-          { uuid: uuid },
-          { currentParticipant: room.currentParticipant + 1 },
-        );
-
-        await queryRunner.commitTransaction();
-
         // 증가된 참여 인원 수 확인
-        const participantsNumber = await this.getParticipantsNumber(uuid);
-        if (participantsNumber != room.currentParticipant + 1) {
+        const participantsNumber = await this.getParticipantsNumber(
+          uuid,
+          queryRunner,
+        );
+        if (participantsNumber != room.currentParticipant) {
           this.logger.warn(
             `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
           );
         }
+        await queryRunner.manager.update(
+          Room,
+          { uuid: uuid },
+          { currentParticipant: participantsNumber + 1 },
+        );
+
+        await queryRunner.commitTransaction();
       } catch (err) {
         await queryRunner.rollbackTransaction();
         throw err;
@@ -303,10 +306,21 @@ export class RoomService {
         );
       }
 
+      // 참여 인원 감소 확인
+      const participantsNumber = await this.getParticipantsNumber(
+        uuid,
+        queryRunner,
+      );
+      if (participantsNumber != room.currentParticipant - 1) {
+        this.logger.warn(
+          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
+        );
+      }
+
       await queryRunner.manager.update(
         Room,
         { uuid: uuid },
-        { currentParticipant: room.currentParticipant - 1 },
+        { currentParticipant: participantsNumber - 1 },
       );
       // RoomUser 삭제
       await queryRunner.manager.delete(RoomUser, {
@@ -315,14 +329,6 @@ export class RoomService {
       });
 
       await queryRunner.commitTransaction();
-
-      // 참여 인원 감소 확인
-      const participantsNumber = await this.getParticipantsNumber(uuid);
-      if (participantsNumber != room.currentParticipant - 1) {
-        this.logger.warn(
-          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
-        );
-      }
 
       const result = await this.roomRepo.findOne({
         where: { uuid: uuid },
@@ -387,9 +393,20 @@ export class RoomService {
     await queryRunner.startTransaction();
 
     try {
+      // 참여 인원 감소 확인
+      const participantsNumber = await this.getParticipantsNumber(
+        uuid,
+        queryRunner,
+      );
+      if (participantsNumber != room.currentParticipant) {
+        this.logger.warn(
+          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
+        );
+      }
+
       await this.roomRepo.update(
         { uuid: uuid },
-        { currentParticipant: room.currentParticipant - 1 },
+        { currentParticipant: participantsNumber - 1 },
       );
       // RoomUser 상태 변경
       await this.roomUserRepo.update(
@@ -399,13 +416,6 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
-      // 참여 인원 감소 확인
-      const participantsNumber = await this.getParticipantsNumber(uuid);
-      if (participantsNumber != room.currentParticipant - 1) {
-        this.logger.warn(
-          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
-        );
-      }
       return await this.roomUserRepo.findOne({
         where: { roomUuid: uuid, userUuid: userUuid },
         relations: ['room'],
@@ -418,9 +428,12 @@ export class RoomService {
     }
   }
 
-  async getParticipantsNumber(uuid: string) {
+  async getParticipantsNumber(uuid: string, queryRunner?: QueryRunner) {
+    const manager = queryRunner
+      ? queryRunner.manager.getRepository(RoomUser)
+      : this.roomUserRepo;
     // STATUS가 JOINED인 ROOM_USER의 개수를 반환
-    return this.roomUserRepo.count({
+    return manager.count({
       where: { roomUuid: uuid, status: RoomUserStatus.JOINED },
     });
   }
