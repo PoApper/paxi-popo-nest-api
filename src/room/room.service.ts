@@ -182,10 +182,6 @@ export class RoomService {
       throw new BadRequestException('입장할 수 없는 상태의 방입니다.');
     }
 
-    if (room.currentParticipant == room.maxParticipant) {
-      throw new BadRequestException('정원이 가득 찼습니다.');
-    }
-
     const roomUser = await this.roomUserRepo.findOne({
       where: { roomUuid: uuid, userUuid: userUuid },
     });
@@ -194,7 +190,13 @@ export class RoomService {
       throw new BadRequestException('강퇴된 방입니다.');
     }
 
-    const sendMessage = roomUser ? true : false;
+    if (!roomUser && room.currentParticipant == room.maxParticipant) {
+      throw new BadRequestException('정원이 가득 찼습니다.');
+    }
+
+    // 첫 입장 시 메세지 전송 여부 확인
+    const sendMessage =
+      roomUser?.status == RoomUserStatus.JOINED ? false : true;
 
     if (!roomUser) {
       const queryRunner = this.dataSource.createQueryRunner();
@@ -214,15 +216,15 @@ export class RoomService {
           { currentParticipant: room.currentParticipant + 1 },
         );
 
-        // 증가된 참여 인원 수를 반영
+        await queryRunner.commitTransaction();
+
+        // 증가된 참여 인원 수 확인
         const participantsNumber = await this.getParticipantsNumber(uuid);
         if (participantsNumber != room.currentParticipant + 1) {
           this.logger.warn(
             `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
           );
         }
-
-        await queryRunner.commitTransaction();
       } catch (err) {
         await queryRunner.rollbackTransaction();
         throw err;
@@ -298,17 +300,11 @@ export class RoomService {
           { ownerUuid: newOwnerRoomUser.userUuid },
         );
       }
-      // 참여 인원 감소
-      const participantsNumber = await this.getParticipantsNumber(uuid);
-      if (participantsNumber != room.currentParticipant) {
-        this.logger.warn(
-          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
-        );
-      }
+
       await queryRunner.manager.update(
         Room,
         { uuid: uuid },
-        { currentParticipant: participantsNumber - 1 },
+        { currentParticipant: room.currentParticipant - 1 },
       );
       // RoomUser 삭제
       await queryRunner.manager.delete(RoomUser, {
@@ -317,6 +313,15 @@ export class RoomService {
       });
 
       await queryRunner.commitTransaction();
+
+      // 참여 인원 감소 확인
+      const participantsNumber = await this.getParticipantsNumber(uuid);
+      if (participantsNumber != room.currentParticipant - 1) {
+        this.logger.warn(
+          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
+        );
+      }
+
       const result = await this.roomRepo.findOne({
         where: { uuid: uuid },
         relations: ['room_users', 'room_users.user.nickname'],
@@ -380,16 +385,9 @@ export class RoomService {
     await queryRunner.startTransaction();
 
     try {
-      // 참여 인원 감소
-      const participantsNumber = await this.getParticipantsNumber(uuid);
-      if (participantsNumber != room.currentParticipant) {
-        this.logger.warn(
-          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
-        );
-      }
       await this.roomRepo.update(
         { uuid: uuid },
-        { currentParticipant: participantsNumber - 1 },
+        { currentParticipant: room.currentParticipant - 1 },
       );
       // RoomUser 상태 변경
       await this.roomUserRepo.update(
@@ -399,6 +397,13 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
+      // 참여 인원 감소 확인
+      const participantsNumber = await this.getParticipantsNumber(uuid);
+      if (participantsNumber != room.currentParticipant - 1) {
+        this.logger.warn(
+          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
+        );
+      }
       return await this.roomUserRepo.findOne({
         where: { roomUuid: uuid, userUuid: userUuid },
         relations: ['room'],
