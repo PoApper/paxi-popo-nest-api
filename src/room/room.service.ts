@@ -95,7 +95,7 @@ export class RoomService {
 
   async findMyRoomByUserUuid(userUuid: string) {
     // JOINED 및 KICKED 상태인 방 모두 조회
-    return this.roomRepo.find({
+    const rooms: any = await this.roomRepo.find({
       where: {
         room_users: { userUuid: userUuid },
       },
