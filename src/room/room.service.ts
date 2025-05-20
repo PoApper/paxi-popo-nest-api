@@ -182,7 +182,9 @@ export class RoomService {
       throw new BadRequestException('입장할 수 없는 상태의 방입니다.');
     }
 
-    // TODO: 정원 체크
+    if (room.currentParticipant == room.maxParticipant) {
+      throw new BadRequestException('정원이 가득 찼습니다.');
+    }
 
     const roomUser = await this.roomUserRepo.findOne({
       where: { roomUuid: uuid, userUuid: userUuid },
