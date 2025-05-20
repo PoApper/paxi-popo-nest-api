@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { MoreThan, Not, Repository, DataSource } from 'typeorm';
@@ -122,7 +123,7 @@ export class RoomService {
   async update(uuid: string, updateRoomDto: UpdateRoomDto, user: JwtPayload) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
     if (
       room.status == RoomStatus.COMPLETED ||
@@ -153,7 +154,7 @@ export class RoomService {
   async remove(uuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
     if (room.status == RoomStatus.DELETED) {
       throw new BadRequestException('이미 삭제된 방입니다.');
@@ -172,7 +173,7 @@ export class RoomService {
     let sendMessage = false;
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
     if (
       room.status == RoomStatus.DELETED ||
@@ -257,41 +258,12 @@ export class RoomService {
     } finally {
       await queryRunner.release();
     }
-
-    // const roomUser = await this.roomUserRepo.findOneBy({
-    //   roomUuid: uuid,
-    //   userUuid: userUuid,
-    // });
-    // if (roomUser) {
-    //   if (roomUser.status == RoomUserStatus.JOINED) {
-    //     throw new BadRequestException('이미 가입된 방입니다.');
-    //   } else if (roomUser.status == RoomUserStatus.LEFT) {
-    //     // 가입 상태로 변경
-    //     return this.roomUserRepo.update(
-    //       { roomUuid: uuid, userUuid: userUuid },
-    //       { status: RoomUserStatus.JOINED },
-    //     );
-    //   } else if (roomUser.status == RoomUserStatus.KICKED) {
-    //     throw new BadRequestException('강퇴된 방입니다.');
-    //   }
-    // }
-
-    // // 참여 인원 증가
-    // await this.roomRepo.update(
-    //   { uuid: uuid },
-    //   { currentParticipant: room.currentParticipant + 1 },
-    // );
-
-    // return this.roomUserRepo.save({
-    //   roomUuid: uuid,
-    //   userUuid: userUuid,
-    // });
   }
 
   async leaveRoom(uuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
     const roomUser = await this.roomUserRepo.findOne({
@@ -388,7 +360,7 @@ export class RoomService {
   ) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
     const roomUser = await this.roomUserRepo.findOne({
@@ -465,7 +437,7 @@ export class RoomService {
       relations: ['room'],
     });
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
     if (room.ownerUuid != ownerUuid) {
@@ -499,7 +471,7 @@ export class RoomService {
   ) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
     if (room.status == RoomStatus.IN_SETTLEMENT) {
@@ -545,7 +517,7 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
-      return await this.getSettlement(userUuid, uuid);
+      return await this.getSettlement(uuid);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -561,7 +533,7 @@ export class RoomService {
   ) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
     if (room.payerUuid != userUuid) {
@@ -611,7 +583,7 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
-      return await this.getSettlement(userUuid, uuid);
+      return await this.getSettlement(uuid);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -623,7 +595,7 @@ export class RoomService {
   async cancelSettlement(uuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
     if (room.payerUuid != userUuid) {
@@ -671,8 +643,7 @@ export class RoomService {
     }
   }
 
-  async getSettlement(userUuid: string, roomUuid: string) {
-    const account = await this.userService.getAccount(userUuid);
+  async getSettlement(roomUuid: string) {
     const room = await this.roomRepo.findOne({
       where: {
         uuid: roomUuid,
@@ -680,12 +651,18 @@ export class RoomService {
     });
 
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
+    }
+
+    if (room.status != RoomStatus.IN_SETTLEMENT) {
+      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
     }
 
     if (!room.payAmount || !room.payerUuid) {
-      throw new BadRequestException('정산 내역이 없습니다.');
+      throw new NotFoundException('정산 내역이 없습니다.');
     }
+
+    const account = await this.userService.getAccount(room.payerUuid);
 
     if (
       !account ||
@@ -693,7 +670,7 @@ export class RoomService {
       !account.accountHolderName ||
       !account.bankName
     ) {
-      throw new BadRequestException('계좌 정보가 없습니다.');
+      throw new NotFoundException('정산자의 계좌 정보가 없습니다.');
     }
 
     const payAmountPerPerson = this.calculatePayAmountPerPerson(
@@ -703,7 +680,7 @@ export class RoomService {
 
     const payerNickname = await this.userService.getNickname(room.payerUuid);
     if (!payerNickname) {
-      throw new BadRequestException('정산자 닉네임을 찾을 수 없습니다.');
+      throw new NotFoundException('정산자 닉네임을 찾을 수 없습니다.');
     }
 
     // Settlement DTO의 내용을 리턴함
@@ -727,7 +704,7 @@ export class RoomService {
   ) {
     const room = await this.findOne(roomUuid);
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
     if (room.status != RoomStatus.IN_SETTLEMENT || room.payerUuid == null) {
@@ -754,7 +731,7 @@ export class RoomService {
   async completeRoom(uuid: string, userUuid: string, userType: UserType) {
     const room = await this.findOne(uuid);
     if (!room) {
-      throw new BadRequestException('방이 존재하지 않습니다.');
+      throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
     if (userUuid != room.payerUuid && userType != UserType.admin) {
