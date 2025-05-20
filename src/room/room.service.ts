@@ -89,7 +89,7 @@ export class RoomService {
   findByUserUuid(userUuid: string) {
     return this.roomRepo.find({
       where: {
-        room_users: { userUuid: userUuid },
+        room_users: { userUuid: userUuid, status: RoomUserStatus.JOINED },
       },
       select: {
         room_users: {
