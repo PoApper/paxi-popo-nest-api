@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { MoreThan, Not, Repository, DataSource } from 'typeorm';
@@ -30,6 +31,7 @@ export class RoomService {
     private readonly userService: UserService,
     private readonly dataSource: DataSource,
   ) {}
+  private readonly logger = new Logger(RoomService.name);
 
   async create(user: JwtPayload, dto: CreateRoomDto) {
     // 출발 시간 현재보다 이전인지 확인
@@ -87,7 +89,7 @@ export class RoomService {
   findByUserUuid(userUuid: string) {
     return this.roomRepo.find({
       where: {
-        room_users: { userUuid: userUuid, status: Not(RoomUserStatus.LEFT) },
+        room_users: { userUuid: userUuid },
       },
       select: {
         room_users: {
@@ -169,7 +171,6 @@ export class RoomService {
   }
 
   async joinRoom(uuid: string, userUuid: string) {
-    let sendMessage = false;
     const room = await this.findOne(uuid);
     if (!room) {
       throw new BadRequestException('방이 존재하지 않습니다.');
@@ -183,109 +184,73 @@ export class RoomService {
 
     // TODO: 정원 체크
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
     const roomUser = await this.roomUserRepo.findOne({
       where: { roomUuid: uuid, userUuid: userUuid },
     });
 
-    try {
-      if (roomUser) {
-        if (roomUser.status == RoomUserStatus.LEFT) {
-          sendMessage = true;
-          // 가입 상태로 변경
-          await queryRunner.manager.update(
-            RoomUser,
-            { roomUuid: uuid, userUuid: userUuid },
-            { status: RoomUserStatus.JOINED },
-          );
-        } else if (roomUser.status == RoomUserStatus.KICKED) {
-          throw new BadRequestException('강퇴된 방입니다.');
-        }
-      } else {
-        sendMessage = true;
+    if (roomUser && roomUser.status == RoomUserStatus.KICKED) {
+      throw new BadRequestException('강퇴된 방입니다.');
+    }
+
+    const sendMessage = roomUser ? true : false;
+
+    if (!roomUser) {
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
         await queryRunner.manager.save(RoomUser, {
           roomUuid: uuid,
           userUuid: userUuid,
+          status: RoomUserStatus.JOINED,
         });
-      }
 
-      // 증가된 참여 인원 수를 반영
-      // TODO: 정말 인원이 바뀌어야 할 상황(첫 입장, LEFT 후 입장 시)에만 DB 콜 하도록 변경
-      const participantsNumber = await this.getParticipantsNumber(uuid);
-      if (participantsNumber != room.currentParticipant + 1) {
-        // TODO: 로그로 변경
-        console.log(
-          'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
+        await queryRunner.manager.update(
+          Room,
+          { uuid: uuid },
+          { currentParticipant: room.currentParticipant + 1 },
         );
+
+        // 증가된 참여 인원 수를 반영
+        const participantsNumber = await this.getParticipantsNumber(uuid);
+        if (participantsNumber != room.currentParticipant + 1) {
+          this.logger.warn(
+            `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
+          );
+        }
+
+        await queryRunner.commitTransaction();
+      } catch (err) {
+        await queryRunner.rollbackTransaction();
+        throw err;
+      } finally {
+        await queryRunner.release();
       }
-      await queryRunner.manager.update(
-        Room,
-        { uuid: uuid },
-        { currentParticipant: participantsNumber },
-      );
-
-      await queryRunner.commitTransaction();
-
-      // room_user에 nickname을 붙이는 작업
-      // 실명과 필요하지 않은 데이터인 user, kickedReason은 제외
-      const result = await this.roomRepo.findOne({
-        where: { uuid: uuid },
-        relations: ['room_users', 'room_users.user.nickname'],
-      });
-
-      // id, createdAt, updatedAt 제외하기 위함
-      const plainResult = instanceToPlain(result);
-      const transformed = {
-        ...plainResult,
-        room_users: plainResult?.room_users.map((ru) => {
-          /* eslint-disable-next-line */
-          const { user, kickedReason, ...rest } = ru;
-          return {
-            ...rest,
-            nickname: user.nickname?.nickname ?? null,
-          };
-        }),
-      };
-
-      return { sendMessage, room: transformed };
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
     }
 
-    // const roomUser = await this.roomUserRepo.findOneBy({
-    //   roomUuid: uuid,
-    //   userUuid: userUuid,
-    // });
-    // if (roomUser) {
-    //   if (roomUser.status == RoomUserStatus.JOINED) {
-    //     throw new BadRequestException('이미 가입된 방입니다.');
-    //   } else if (roomUser.status == RoomUserStatus.LEFT) {
-    //     // 가입 상태로 변경
-    //     return this.roomUserRepo.update(
-    //       { roomUuid: uuid, userUuid: userUuid },
-    //       { status: RoomUserStatus.JOINED },
-    //     );
-    //   } else if (roomUser.status == RoomUserStatus.KICKED) {
-    //     throw new BadRequestException('강퇴된 방입니다.');
-    //   }
-    // }
+    // room_user에 nickname을 붙이는 작업
+    // 실명과 필요하지 않은 데이터인 user, kickedReason은 제외
+    const result = await this.roomRepo.findOne({
+      where: { uuid: uuid },
+      relations: ['room_users', 'room_users.user.nickname'],
+    });
 
-    // // 참여 인원 증가
-    // await this.roomRepo.update(
-    //   { uuid: uuid },
-    //   { currentParticipant: room.currentParticipant + 1 },
-    // );
+    // id, createdAt, updatedAt 제외하기 위함
+    const plainResult = instanceToPlain(result);
+    const transformed = {
+      ...plainResult,
+      room_users: plainResult?.room_users.map((ru) => {
+        /* eslint-disable-next-line */
+        const { user, kickedReason, ...rest } = ru;
+        return {
+          ...rest,
+          nickname: user.nickname?.nickname ?? null,
+        };
+      }),
+    };
 
-    // return this.roomUserRepo.save({
-    //   roomUuid: uuid,
-    //   userUuid: userUuid,
-    // });
+    return { sendMessage, room: transformed };
   }
 
   async leaveRoom(uuid: string, userUuid: string) {
@@ -334,9 +299,8 @@ export class RoomService {
       // 참여 인원 감소
       const participantsNumber = await this.getParticipantsNumber(uuid);
       if (participantsNumber != room.currentParticipant) {
-        // TODO: 로그로 변경
-        console.log(
-          'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
+        this.logger.warn(
+          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
         );
       }
       await queryRunner.manager.update(
@@ -344,12 +308,11 @@ export class RoomService {
         { uuid: uuid },
         { currentParticipant: participantsNumber - 1 },
       );
-      // RoomUser 상태 변경
-      await queryRunner.manager.update(
-        RoomUser,
-        { roomUuid: uuid, userUuid: userUuid },
-        { status: RoomUserStatus.LEFT },
-      );
+      // RoomUser 삭제
+      await queryRunner.manager.delete(RoomUser, {
+        roomUuid: uuid,
+        userUuid: userUuid,
+      });
 
       await queryRunner.commitTransaction();
       const result = await this.roomRepo.findOne({
@@ -418,9 +381,8 @@ export class RoomService {
       // 참여 인원 감소
       const participantsNumber = await this.getParticipantsNumber(uuid);
       if (participantsNumber != room.currentParticipant) {
-        // TODO: 로그로 변경
-        console.log(
-          'JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!!',
+        this.logger.warn(
+          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
         );
       }
       await this.roomRepo.update(
