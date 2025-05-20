@@ -94,6 +94,14 @@ export class RoomService {
       where: {
         room_users: { userUuid: userUuid },
       },
+      select: {
+        room_users: {
+          userUuid: false,
+          status: true,
+          kickedReason: true,
+          lastReadChatUuid: true,
+        },
+      },
       relations: ['room_users'],
     });
 
