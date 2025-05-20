@@ -89,29 +89,21 @@ export class RoomService {
     return this.roomRepo.findOneBy({ uuid: uuid });
   }
 
-  findByUserUuid(userUuid: string) {
-    return this.roomRepo
-      .find({
-        where: {
-          room_users: { userUuid: userUuid, status: Not(RoomUserStatus.LEFT) },
-        },
-        relations: ['room_users', 'chats'],
-      })
-      .then((rooms: any) => {
-        return rooms.map((room) => {
-          if (room.chats && room.chats.length > 0) {
-            // id가 가장 큰 채팅(최신 채팅) 선택
-            room.lastChat = room.chats.sort((a, b) => b.id - a.id)[0];
-            room.hasNewChat =
-              room.room_users[0].lastReadChatUuid != room.lastChat.uuid;
-            delete room.chats;
-          } else {
-            room.lastChat = null;
-            room.hasNewChat = false;
-          }
-          return room;
-        });
-      });
+  async findByUserUuid(userUuid: string) {
+    const rooms: any = await this.roomRepo.find({
+      where: {
+        room_users: { userUuid: userUuid },
+      },
+      relations: ['room_users'],
+    });
+
+    for (const room of rooms) {
+      const lastChat = await this.chatService.getLastMessageOfRoom(room.uuid);
+      room.hasNewMessage =
+        lastChat?.uuid != room.room_users[0].lastReadChatUuid;
+    }
+
+    return rooms;
   }
 
   getRoomTitle(uuid: string) {
@@ -799,7 +791,7 @@ export class RoomService {
 
     const lastReadMessageUuid = await this.chatService
       .getLastMessageOfRoom(roomUuid)
-      .then((message) => message.uuid);
+      .then((message) => message?.uuid);
 
     await this.roomUserRepo.update(
       { roomUuid, userUuid },

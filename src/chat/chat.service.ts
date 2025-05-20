@@ -122,9 +122,7 @@ export class ChatService {
       where: { roomUuid },
       order: { createdAt: 'DESC' },
     });
-    if (!lastMessage) {
-      throw new NotFoundException('방에 메세지가 없습니다.');
-    }
+    if (!lastMessage) return null;
     return lastMessage;
   }
 }
