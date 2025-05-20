@@ -218,7 +218,7 @@ export class RoomService {
           uuid,
           queryRunner,
         );
-        if (participantsNumber != room.currentParticipant) {
+        if (participantsNumber != room.currentParticipant + 1) {
           this.logger.warn(
             `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
           );
@@ -226,7 +226,7 @@ export class RoomService {
         await queryRunner.manager.update(
           Room,
           { uuid: uuid },
-          { currentParticipant: participantsNumber + 1 },
+          { currentParticipant: participantsNumber },
         );
 
         await queryRunner.commitTransaction();
@@ -306,6 +306,12 @@ export class RoomService {
         );
       }
 
+      // RoomUser 삭제
+      await queryRunner.manager.delete(RoomUser, {
+        roomUuid: uuid,
+        userUuid: userUuid,
+      });
+
       // 참여 인원 감소 확인
       const participantsNumber = await this.getParticipantsNumber(
         uuid,
@@ -320,13 +326,8 @@ export class RoomService {
       await queryRunner.manager.update(
         Room,
         { uuid: uuid },
-        { currentParticipant: participantsNumber - 1 },
+        { currentParticipant: participantsNumber },
       );
-      // RoomUser 삭제
-      await queryRunner.manager.delete(RoomUser, {
-        roomUuid: uuid,
-        userUuid: userUuid,
-      });
 
       await queryRunner.commitTransaction();
 
@@ -393,25 +394,28 @@ export class RoomService {
     await queryRunner.startTransaction();
 
     try {
+      // RoomUser 상태 변경
+      await queryRunner.manager.update(
+        RoomUser,
+        { roomUuid: uuid, userUuid: userUuid },
+        { status: RoomUserStatus.KICKED, kickedReason: reason },
+      );
+
       // 참여 인원 감소 확인
       const participantsNumber = await this.getParticipantsNumber(
         uuid,
         queryRunner,
       );
-      if (participantsNumber != room.currentParticipant) {
+      if (participantsNumber != room.currentParticipant - 1) {
         this.logger.warn(
           `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
         );
       }
 
-      await this.roomRepo.update(
+      await queryRunner.manager.update(
+        Room,
         { uuid: uuid },
-        { currentParticipant: participantsNumber - 1 },
-      );
-      // RoomUser 상태 변경
-      await this.roomUserRepo.update(
-        { roomUuid: uuid, userUuid: userUuid },
-        { status: RoomUserStatus.KICKED, kickedReason: reason },
+        { currentParticipant: participantsNumber },
       );
 
       await queryRunner.commitTransaction();
