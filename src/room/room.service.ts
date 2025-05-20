@@ -103,7 +103,7 @@ export class RoomService {
             // id가 가장 큰 채팅(최신 채팅) 선택
             room.lastChat = room.chats.sort((a, b) => b.id - a.id)[0];
             room.hasNewChat =
-              room.room_users[0].lastReadChatUuid == room.lastChat.uuid;
+              room.room_users[0].lastReadChatUuid != room.lastChat.uuid;
             delete room.chats;
           } else {
             room.lastChat = null;
