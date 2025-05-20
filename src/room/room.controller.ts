@@ -103,7 +103,7 @@ export class RoomController {
   })
   findMyRoom(@Req() req) {
     const user = req.user as JwtPayload;
-    return this.roomService.findByUserUuid(user.uuid);
+    return this.roomService.findMyRoomByUserUuid(user.uuid);
   }
 
   @Get(':uuid')
@@ -205,11 +205,12 @@ export class RoomController {
   @Put(['leave2/:uuid', 'leave/:uuid'])
   @ApiOperation({
     summary:
-      '[웹소켓 통합 버전-개발 중] 방에서 나갑니다. 사용자의 상태가 LEFT로 변경됩니다. 방에 퇴장 메세지를 전송합니다.',
+      '[웹소켓 통합 버전-개발 중] 방에서 나갑니다. 방에 퇴장 메세지를 전송합니다.',
   })
   @ApiResponse({
     status: 200,
-    description: '방 정보를 반환, 퇴장 메세지를 전송합니다.',
+    description:
+      '방의 현재 인원 수가 하나 줄고, 방 정보를 반환, 퇴장 메세지를 전송합니다.',
     type: RoomWithUsersDto,
   })
   @ApiResponse({
