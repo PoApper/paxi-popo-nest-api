@@ -87,10 +87,11 @@ export class RoomService {
     return this.roomRepo.findOneBy({ uuid: uuid });
   }
 
-  findByUserUuid(userUuid: string) {
+  findMyRoomByUserUuid(userUuid: string) {
+    // JOINED 및 KICKED 상태인 방 모두 조회
     return this.roomRepo.find({
       where: {
-        room_users: { userUuid: userUuid, status: RoomUserStatus.JOINED },
+        room_users: { userUuid: userUuid },
       },
       select: {
         room_users: {
