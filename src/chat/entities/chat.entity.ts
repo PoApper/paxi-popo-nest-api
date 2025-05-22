@@ -23,6 +23,9 @@ export class Chat {
   @Column({ type: 'uuid', unique: true })
   uuid: string;
 
+  @Column({ nullable: true })
+  senderNickname: string;
+
   @Column({ nullable: false })
   roomUuid: string;
 

@@ -21,10 +21,11 @@ export class ChatService {
     private readonly roomService: RoomService,
   ) {}
 
-  async create(createChatDto: CreateChatDto) {
+  async create(createChatDto: CreateChatDto, senderNickname?: string) {
     const chat = this.chatRepo.create({
       ...createChatDto,
       uuid: uuidv4(),
+      senderNickname: senderNickname ?? undefined,
     });
     return this.chatRepo.save(chat);
   }
