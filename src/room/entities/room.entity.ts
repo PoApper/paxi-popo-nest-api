@@ -10,7 +10,7 @@ import { ApiHideProperty } from '@nestjs/swagger';
 
 import { User } from 'src/user/entities/user.entity';
 import { RoomStatus } from 'src/room/entities/room.meta';
-import { RoomUser } from 'src/room/entities/room.user.entity';
+import { RoomUser } from 'src/room/entities/room-user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
 import { Report } from 'src/report/entities/report.entity';
 import { Base } from 'src/common/base.entity';

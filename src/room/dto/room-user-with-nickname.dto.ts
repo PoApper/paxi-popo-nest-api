@@ -1,7 +1,7 @@
 // dto/room-user-with-nickname.dto.ts
 import { ApiProperty, PickType } from '@nestjs/swagger';
 
-import { RoomUser } from 'src/room/entities/room.user.entity';
+import { RoomUser } from 'src/room/entities/room-user.entity';
 
 import { Room } from '../entities/room.entity';
 
