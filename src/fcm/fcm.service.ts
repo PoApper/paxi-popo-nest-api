@@ -7,7 +7,7 @@ import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { getMessaging } from 'firebase-admin/messaging';
 
-import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
+import { FcmKey } from 'src/fcm/entities/fcm-key.entity';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { NoContentException } from 'src/common/exception';
 

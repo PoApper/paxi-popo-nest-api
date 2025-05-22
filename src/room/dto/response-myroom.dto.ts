@@ -1,7 +1,7 @@
 import { ApiProperty, PickType } from '@nestjs/swagger';
 import { IsBoolean, IsString } from 'class-validator';
 
-import { RoomUserStatus } from 'src/room/entities/room.user.meta';
+import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 
 import { Room } from '../entities/room.entity';
 

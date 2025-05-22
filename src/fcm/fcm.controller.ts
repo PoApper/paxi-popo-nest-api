@@ -15,7 +15,7 @@ import {
   ApiResponse,
 } from '@nestjs/swagger';
 
-import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
+import { FcmKey } from 'src/fcm/entities/fcm-key.entity';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.payload';

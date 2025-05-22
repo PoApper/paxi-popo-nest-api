@@ -13,10 +13,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { instanceToPlain } from 'class-transformer';
 
 import { Room } from 'src/room/entities/room.entity';
-import { RoomUser } from 'src/room/entities/room.user.entity';
+import { RoomUser } from 'src/room/entities/room-user.entity';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { UserType } from 'src/user/user.meta';
-import { RoomUserStatus } from 'src/room/entities/room.user.meta';
+import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 import { RoomStatus } from 'src/room/entities/room.meta';
 import { UserService } from 'src/user/user.service';
 import { ChatService } from 'src/chat/chat.service';
