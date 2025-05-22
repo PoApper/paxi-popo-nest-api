@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -17,6 +19,8 @@ import { UserType } from 'src/user/user.meta';
 import { RoomUserStatus } from 'src/room/entities/room.user.meta';
 import { RoomStatus } from 'src/room/entities/room.meta';
 import { UserService } from 'src/user/user.service';
+import { ChatService } from 'src/chat/chat.service';
+import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
 
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
@@ -31,6 +35,8 @@ export class RoomService {
     @InjectRepository(RoomUser)
     private readonly roomUserRepo: Repository<RoomUser>,
     private readonly userService: UserService,
+    @Inject(forwardRef(() => ChatService)) // 순환 참조 해결
+    private readonly chatService: ChatService,
     private readonly dataSource: DataSource,
   ) {}
   private readonly logger = new Logger(RoomService.name);
@@ -88,9 +94,9 @@ export class RoomService {
     return this.roomRepo.findOneBy({ uuid: uuid });
   }
 
-  findMyRoomByUserUuid(userUuid: string) {
+  async findMyRoomByUserUuid(userUuid: string) {
     // JOINED 및 KICKED 상태인 방 모두 조회
-    return this.roomRepo.find({
+    const rooms: Room[] = await this.roomRepo.find({
       where: {
         room_users: { userUuid: userUuid },
       },
@@ -99,10 +105,26 @@ export class RoomService {
           userUuid: false,
           status: true,
           kickedReason: true,
+          lastReadChatUuid: true,
         },
       },
       relations: ['room_users'],
     });
+
+    return await Promise.all(
+      rooms.map(async (room) => {
+        const lastChat = await this.chatService.getLastMessageOfRoom(room.uuid);
+        const hasNewMessage =
+          lastChat?.uuid != room.room_users[0].lastReadChatUuid;
+
+        return new ResponseMyRoomDto(
+          room,
+          room.room_users[0].status,
+          room.room_users[0].kickedReason,
+          hasNewMessage,
+        );
+      }),
+    );
   }
 
   getRoomTitle(uuid: string) {
@@ -530,9 +552,8 @@ export class RoomService {
         { roomUuid: uuid, userUuid: userUuid },
         { isPaid: true },
       );
-
       await queryRunner.commitTransaction();
-
+      // TODO: 닉네임이 등록되지 않은 경우 정산은 업데이트 되나 에러 발생
       return await this.getSettlement(uuid);
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -695,22 +716,17 @@ export class RoomService {
     );
 
     const payerNickname = await this.userService.getNickname(room.payerUuid);
-    if (!payerNickname) {
-      throw new NotFoundException('정산자 닉네임을 찾을 수 없습니다.');
-    }
+    // if (!payerNickname) {
+    //   throw new NotFoundException('정산자 닉네임을 찾을 수 없습니다.');
+    // }
 
     // Settlement DTO의 내용을 리턴함
-    const responseSettlement = new ResponseSettlementDto();
-    responseSettlement.roomUuid = roomUuid;
-    responseSettlement.payerUuid = room.payerUuid;
-    responseSettlement.payerNickname = payerNickname.nickname;
-    responseSettlement.payerAccountNumber = account.accountNumber;
-    responseSettlement.payerAccountHolderName = account.accountHolderName;
-    responseSettlement.payerBankName = account.bankName;
-    responseSettlement.payAmount = room.payAmount;
-    responseSettlement.payAmountPerPerson = payAmountPerPerson;
-    responseSettlement.currentParticipant = room.currentParticipant;
-    return responseSettlement;
+    return new ResponseSettlementDto(
+      room,
+      payerNickname,
+      account,
+      payAmountPerPerson,
+    );
   }
 
   async updateRoomUserIsPaid(
@@ -765,6 +781,28 @@ export class RoomService {
 
     return await this.roomRepo.findOne({
       where: { uuid: uuid },
+    });
+  }
+
+  async saveLastReadChat(roomUuid: string, userUuid: string) {
+    const roomUser = await this.roomUserRepo.findOne({
+      where: { roomUuid, userUuid },
+    });
+    if (!roomUser) {
+      throw new BadRequestException('방에 가입되어 있지 않습니다.');
+    }
+
+    const lastReadMessageUuid = await this.chatService
+      .getLastMessageOfRoom(roomUuid)
+      .then((message) => message?.uuid);
+
+    await this.roomUserRepo.update(
+      { roomUuid, userUuid },
+      { lastReadChatUuid: lastReadMessageUuid },
+    );
+
+    return await this.roomUserRepo.findOne({
+      where: { roomUuid, userUuid },
     });
   }
 

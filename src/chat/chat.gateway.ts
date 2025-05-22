@@ -62,6 +62,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       client.data.user = payload;
+      client.data.focusedRoomUuid = '';
       // userUuid를 키로 하는 소켓 방 생성, controller에서 userUuid를 받아 메세지를 보낼 때 사용
       await client.join(`user-${payload.uuid}`);
     } catch (error) {
@@ -76,10 +77,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  handleDisconnect(client: Socket) {
+  async handleDisconnect(client: Socket) {
     console.log(`${client.id} disconnected`);
-    delete client.data.user;
-    delete client.data.rooms;
+    if (client.data.focusedRoomUuid)
+      await this.roomService.saveLastReadChat(
+        client.data.focusedRoomUuid,
+        client.data.user.uuid,
+      );
+    delete client.data;
   }
 
   // NOTE: 삭제 예정
@@ -361,5 +366,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           .emit('deletedSettlement', { roomUuid: roomUuid });
       }
     }
+  }
+
+  updateUserFocusRoomUuid(userUuid: string, roomUuid?: string) {
+    const userSocket = Array.from(this.server.sockets.sockets.values()).find(
+      (socket) => socket.data.user.uuid === userUuid,
+    );
+
+    if (userSocket) userSocket.data.focusedRoomUuid = roomUuid;
+  }
+
+  getUserFocusRoomUuid(userUuid: string) {
+    const userSocket = Array.from(this.server.sockets.sockets.values()).find(
+      (socket) => socket.data.user.uuid === userUuid,
+    );
+
+    if (userSocket) return userSocket.data.focusedRoomUuid;
+    else return null;
   }
 }
