@@ -3,7 +3,6 @@ import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { NotFoundException } from '@nestjs/common';
 
 import { Nickname } from 'src/user/entities/nickname.entity';
-import { Account } from 'src/user/entities/account.entity';
 import { Room } from 'src/room/entities/room.entity';
 
 export class ResponseSettlementDto {
