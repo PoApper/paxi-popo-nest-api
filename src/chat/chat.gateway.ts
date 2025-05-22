@@ -79,13 +79,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleDisconnect(client: Socket) {
     console.log(`${client.id} disconnected`);
-    await this.roomService.saveLastReadChat(
-      client.data.focusedRoomUuid,
-      client.data.user.uuid,
-    );
-    delete client.data.user;
-    delete client.data.rooms;
-    delete client.data.focusedRoomUuid;
+    if (client.data.focusedRoomUuid)
+      await this.roomService.saveLastReadChat(
+        client.data.focusedRoomUuid,
+        client.data.user.uuid,
+      );
+    delete client.data;
   }
 
   // NOTE: 삭제 예정
@@ -369,7 +368,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  updateUserFocus(userUuid: string, roomUuid?: string) {
+  updateUserFocusRoomUuid(userUuid: string, roomUuid?: string) {
     const userSocket = Array.from(this.server.sockets.sockets.values()).find(
       (socket) => socket.data.user.uuid === userUuid,
     );
@@ -377,7 +376,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (userSocket) userSocket.data.focusedRoomUuid = roomUuid;
   }
 
-  getUserFocus(userUuid: string) {
+  getUserFocusRoomUuid(userUuid: string) {
     const userSocket = Array.from(this.server.sockets.sockets.values()).find(
       (socket) => socket.data.user.uuid === userUuid,
     );

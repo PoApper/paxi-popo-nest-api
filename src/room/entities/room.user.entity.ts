@@ -40,8 +40,6 @@ export class RoomUser extends Base {
   @ApiProperty({ example: '25c930d5-f38e-4f28-813b-82eb49acd606' })
   lastReadChatUuid: string;
 
-  // TODO: 유저 별 정산 금액 추가
-
   /**
    * Database Relation
    */

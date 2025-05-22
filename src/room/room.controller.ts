@@ -227,7 +227,7 @@ export class RoomController {
       });
       this.chatGateway.sendMessage(uuid, chat);
     }
-    this.chatGateway.updateUserFocus(user.uuid, uuid);
+    this.chatGateway.updateUserFocusRoomUuid(user.uuid, uuid);
     await this.roomService.saveLastReadChat(uuid, user.uuid);
     return room;
   }
@@ -610,10 +610,10 @@ export class RoomController {
   async unfocus(@Req() req) {
     const user = req.user as JwtPayload;
 
-    const uuid = this.chatGateway.getUserFocus(user.uuid);
-    if (typeof uuid !== 'string') throw new NoContentException();
+    const uuid = this.chatGateway.getUserFocusRoomUuid(user.uuid);
+    if (!uuid || typeof uuid !== 'string') throw new NoContentException();
 
-    this.chatGateway.updateUserFocus(user.uuid);
+    this.chatGateway.updateUserFocusRoomUuid(user.uuid);
     return await this.roomService.saveLastReadChat(uuid, user.uuid);
   }
 }
