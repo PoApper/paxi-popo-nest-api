@@ -9,7 +9,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
 import { RoomService } from 'src/room/room.service';
-import { UserService } from 'src/user/user.service';
 
 import { Chat } from './entities/chat.entity';
 import { CreateChatDto } from './dto/create-chat.dto';
@@ -20,7 +19,6 @@ export class ChatService {
     private readonly chatRepo: Repository<Chat>,
     @Inject(forwardRef(() => RoomService)) // 순환 참조 해결
     private readonly roomService: RoomService,
-    private readonly userService: UserService,
   ) {}
 
   async create(createChatDto: CreateChatDto, senderNickname?: string) {
