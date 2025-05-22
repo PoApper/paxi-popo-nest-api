@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { LessThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,6 +18,7 @@ export class ChatService {
   constructor(
     @InjectRepository(Chat)
     private readonly chatRepo: Repository<Chat>,
+    @Inject(forwardRef(() => RoomService)) // 순환 참조 해결
     private readonly roomService: RoomService,
     private readonly userService: UserService,
   ) {}
@@ -112,5 +118,14 @@ export class ChatService {
     }
     await this.chatRepo.delete(chat.id);
     return { roomUuid: chat.roomUuid, deletedChatUuid: chat.uuid };
+  }
+
+  async getLastMessageOfRoom(roomUuid: string) {
+    const lastMessage = await this.chatRepo.findOne({
+      where: { roomUuid },
+      order: { id: 'DESC' },
+    });
+    if (!lastMessage) return null;
+    return lastMessage;
   }
 }
