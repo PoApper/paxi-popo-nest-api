@@ -120,7 +120,7 @@ export class ChatService {
   async getLastMessageOfRoom(roomUuid: string) {
     const lastMessage = await this.chatRepo.findOne({
       where: { roomUuid },
-      order: { createdAt: 'DESC' },
+      order: { id: 'DESC' },
     });
     if (!lastMessage) return null;
     return lastMessage;
