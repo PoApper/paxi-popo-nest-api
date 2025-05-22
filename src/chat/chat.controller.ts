@@ -23,6 +23,7 @@ import {
 } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
+import { UserService } from 'src/user/user.service';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ChatService } from './chat.service';
@@ -42,10 +43,12 @@ import { ChatMessageType } from './entities/chat.meta';
 })
 @Controller('chat')
 // TODO: 덕지덕지 데코레이터 정리하기
+// TODO: POPO에서 nickname 토큰에 다는 작업 끝나면 nickname guard 추가해서 전체에 적용
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
     private readonly chatGateway: ChatGateway,
+    private readonly userService: UserService,
   ) {}
 
   @Get(':roomUuid')
@@ -187,12 +190,16 @@ export class ChatController {
     @Req() req,
   ) {
     const user = req.user as JwtPayload;
-    const chat = await this.chatService.create({
-      roomUuid: roomUuid,
-      senderUuid: user.uuid,
-      message: body.message,
-      messageType: ChatMessageType.TEXT,
-    });
+    const nickname = await this.userService.getNickname(user.uuid);
+    const chat = await this.chatService.create(
+      {
+        roomUuid: roomUuid,
+        senderUuid: user.uuid,
+        message: body.message,
+        messageType: ChatMessageType.TEXT,
+      },
+      nickname?.nickname ?? undefined,
+    );
     this.chatGateway.sendMessage(roomUuid, chat);
     return chat;
   }

@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
 import { RoomService } from 'src/room/room.service';
+import { UserService } from 'src/user/user.service';
 
 import { Chat } from './entities/chat.entity';
 import { CreateChatDto } from './dto/create-chat.dto';
@@ -13,12 +14,14 @@ export class ChatService {
     @InjectRepository(Chat)
     private readonly chatRepo: Repository<Chat>,
     private readonly roomService: RoomService,
+    private readonly userService: UserService,
   ) {}
 
-  async create(createChatDto: CreateChatDto) {
+  async create(createChatDto: CreateChatDto, senderNickname?: string) {
     const chat = this.chatRepo.create({
       ...createChatDto,
       uuid: uuidv4(),
+      senderNickname: senderNickname ?? undefined,
     });
     return this.chatRepo.save(chat);
   }
