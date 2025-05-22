@@ -20,6 +20,7 @@ import { RoomUserStatus } from 'src/room/entities/room.user.meta';
 import { RoomStatus } from 'src/room/entities/room.meta';
 import { UserService } from 'src/user/user.service';
 import { ChatService } from 'src/chat/chat.service';
+import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
 
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
@@ -95,7 +96,7 @@ export class RoomService {
 
   async findMyRoomByUserUuid(userUuid: string) {
     // JOINED 및 KICKED 상태인 방 모두 조회
-    const rooms: any = await this.roomRepo.find({
+    const rooms: Room[] = await this.roomRepo.find({
       where: {
         room_users: { userUuid: userUuid },
       },
@@ -110,13 +111,31 @@ export class RoomService {
       relations: ['room_users'],
     });
 
-    for (const room of rooms) {
-      const lastChat = await this.chatService.getLastMessageOfRoom(room.uuid);
-      room.hasNewMessage =
-        lastChat?.uuid != room.room_users[0].lastReadChatUuid;
-    }
+    return await Promise.all(
+      rooms.map(async (room) => {
+        const responseMyRoom = new ResponseMyRoomDto();
+        responseMyRoom.uuid = room.uuid;
+        responseMyRoom.title = room.title;
+        responseMyRoom.ownerUuid = room.ownerUuid;
+        responseMyRoom.departureLocation = room.departureLocation;
+        responseMyRoom.destinationLocation = room.destinationLocation;
+        responseMyRoom.maxParticipant = room.maxParticipant;
+        responseMyRoom.currentParticipant = room.currentParticipant;
+        responseMyRoom.departureTime = room.departureTime;
+        responseMyRoom.status = room.status;
+        responseMyRoom.description = room.description;
+        responseMyRoom.payerUuid = room.payerUuid;
+        responseMyRoom.payAmount = room.payAmount;
+        responseMyRoom.kickedReason = room.room_users[0].kickedReason;
+        responseMyRoom.userStatus = room.room_users[0].status;
 
-    return rooms;
+        const lastChat = await this.chatService.getLastMessageOfRoom(room.uuid);
+        responseMyRoom.hasNewMessage =
+          lastChat?.uuid != room.room_users[0].lastReadChatUuid;
+
+        return responseMyRoom;
+      }),
+    );
   }
 
   getRoomTitle(uuid: string) {

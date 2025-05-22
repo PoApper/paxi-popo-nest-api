@@ -27,6 +27,7 @@ import { ChatService } from 'src/chat/chat.service';
 import { UserService } from 'src/user/user.service';
 import { FcmService } from 'src/fcm/fcm.service';
 import { NoContentException } from 'src/common/exception';
+import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
 
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -100,34 +101,7 @@ export class RoomController {
     status: 200,
     description:
       '자신이 참여중인 방을 반환, 참여중인 방이 없을 경우 빈 배열 반환',
-    example: [
-      // TODO: 예시 데이터 수정
-      {
-        uuid: '45281c1e-61e5-4628-8821-6e0cb0940fd3',
-        title: '포항역 가는 택시 같이 타요 🚕',
-        ownerUuid: '2cda53d2-baf7-4434-90cb-ff82d3345ad2',
-        departureLocation: '지곡회관',
-        destinationLocation: '포항역',
-        maxParticipant: 4,
-        currentParticipant: 2,
-        departureTime: '2026-01-01T00:00:00.000Z',
-        status: 'ACTIVE',
-        description: '캐리어 두개 있습니다',
-        payerUuid: null,
-        payAmount: null,
-        room_users: [
-          {
-            userUuid: '2cda53d2-baf7-4434-90cb-ff82d3345ad2',
-            roomUuid: '45281c1e-61e5-4628-8821-6e0cb0940fd3',
-            status: 'JOINED',
-            isPaid: false,
-            kickedReason: null,
-            lastReadChatUuid: '66bc2b73-2031-4309-a52d-692072cf0f23',
-          },
-        ],
-        hasNewChat: true,
-      },
-    ],
+    type: [ResponseMyRoomDto],
   })
   findMyRoom(@Req() req) {
     const user = req.user as JwtPayload;
