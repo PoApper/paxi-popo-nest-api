@@ -26,6 +26,8 @@ import { ChatMessageType } from 'src/chat/entities/chat.meta';
 import { ChatService } from 'src/chat/chat.service';
 import { UserService } from 'src/user/user.service';
 import { FcmService } from 'src/fcm/fcm.service';
+import { NoContentException } from 'src/common/exception';
+import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
 
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -99,11 +101,11 @@ export class RoomController {
     status: 200,
     description:
       '자신이 참여중인 방을 반환, 참여중인 방이 없을 경우 빈 배열 반환',
-    type: [Room],
+    type: [ResponseMyRoomDto],
   })
   findMyRoom(@Req() req) {
     const user = req.user as JwtPayload;
-    return this.roomService.findByUserUuid(user.uuid);
+    return this.roomService.findMyRoomByUserUuid(user.uuid);
   }
 
   @Get(':uuid')
@@ -199,17 +201,20 @@ export class RoomController {
       });
       this.chatGateway.sendMessage(uuid, chat);
     }
+    this.chatGateway.updateUserFocusRoomUuid(user.uuid, uuid);
+    await this.roomService.saveLastReadChat(uuid, user.uuid);
     return room;
   }
 
   @Put(['leave2/:uuid', 'leave/:uuid'])
   @ApiOperation({
     summary:
-      '[웹소켓 통합 버전-개발 중] 방에서 나갑니다. 사용자의 상태가 LEFT로 변경됩니다. 방에 퇴장 메세지를 전송합니다.',
+      '[웹소켓 통합 버전-개발 중] 방에서 나갑니다. 방에 퇴장 메세지를 전송합니다.',
   })
   @ApiResponse({
     status: 200,
-    description: '방 정보를 반환, 퇴장 메세지를 전송합니다.',
+    description:
+      '방의 현재 인원 수가 하나 줄고, 방 정보를 반환, 퇴장 메세지를 전송합니다.',
     type: RoomWithUsersDto,
   })
   @ApiResponse({
@@ -552,6 +557,38 @@ export class RoomController {
     });
     this.chatGateway.sendMessage(uuid, chat);
     return room;
+  }
+
+  @Post('unfocus')
+  @ApiOperation({
+    summary:
+      '사용자가 채팅방에서 나갈때(뒤로가기 등) 호출되어 마지막으로 읽은 채팅의 위치를 기억합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'RoomUser 정보를 반환',
+    type: RoomUser,
+  })
+  @ApiResponse({
+    status: 204,
+    description: '마지막으로 읽은 채팅이 없거나 소켓에 연결되지 않은 경우',
+  })
+  @ApiResponse({
+    status: 400,
+    description: '방이 존재하지 않는 경우, 방에 가입되어 있지 않은 경우',
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  async unfocus(@Req() req) {
+    const user = req.user as JwtPayload;
+
+    const uuid = this.chatGateway.getUserFocusRoomUuid(user.uuid);
+    if (!uuid || typeof uuid !== 'string') throw new NoContentException();
+
+    this.chatGateway.updateUserFocusRoomUuid(user.uuid);
+    return await this.roomService.saveLastReadChat(uuid, user.uuid);
   }
 }
 

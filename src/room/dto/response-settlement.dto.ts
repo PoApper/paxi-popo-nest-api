@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { NotFoundException } from '@nestjs/common';
+
+import { Nickname } from 'src/user/entities/nickname.entity';
+import { Room } from 'src/room/entities/room.entity';
 
 export class ResponseSettlementDto {
   @IsNotEmpty()
@@ -64,4 +68,36 @@ export class ResponseSettlementDto {
     example: 3334,
   })
   payAmountPerPerson: number;
+
+  constructor(
+    room: Room,
+    payerNickname: Nickname | null, //TODO: nullable하지 않게 변경(updateSettlement 관련 문제로 nullable로 변경해둠)
+    account: {
+      accountNumber: string | null;
+      accountHolderName: string;
+      bankName: string;
+    },
+    payAmountPerPerson: number,
+  ) {
+    if (!room.payAmount || !room.payerUuid) {
+      throw new NotFoundException('정산 내역이 없습니다.');
+    }
+    if (
+      !account ||
+      !account.accountNumber ||
+      !account.accountHolderName ||
+      !account.bankName
+    ) {
+      throw new NotFoundException('정산자의 계좌 정보가 없습니다.');
+    }
+    this.roomUuid = room.uuid;
+    this.payerUuid = room.payerUuid;
+    this.payerNickname = payerNickname?.nickname ?? '';
+    this.payerAccountNumber = account.accountNumber;
+    this.payerAccountHolderName = account.accountHolderName;
+    this.payerBankName = account.bankName;
+    this.payAmount = room.payAmount;
+    this.currentParticipant = room.currentParticipant;
+    this.payAmountPerPerson = payAmountPerPerson;
+  }
 }

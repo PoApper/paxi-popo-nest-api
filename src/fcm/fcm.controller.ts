@@ -49,6 +49,11 @@ export class FcmController {
     type: String,
   })
   @ApiResponse({
+    status: 204,
+    description: '푸시 키 중복',
+    type: String,
+  })
+  @ApiResponse({
     status: 400,
     description: '푸시 키 등록 실패',
   })
