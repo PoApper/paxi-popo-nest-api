@@ -113,27 +113,16 @@ export class RoomService {
 
     return await Promise.all(
       rooms.map(async (room) => {
-        const responseMyRoom = new ResponseMyRoomDto();
-        responseMyRoom.uuid = room.uuid;
-        responseMyRoom.title = room.title;
-        responseMyRoom.ownerUuid = room.ownerUuid;
-        responseMyRoom.departureLocation = room.departureLocation;
-        responseMyRoom.destinationLocation = room.destinationLocation;
-        responseMyRoom.maxParticipant = room.maxParticipant;
-        responseMyRoom.currentParticipant = room.currentParticipant;
-        responseMyRoom.departureTime = room.departureTime;
-        responseMyRoom.status = room.status;
-        responseMyRoom.description = room.description;
-        responseMyRoom.payerUuid = room.payerUuid;
-        responseMyRoom.payAmount = room.payAmount;
-        responseMyRoom.kickedReason = room.room_users[0].kickedReason;
-        responseMyRoom.userStatus = room.room_users[0].status;
-
         const lastChat = await this.chatService.getLastMessageOfRoom(room.uuid);
-        responseMyRoom.hasNewMessage =
+        const hasNewMessage =
           lastChat?.uuid != room.room_users[0].lastReadChatUuid;
 
-        return responseMyRoom;
+        return new ResponseMyRoomDto(
+          room,
+          room.room_users[0].status,
+          room.room_users[0].kickedReason,
+          hasNewMessage,
+        );
       }),
     );
   }
@@ -563,9 +552,8 @@ export class RoomService {
         { roomUuid: uuid, userUuid: userUuid },
         { isPaid: true },
       );
-
       await queryRunner.commitTransaction();
-
+      // TODO: 닉네임이 등록되지 않은 경우 정산은 업데이트 되나 에러 발생
       return await this.getSettlement(uuid);
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -728,22 +716,17 @@ export class RoomService {
     );
 
     const payerNickname = await this.userService.getNickname(room.payerUuid);
-    if (!payerNickname) {
-      throw new NotFoundException('정산자 닉네임을 찾을 수 없습니다.');
-    }
+    // if (!payerNickname) {
+    //   throw new NotFoundException('정산자 닉네임을 찾을 수 없습니다.');
+    // }
 
     // Settlement DTO의 내용을 리턴함
-    const responseSettlement = new ResponseSettlementDto();
-    responseSettlement.roomUuid = roomUuid;
-    responseSettlement.payerUuid = room.payerUuid;
-    responseSettlement.payerNickname = payerNickname.nickname;
-    responseSettlement.payerAccountNumber = account.accountNumber;
-    responseSettlement.payerAccountHolderName = account.accountHolderName;
-    responseSettlement.payerBankName = account.bankName;
-    responseSettlement.payAmount = room.payAmount;
-    responseSettlement.payAmountPerPerson = payAmountPerPerson;
-    responseSettlement.currentParticipant = room.currentParticipant;
-    return responseSettlement;
+    return new ResponseSettlementDto(
+      room,
+      payerNickname,
+      account,
+      payAmountPerPerson,
+    );
   }
 
   async updateRoomUserIsPaid(
