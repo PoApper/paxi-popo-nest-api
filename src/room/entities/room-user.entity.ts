@@ -7,8 +7,7 @@ import {
 } from 'typeorm';
 import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
-
-import { RoomUserStatus } from 'src/room/entities/room.user.meta';
+import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 import { Room } from 'src/room/entities/room.entity';
 import { User } from 'src/user/entities/user.entity';
 import { Base } from 'src/common/base.entity';

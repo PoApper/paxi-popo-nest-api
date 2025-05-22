@@ -34,7 +34,7 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { Room } from './entities/room.entity';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
-import { RoomUser } from './entities/room.user.entity';
+import { RoomUser } from './entities/room-user.entity';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
 import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
 import { ResponseSettlementDto } from './dto/response-settlement.dto';
