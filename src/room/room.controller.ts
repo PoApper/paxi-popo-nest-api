@@ -77,7 +77,7 @@ export class RoomController {
   })
   async create(@Req() req, @Body() dto: CreateRoomDto) {
     const user = req.user as JwtPayload;
-    return await this.roomService.create(user, dto);
+    return await this.roomService.create(user.uuid, dto);
   }
 
   @Get()

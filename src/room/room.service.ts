@@ -41,7 +41,7 @@ export class RoomService {
   ) {}
   private readonly logger = new Logger(RoomService.name);
 
-  async create(user: JwtPayload, dto: CreateRoomDto) {
+  async create(userUuid: string, dto: CreateRoomDto) {
     // 출발 시간 현재보다 이전인지 확인
     if (new Date(dto.departureTime) < new Date()) {
       throw new BadRequestException(
@@ -56,13 +56,13 @@ export class RoomService {
     try {
       const room = await queryRunner.manager.save(Room, {
         ...dto,
-        ownerUuid: user.uuid,
-        room_users: [{ userUuid: user.uuid }],
+        ownerUuid: userUuid,
+        room_users: [{ userUuid: userUuid }],
       });
 
       await queryRunner.manager.save(RoomUser, {
         roomUuid: room.uuid,
-        userUuid: user.uuid,
+        userUuid: userUuid,
       });
 
       await queryRunner.commitTransaction();
