@@ -14,6 +14,11 @@ export class JwtPayload {
   name: string;
 
   @ApiProperty({
+    example: '행복한_수소_1234',
+  })
+  nickname: string;
+
+  @ApiProperty({
     example: UserType.student,
   })
   userType: UserType;
