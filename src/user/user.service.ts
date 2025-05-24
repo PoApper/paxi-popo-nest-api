@@ -136,19 +136,25 @@ export class UserService {
 
   async createAccount(userUuid: string, dto: CreateAccountDto) {
     const encryptedAccountNumber = this.encryptAccountNumber(dto.accountNumber);
-    return this.accountRepo.save({
-      userUuid,
-      encryptedAccountNumber,
-      accountHolderName: dto.accountHolderName,
-      bankName: dto.bankName,
-    });
+    try {
+      await this.accountRepo.save({
+        userUuid,
+        encryptedAccountNumber,
+        accountHolderName: dto.accountHolderName,
+        bankName: dto.bankName,
+      });
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY')
+        throw new BadRequestException('계좌번호가 이미 존재합니다.');
+    }
+    return this.getAccount(userUuid);
   }
 
   async updateAccount(userUuid: string, dto: UpdateAccountDto) {
     const encryptedAccountNumber = dto.accountNumber
       ? this.encryptAccountNumber(dto.accountNumber)
       : undefined;
-    return this.accountRepo.update(
+    await this.accountRepo.update(
       { userUuid },
       {
         encryptedAccountNumber,
@@ -156,6 +162,7 @@ export class UserService {
         bankName: dto.bankName,
       },
     );
+    return this.getAccount(userUuid);
   }
   private encryptAccountNumber(accountNumber: string) {
     const key = Buffer.from(process.env.ACCOUNT_ENCRYPTION_KEY!, 'base64');

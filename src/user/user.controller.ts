@@ -200,8 +200,8 @@ export class UserController {
   @ApiResponse({
     status: 201,
     description:
-      '유저의 계좌번호를 생성합니다. 계좌번호를 제외한 정보를 반환합니다.',
-    example: CreateAccountDto,
+      '유저의 계좌번호를 생성합니다. 생성된 계좌번호 정보를 반환합니다.',
+    type: CreateAccountDto,
   })
   @ApiResponse({
     status: 400,
@@ -222,8 +222,8 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description:
-      '유저의 계좌번호를 수정합니다. 계좌번호를 제외한 정보를 반환합니다.',
-    example: UpdateAccountDto,
+      '유저의 계좌번호를 수정합니다. 수정된 계좌번호 정보를 반환합니다.',
+    type: UpdateAccountDto,
   })
   @ApiBody({
     type: UpdateAccountDto,
