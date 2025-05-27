@@ -6,5 +6,5 @@ import { CreateRoomDto } from './create-room.dto';
 export class UpdateRoomDto extends PartialType(CreateRoomDto) {
   @IsOptional()
   @IsBoolean()
-  arriveAlertSent?: boolean;
+  departureAlertSent?: boolean;
 }

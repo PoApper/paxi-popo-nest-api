@@ -168,7 +168,7 @@ export class RoomService {
       }
       // 출발 시간 변경 시 출발전 알림 여부 초기화
       if (updateRoomDto.departureTime) {
-        updateRoomDto.arriveAlertSent = false;
+        updateRoomDto.departureAlertSent = false;
       }
     } else {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
