@@ -7,10 +7,18 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { MoreThan, Not, Repository, DataSource } from 'typeorm';
+import {
+  MoreThan,
+  Not,
+  Repository,
+  DataSource,
+  LessThan,
+  Between,
+} from 'typeorm';
 import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import { InjectRepository } from '@nestjs/typeorm';
 import { instanceToPlain } from 'class-transformer';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 import { Room } from 'src/room/entities/room.entity';
 import { RoomUser } from 'src/room/entities/room-user.entity';
@@ -21,6 +29,7 @@ import { RoomStatus } from 'src/room/entities/room.meta';
 import { UserService } from 'src/user/user.service';
 import { ChatService } from 'src/chat/chat.service';
 import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
+import { FcmService } from 'src/fcm/fcm.service';
 
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
@@ -37,6 +46,7 @@ export class RoomService {
     private readonly userService: UserService,
     @Inject(forwardRef(() => ChatService)) // 순환 참조 해결
     private readonly chatService: ChatService,
+    private readonly fcmService: FcmService,
     private readonly dataSource: DataSource,
   ) {}
   private readonly logger = new Logger(RoomService.name);
@@ -814,5 +824,57 @@ export class RoomService {
     // NOTE: 서비스 이용약관에 따라 소수점은 올려서 계산함
     // 정산자가 정산 금액보다 최대 (currentParticipant-1)원 더 받을 수 있음
     return Math.ceil(payAmount / currentParticipant);
+  }
+
+  getDepartureAlertTargetRooms() {
+    return this.roomRepo.find({
+      where: {
+        departureTime: Between(
+          new Date(),
+          new Date(Date.now() + 30 * 60 * 1000),
+        ),
+        departureAlertSent: false,
+        status: RoomStatus.ACTIVATED,
+        room_users: {
+          status: RoomUserStatus.JOINED,
+        },
+      },
+      relations: ['room_users'],
+    });
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async sendDepartureAlert() {
+    const targetRooms = await this.getDepartureAlertTargetRooms();
+
+    for (const room of targetRooms) {
+      const leftMinutes = Math.ceil(
+        (new Date(room.departureTime).getTime() - new Date().getTime()) /
+          (1000 * 60),
+      );
+      this.fcmService
+        .sendPushNotificationByUserUuid(
+          room.room_users.map((ru) => ru.userUuid),
+          '출발 알림',
+          `방 "${room.title}"의 출발이 ${leftMinutes}분 남았습니다.`,
+          {
+            roomUuid: room.uuid,
+          },
+        )
+        .then(
+          () => {
+            // 출발 알림 전송 여부 업데이트
+            this.roomRepo.update(
+              { uuid: room.uuid },
+              { departureAlertSent: true },
+            );
+          },
+          (error) => {
+            this.logger.error(
+              `출발 알림 전송에 실패했습니다. 방 UUID: ${room.uuid}\n${error.message}`,
+            );
+          },
+        );
+    }
   }
 }
