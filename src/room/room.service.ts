@@ -166,6 +166,10 @@ export class RoomService {
           '출발 시간은 현재 시간보다 이전일 수 없습니다.',
         );
       }
+      // 출발 시간 변경 시 출발전 알림 여부 초기화
+      if (updateRoomDto.departureTime) {
+        updateRoomDto.arriveAlertSent = false;
+      }
     } else {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
