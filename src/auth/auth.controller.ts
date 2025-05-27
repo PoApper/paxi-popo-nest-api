@@ -19,7 +19,7 @@ const requiredRoles = [UserType.admin, UserType.association, UserType.staff];
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Get(['verifyToken', 'verifyToken/admin', 'me'])
+  @Get(['verifyToken', 'verifyToken/admin'])
   @UseGuards(JwtAuthGuard)
   verifyToken(@Req() req: Request) {
     const path = req.path;

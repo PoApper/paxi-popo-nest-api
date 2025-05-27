@@ -22,6 +22,8 @@ export class Account extends Base {
   userUuid: string;
 
   @Column({ type: 'varchar', nullable: false })
+  @ApiHideProperty()
+  @Exclude()
   encryptedAccountNumber: string;
 
   @Column({ type: 'varchar', nullable: false })
