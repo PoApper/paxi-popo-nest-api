@@ -24,6 +24,8 @@ import { Roles } from 'src/auth/authorization/roles.decorator';
 import { UserService } from './user.service';
 import { UserType } from './user.meta';
 import { Nickname } from './entities/nickname.entity';
+import { CreateAccountDto } from './dto/create-account.dto';
+import { UpdateAccountDto } from './dto/update-account.dto';
 
 @ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
@@ -189,5 +191,45 @@ export class UserController {
   async getUserInfo(@Req() req) {
     const user = req.user as JwtPayload;
     return await this.userService.getUserInfo(user.uuid);
+  }
+
+  @Post('account')
+  @ApiOperation({
+    summary: '유저의 계좌번호를 생성합니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      '유저의 계좌번호를 생성합니다. 생성된 계좌번호 정보를 반환합니다.',
+    type: CreateAccountDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '유저의 계좌번호가 이미 존재하는 경우',
+  })
+  @ApiBody({
+    type: CreateAccountDto,
+  })
+  async createAccount(@Req() req, @Body() dto: CreateAccountDto) {
+    const user = req.user as JwtPayload;
+    return await this.userService.createAccount(user.uuid, dto);
+  }
+
+  @Put('account')
+  @ApiOperation({
+    summary: '유저의 계좌번호를 수정합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      '유저의 계좌번호를 수정합니다. 수정된 계좌번호 정보를 반환합니다.',
+    type: UpdateAccountDto,
+  })
+  @ApiBody({
+    type: UpdateAccountDto,
+  })
+  async updateAccount(@Req() req, @Body() dto: UpdateAccountDto) {
+    const user = req.user as JwtPayload;
+    return await this.userService.updateAccount(user.uuid, dto);
   }
 }

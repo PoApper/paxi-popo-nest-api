@@ -52,6 +52,12 @@ export class User extends BaseEntity {
   @ApiHideProperty()
   cryptoSalt: string;
 
+  @Column({ nullable: true })
+  hashedRefreshToken: string;
+
+  @Column({ nullable: true })
+  refreshTokenExpiresAt: Date;
+
   // 여기서는 변경될 수 없음
   @CreateDateColumn()
   @Exclude()

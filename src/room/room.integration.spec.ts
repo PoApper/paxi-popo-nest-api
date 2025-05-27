@@ -60,11 +60,11 @@ describe('RoomModule - Integration Test', () => {
     await dataSource.synchronize(true);
     testUser = await userService.save({
       email: 'test@test.com',
-      password: 'test',
-      name: 'test',
+      password: 'pass123',
+      name: '포닉스',
       userType: UserType.student,
     });
-    await userService.createNickname(testUser.uuid, '포닉스');
+    await userService.createNickname(testUser.uuid, '행복한_수소_1234');
   });
 
   afterEach(async () => {
@@ -116,7 +116,7 @@ describe('RoomModule - Integration Test', () => {
 
   describe('settlement', () => {
     it('should create a requested settlement with an account number', async () => {
-      const room = await roomService.create(testUser, {
+      const room = await roomService.create(testUser.uuid, {
         description: '캐리어 두 개 있습니다',
         title: '지곡회관 포항역 카풀해요~ 😎',
         departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24),
