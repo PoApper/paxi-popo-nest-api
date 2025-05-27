@@ -15,7 +15,7 @@ import { Logger, UseFilters, Injectable } from '@nestjs/common';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { RoomService } from 'src/room/room.service';
-import { RoomUserStatus } from 'src/room/entities/room.user.meta';
+import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 import { FcmService } from 'src/fcm/fcm.service';
 import { UserService } from 'src/user/user.service';
 import { ResponseSettlementDto } from 'src/room/dto/response-settlement.dto';
