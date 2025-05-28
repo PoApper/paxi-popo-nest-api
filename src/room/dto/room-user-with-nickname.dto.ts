@@ -1,5 +1,6 @@
 // dto/room-user-with-nickname.dto.ts
 import { ApiProperty, PickType } from '@nestjs/swagger';
+import { instanceToPlain } from 'class-transformer';
 
 import { RoomUser } from 'src/room/entities/room-user.entity';
 
@@ -14,6 +15,15 @@ export class RoomUserWithNicknameDto extends PickType(RoomUser, [
 ]) {
   @ApiProperty({ nullable: false })
   nickname: string;
+
+  constructor(roomUser: RoomUser) {
+    super();
+    const plain = instanceToPlain(roomUser);
+    /* eslint-disable-next-line */
+    const { user, kickedReason, ...rest } = plain;
+    Object.assign(this, rest);
+    this.nickname = roomUser.user.nickname.nickname;
+  }
 }
 
 export class RoomWithUsersDto extends PickType(Room, [
@@ -34,4 +44,12 @@ export class RoomWithUsersDto extends PickType(Room, [
     type: [RoomUserWithNicknameDto],
   })
   room_users: RoomUserWithNicknameDto[];
+
+  constructor(room: Room) {
+    super();
+    const plain = instanceToPlain(room);
+    Object.assign(this, plain);
+    this.room_users =
+      room.room_users?.map((ru) => new RoomUserWithNicknameDto(ru)) ?? [];
+  }
 }
