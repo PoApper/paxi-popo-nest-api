@@ -9,7 +9,7 @@ export class AppController {
   constructor(private readonly appService: AppService) {}
 
   @Get()
-  @PublicGuard(GuardName.JwtGuard)
+  @PublicGuard([GuardName.NicknameGuard, GuardName.JwtGuard])
   getHello(): string {
     return this.appService.getHello();
   }

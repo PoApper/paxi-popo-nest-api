@@ -16,6 +16,7 @@ import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
 import configurations from './config/configurations';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { NicknameExistsGuard } from './auth/guards/nickname.guard';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -59,6 +60,10 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: NicknameExistsGuard,
     },
   ],
 })

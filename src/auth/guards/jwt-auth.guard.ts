@@ -13,13 +13,13 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   canActivate(context: ExecutionContext) {
     // 현재 실행되는 핸들러와 클래스에 적용된 메타데이터를 가져옴
-    const publicGuardName = this.reflector.getAllAndOverride<GuardName>(
+    const publicGuardNames = this.reflector.getAllAndOverride<GuardName[]>(
       PUBLIC_GUARDS_KEY,
       [context.getHandler(), context.getClass()],
     );
 
     // Public이면 인증 없이 통과
-    if (publicGuardName === GuardName.JwtGuard) {
+    if (publicGuardNames?.includes(GuardName.JwtGuard)) {
       return true;
     }
 

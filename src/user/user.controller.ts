@@ -17,8 +17,10 @@ import {
 } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
-import { RolesGuard } from 'src/auth/authorization/roles.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/authorization/roles.decorator';
+import { PublicGuard } from 'src/common/public-guard.decorator';
+import { GuardName } from 'src/common/guard-name';
 
 import { UserService } from './user.service';
 import { UserType } from './user.meta';
@@ -36,6 +38,7 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get('onboarding-status')
+  @PublicGuard([GuardName.NicknameGuard])
   @ApiOperation({
     summary: '유저의 온보딩 상태를 반환합니다.',
     description:
@@ -76,6 +79,7 @@ export class UserController {
   }
 
   @Post('nickname')
+  @PublicGuard([GuardName.NicknameGuard])
   @ApiOperation({
     summary: '유저의 닉네임을 생성합니다.',
   })

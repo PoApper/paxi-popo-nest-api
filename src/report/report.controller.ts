@@ -19,7 +19,7 @@ import {
 import { ReportService } from 'src/report/report.service';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { CreateReportDto } from 'src/report/dto/create-report.dto';
-import { RolesGuard } from 'src/auth/authorization/roles.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { UserType } from 'src/user/user.meta';
 import { Report } from 'src/report/entities/report.entity';
 
