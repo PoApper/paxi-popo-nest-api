@@ -52,7 +52,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       const payload: JwtPayload = await this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET_KEY,
+        secret: process.env.JWT_ACCESS_TOKEN_SECRET,
       });
 
       if (!payload) {

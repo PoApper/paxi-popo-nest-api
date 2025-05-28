@@ -37,9 +37,7 @@ import configurations from './config/configurations';
         return dbConfig;
       },
     }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-    }),
+    JwtModule.register({}),
     AuthModule,
     UserModule,
     RoomModule,
