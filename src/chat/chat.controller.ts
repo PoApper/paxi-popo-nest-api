@@ -22,7 +22,6 @@ import {
 } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
-import { UserService } from 'src/user/user.service';
 import { User } from 'src/common/decorators/user.decorator';
 
 import { ChatService } from './chat.service';
@@ -41,12 +40,10 @@ import { ChatMessageType } from './entities/chat.meta';
 })
 @Controller('chat')
 // TODO: 덕지덕지 데코레이터 정리하기
-// TODO: POPO에서 nickname 토큰에 다는 작업 끝나면 nickname guard 추가해서 전체에 적용
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
     private readonly chatGateway: ChatGateway,
-    private readonly userService: UserService,
   ) {}
 
   @Get(':roomUuid')
@@ -91,7 +88,7 @@ export class ChatController {
 
   @Put(':chatUuid')
   @ApiOperation({
-    summary: '[웹소켓 통합 버전-개발 중] 채팅 메세지를 수정합니다.',
+    summary: '채팅 메세지를 수정합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -132,7 +129,7 @@ export class ChatController {
 
   @Delete(':chatUuid')
   @ApiOperation({
-    summary: '[웹소켓 통합 버전-개발 중] 채팅 메세지를 삭제합니다.',
+    summary: '채팅 메세지를 삭제합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -160,7 +157,7 @@ export class ChatController {
 
   @Post(':roomUuid')
   @ApiOperation({
-    summary: '[웹소켓 통합 버전-개발 중] 방에 채팅을 전송합니다.',
+    summary: '방에 채팅을 전송합니다.',
   })
   @ApiResponse({
     status: 201,

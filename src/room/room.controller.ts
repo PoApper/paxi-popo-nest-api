@@ -161,10 +161,9 @@ export class RoomController {
     return this.roomService.remove(uuid, user.uuid);
   }
 
-  @Post(['join2/:uuid', 'join/:uuid'])
+  @Post('join/:uuid')
   @ApiOperation({
-    summary:
-      '[웹소켓 통합 버전-개발 중] 방에 참여합니다. 첫 입장 및 재입장 모든 경우에 호출됩니다',
+    summary: '방에 참여합니다. 첫 입장 및 재입장 모든 경우에 호출됩니다',
   })
   @ApiResponse({
     status: 201,
@@ -196,10 +195,9 @@ export class RoomController {
     return room;
   }
 
-  @Put(['leave2/:uuid', 'leave/:uuid'])
+  @Put('leave/:uuid')
   @ApiOperation({
-    summary:
-      '[웹소켓 통합 버전-개발 중] 방에서 나갑니다. 방에 퇴장 메세지를 전송합니다.',
+    summary: '방에서 나갑니다. 방에 퇴장 메세지를 전송합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -224,10 +222,10 @@ export class RoomController {
     return room;
   }
 
-  @Put(['kick2/:uuid', 'kick/:uuid'])
+  @Put('kick/:uuid')
   @ApiOperation({
     summary:
-      '[웹소켓 통합 버전-개발 중] 사용자를 추방합니다. 방장만 가능하며, 사용자의 상태를 KICKED로 변경합니다.',
+      '사용자를 추방합니다. 방장만 가능하며, 사용자의 상태를 KICKED로 변경합니다.',
   })
   @ApiBody({
     schema: {
@@ -284,9 +282,9 @@ export class RoomController {
     return room;
   }
 
-  @Post(['delegate2/:uuid', 'delegate/:uuid'])
+  @Post('delegate/:uuid')
   @ApiOperation({
-    summary: '[웹소켓 통합 버전-개발 중] 방장 권한을 위임합니다.',
+    summary: '방장 권한을 위임합니다.',
   })
   @ApiResponse({
     status: 201,
@@ -320,9 +318,9 @@ export class RoomController {
     return room;
   }
 
-  @Post([':uuid/settlement2', ':uuid/settlement'])
+  @Post(':uuid/settlement')
   @ApiOperation({
-    summary: '[웹소켓 통합 버전-개발 중] 카풀 방의 정산 정보를 등록합니다.',
+    summary: '카풀 방의 정산 정보를 등록합니다.',
   })
   @ApiResponse({
     status: 201,
@@ -377,10 +375,9 @@ export class RoomController {
     return await this.roomService.getSettlement(uuid);
   }
 
-  @Put([':uuid/settlement2', ':uuid/settlement'])
+  @Put(':uuid/settlement')
   @ApiOperation({
-    summary:
-      '[웹소켓 통합 버전-개발 중] 카풀 방의 정산 정보(정산 금액, 정산 계좌)를 수정합니다.',
+    summary: '카풀 방의 정산 정보(정산 금액, 정산 계좌)를 수정합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -418,9 +415,9 @@ export class RoomController {
     return responseSettlement;
   }
 
-  @Delete([':uuid/settlement2', ':uuid/settlement'])
+  @Delete(':uuid/settlement')
   @ApiOperation({
-    summary: '[웹소켓 통합 버전-개발 중] 카풀 방의 정산 요청을 취소합니다.',
+    summary: '카풀 방의 정산 요청을 취소합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -454,10 +451,9 @@ export class RoomController {
     return room;
   }
 
-  @Patch([':uuid/pay2', ':uuid/pay'])
+  @Patch(':uuid/pay')
   @ApiOperation({
-    summary:
-      '[웹소켓 통합 버전-개발 중] 카풀 방에 대한 유저의 정산 여부를 수정합니다.',
+    summary: '카풀 방에 대한 유저의 정산 여부를 수정합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -507,10 +503,10 @@ export class RoomController {
     return roomUser;
   }
 
-  @Patch([':uuid/complete2', ':uuid/complete'])
+  @Patch(':uuid/complete')
   @ApiOperation({
     summary:
-      '[웹소켓 통합 버전-개발 중] 모든 정산이 끝난 후 방을 완료 상태로 바꿉니다. 방장이 아닌 정산 신청자, 관리자만 가능합니다.',
+      '모든 정산이 끝난 후 방을 완료 상태로 바꿉니다. 방장이 아닌 정산 신청자, 관리자만 가능합니다.',
   })
   @ApiResponse({
     status: 200,
