@@ -37,7 +37,13 @@ import configurations from './config/configurations';
         return dbConfig;
       },
     }),
-    JwtModule.register({}),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_ACCESS_TOKEN_SECRET'),
+      }),
+    }),
     AuthModule,
     UserModule,
     RoomModule,
