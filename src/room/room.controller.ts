@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Put,
-  Query,
   Req,
 } from '@nestjs/common';
 import {
@@ -240,9 +239,15 @@ export class RoomController {
     schema: {
       type: 'object',
       properties: {
+        userUuid: {
+          type: 'string',
+          description: '강퇴할 사용자의 UUID',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
         reason: {
           type: 'string',
           description: '강퇴 사유',
+          example: '아무 말이 없어서 강퇴합니다.',
         },
       },
     },
@@ -263,20 +268,19 @@ export class RoomController {
   })
   async kickUserFromRoom(
     @Req() req,
-    // TODO: 필터링 기능이 아니라서 쿼리 파라미터를 바디로 변경하는건 어떤지?
-    @Query('userUuid') userUuid: string,
     @Param('uuid') uuid: string,
-    @Body('reason') reason?: string,
+    @Body() dto: { userUuid: string; reason: string },
   ) {
     const user = req.user as JwtPayload;
     const room = await this.roomService.kickUserFromRoom(
       uuid,
       user.uuid,
-      userUuid,
-      reason,
+      dto.userUuid,
+      dto.reason,
     );
 
-    const message = `방장에 의해 ${userUuid} 님이 방에서 강제퇴장 되었습니다.`;
+    const kickedUserNickname = await this.userService.getNickname(dto.userUuid);
+    const message = `방장에 의해 ${kickedUserNickname?.nickname} 님이 방에서 강제퇴장 되었습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
@@ -305,13 +309,16 @@ export class RoomController {
   async delegateRoom(
     @Req() req,
     @Param('uuid') uuid: string,
-    // TODO: 필터링 기능이 아니라서 쿼리 파라미터를 바디로 변경하는건 어떤지?
-    @Query('userUuid') userUuid: string,
+    @Body() dto: { userUuid: string },
   ) {
     const user = req.user as JwtPayload;
-    const room = await this.roomService.delegateRoom(uuid, user.uuid, userUuid);
-    const newRoomOwnerNickname = await this.userService.getNickname(userUuid);
-    const message = `${user.nickname} 님이 ${newRoomOwnerNickname?.nickname} 님에게 방장을 위임했습니다.`;
+    const room = await this.roomService.delegateRoom(
+      uuid,
+      user.uuid,
+      dto.userUuid,
+    );
+    const newOwnerNickname = await this.userService.getNickname(dto.userUuid);
+    const message = `${user.nickname} 님이 ${newOwnerNickname?.nickname} 님에게 방장을 위임했습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
@@ -462,8 +469,7 @@ export class RoomController {
   })
   @ApiResponse({
     status: 200,
-    description:
-      '수정된 정산 정보를 반환합니다. TODO: 정산자에게 정산 완료 알림 기능 추가 필요',
+    description: '수정된 정산 정보를 반환합니다.',
     type: RoomUser,
   })
   @ApiResponse({

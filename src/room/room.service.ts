@@ -397,7 +397,7 @@ export class RoomService {
     uuid: string,
     ownerUuid: string,
     userUuid: string,
-    reason?: string,
+    reason: string,
   ) {
     const room = await this.findOne(uuid);
     if (!room) {
@@ -476,12 +476,12 @@ export class RoomService {
     });
   }
 
-  async delegateRoom(uuid: string, ownerUuid: string, userUuid: string) {
+  async delegateRoom(uuid: string, ownerUuid: string, newOwnerUuid: string) {
     const room = await this.findOne(uuid);
     const roomUser = await this.roomUserRepo.findOne({
       where: {
         roomUuid: uuid,
-        userUuid: userUuid,
+        userUuid: newOwnerUuid,
         status: RoomUserStatus.JOINED,
       },
       relations: ['room'],
@@ -494,7 +494,7 @@ export class RoomService {
       throw new UnauthorizedException('방장이 아닙니다.');
     }
 
-    if (room.ownerUuid == userUuid) {
+    if (room.ownerUuid == newOwnerUuid) {
       throw new BadRequestException(
         '자기 자신에게 방장 권한을 위임할 수 없습니다.',
       );
@@ -506,7 +506,7 @@ export class RoomService {
 
     await this.roomRepo.update(
       { uuid: uuid },
-      { ownerUuid: userUuid, status: RoomStatus.ACTIVATED },
+      { ownerUuid: newOwnerUuid, status: RoomStatus.ACTIVATED },
     );
 
     return await this.roomRepo.findOne({
