@@ -69,33 +69,12 @@ export class FcmService {
     data?: any,
   ) {
     const tokens = await this.findByUserUuids(userUuids);
-    return getMessaging()
-      .sendEachForMulticast({
-        tokens: tokens.map((token) => token.pushKey),
-        notification: {
-          title: title,
-          body: body,
-        },
-        // Intent를 통해 전달할 데이터
-        data: data,
-        // iOS
-        apns: {
-          payload: {
-            aps: {
-              // 프론트 포그라운드 처리를 위한 설정
-              alert: {
-                title: title,
-                body: body,
-              },
-              sound: 'default',
-              contentAvailable: true, // 백그라운드 푸시 알림을 위한 설정
-            },
-          },
-        },
-      })
-      .then((response) => {
-        return response;
-      });
+    return await this.sendPushNotificationByToken(
+      tokens.map((token) => token.pushKey),
+      title,
+      body,
+      data,
+    );
   }
 
   async sendPushNotificationByToken(
