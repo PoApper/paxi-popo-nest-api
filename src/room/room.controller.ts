@@ -189,8 +189,7 @@ export class RoomController {
       user.uuid,
     );
     if (sendMessage) {
-      const nickname = await this.userService.getNickname(user.uuid);
-      const message = `${nickname?.nickname} 님이 방에 참여했습니다.`;
+      const message = `${user.nickname} 님이 방에 참여했습니다.`;
       const chat = await this.chatService.create({
         roomUuid: uuid,
         message: message,
@@ -222,8 +221,7 @@ export class RoomController {
   async leaveRoom(@Req() req, @Param('uuid') uuid: string) {
     const user = req.user as JwtPayload;
     const room = await this.roomService.leaveRoom(uuid, user.uuid);
-    const nickname = await this.userService.getNickname(user.uuid);
-    const message = `${nickname?.nickname} 님이 방에서 나갔습니다.`;
+    const message = `${user.nickname} 님이 방에서 나갔습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
@@ -278,8 +276,7 @@ export class RoomController {
       reason,
     );
 
-    const nickname = await this.userService.getNickname(userUuid);
-    const message = `방장에 의해 ${nickname?.nickname} 님이 방에서 강제퇴장 되었습니다.`;
+    const message = `방장에 의해 ${userUuid} 님이 방에서 강제퇴장 되었습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
@@ -313,9 +310,8 @@ export class RoomController {
   ) {
     const user = req.user as JwtPayload;
     const room = await this.roomService.delegateRoom(uuid, user.uuid, userUuid);
-    const nickname = await this.userService.getNickname(user.uuid);
     const newRoomOwnerNickname = await this.userService.getNickname(userUuid);
-    const message = `${nickname?.nickname} 님이 ${newRoomOwnerNickname?.nickname} 님에게 방장을 위임했습니다.`;
+    const message = `${user.nickname} 님이 ${newRoomOwnerNickname?.nickname} 님에게 방장을 위임했습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
@@ -447,8 +443,7 @@ export class RoomController {
     const user = req.user as JwtPayload;
     const room = await this.roomService.cancelSettlement(uuid, user.uuid);
 
-    const nickname = await this.userService.getNickname(user.uuid);
-    const message = `결제자 ${nickname?.nickname} 님이 정산 요청을 취소했습니다. 다시 정산을 진행해 주세요.`;
+    const message = `결제자 ${user.nickname} 님이 정산 요청을 취소했습니다. 다시 정산을 진행해 주세요.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
@@ -497,9 +492,8 @@ export class RoomController {
       body.isPaid,
     );
     if (body.isPaid) {
-      const nickname = await this.userService.getNickname(user.uuid);
       const roomTitle = await this.roomService.getRoomTitle(uuid);
-      const message = `${nickname?.nickname} 님이 정산을 완료했다고 알립니다. 확인해 보세요!`;
+      const message = `${user.nickname} 님이 정산을 완료했다고 알립니다. 확인해 보세요!`;
       this.fcmService
         .sendPushNotificationByUserUuid(
           payerUuid,

@@ -63,11 +63,10 @@ export class UserController {
   })
   async getOnboardingStatus(@Req() req) {
     const user = req.user as JwtPayload;
-    const nickname = await this.userService.getNickname(user.uuid);
-    if (nickname) {
+    if (user.nickname) {
       return {
         onboardingStatus: true,
-        nickname: nickname.nickname,
+        nickname: user.nickname,
       };
     }
 
