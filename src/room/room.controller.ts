@@ -109,10 +109,10 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '특정 방을 반환, 방이 존재하지 않을 경우 null 반환',
-    type: Room,
+    type: RoomWithUsersDto,
   })
   findOne(@Param('uuid') uuid: string) {
-    return this.roomService.findOne(uuid);
+    return this.roomService.findOneWithRoomUsers(uuid);
   }
 
   @Patch(':uuid')
@@ -147,7 +147,7 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '상태가 DELETED로 변경된 방의 UUID를 반환',
-    type: Room,
+    type: String,
   })
   @ApiResponse({
     status: 400,
@@ -248,7 +248,7 @@ export class RoomController {
     status: 200,
     description:
       '강퇴된 사용자와 방 정보를 반환, 방에 강퇴 메세지를 전송합니다.',
-    type: Room,
+    type: RoomWithUsersDto,
   })
   @ApiResponse({
     status: 400,
@@ -261,16 +261,18 @@ export class RoomController {
   async kickUserFromRoom(
     @User() user: JwtPayload,
     @Param('uuid') uuid: string,
-    @Body() dto: { userUuid: string; reason: string },
+    @Body() dto: { kickedUserUuid: string; reason: string },
   ) {
     const room = await this.roomService.kickUserFromRoom(
       uuid,
       user.uuid,
-      dto.userUuid,
+      dto.kickedUserUuid,
       dto.reason,
     );
 
-    const kickedUserNickname = await this.userService.getNickname(dto.userUuid);
+    const kickedUserNickname = await this.userService.getNickname(
+      dto.kickedUserUuid,
+    );
     const message = `방장에 의해 ${kickedUserNickname?.nickname} 님이 방에서 강제퇴장 되었습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
