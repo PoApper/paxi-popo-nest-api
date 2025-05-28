@@ -161,23 +161,28 @@ export class RoomService {
       throw new BadRequestException('이미 종료된 방입니다.');
     }
 
-    if (user.userType == UserType.admin || room?.ownerUuid == user.uuid) {
-      // 출발 시간이 있다면 현재보다 이전인지 확인
-      const departureTime = updateRoomDto.departureTime;
-      if (departureTime && new Date(departureTime) < new Date()) {
-        throw new BadRequestException(
-          '출발 시간은 현재 시간보다 이전일 수 없습니다.',
-        );
-      }
-      // 출발 시간 변경 시 출발전 알림 여부 초기화
-      if (updateRoomDto.departureTime) {
-        updateRoomDto.departureAlertSent = false;
-      }
-    } else {
+    if (!(user.userType == UserType.admin || room?.ownerUuid == user.uuid)) {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
 
-    await this.roomRepo.update({ uuid: uuid }, { ...updateRoomDto });
+    // 출발 시간이 있다면 현재보다 이전인지 확인
+    const departureTime = updateRoomDto.departureTime;
+    if (departureTime && new Date(departureTime) < new Date()) {
+      throw new BadRequestException(
+        '출발 시간은 현재 시간보다 이전일 수 없습니다.',
+      );
+    }
+
+    // 출발 시간 변경 시 출발전 알림 여부 초기화
+    let departureAlertSent = room.departureAlertSent;
+    if (updateRoomDto.departureTime) {
+      departureAlertSent = false;
+    }
+
+    await this.roomRepo.update(
+      { uuid: uuid },
+      { ...updateRoomDto, departureAlertSent: departureAlertSent },
+    );
 
     return await this.roomRepo.findOne({
       where: { uuid: uuid },
@@ -813,29 +818,6 @@ export class RoomService {
     });
   }
 
-  calculatePayAmountPerPerson(payAmount: number, currentParticipant: number) {
-    // NOTE: 서비스 이용약관에 따라 소수점은 올려서 계산함
-    // 정산자가 정산 금액보다 최대 (currentParticipant-1)원 더 받을 수 있음
-    return Math.ceil(payAmount / currentParticipant);
-  }
-
-  getDepartureAlertTargetRooms() {
-    return this.roomRepo.find({
-      where: {
-        departureTime: Between(
-          new Date(),
-          new Date(Date.now() + 30 * 60 * 1000),
-        ),
-        departureAlertSent: false,
-        status: RoomStatus.ACTIVATED,
-        room_users: {
-          status: RoomUserStatus.JOINED,
-        },
-      },
-      relations: ['room_users'],
-    });
-  }
-
   @Cron(CronExpression.EVERY_MINUTE)
   async sendDepartureAlert() {
     const targetRooms = await this.getDepartureAlertTargetRooms();
@@ -869,5 +851,29 @@ export class RoomService {
           },
         );
     }
+  }
+
+  calculatePayAmountPerPerson(payAmount: number, currentParticipant: number) {
+    // NOTE: 서비스 이용약관에 따라 소수점은 올려서 계산함
+    // 정산자가 정산 금액보다 최대 (currentParticipant-1)원 더 받을 수 있음
+    return Math.ceil(payAmount / currentParticipant);
+  }
+
+  getDepartureAlertTargetRooms() {
+    return this.roomRepo.find({
+      where: {
+        // 출발 30분보다 이전인 방들을 가져옴
+        departureTime: Between(
+          new Date(),
+          new Date(Date.now() + 30 * 60 * 1000),
+        ),
+        departureAlertSent: false,
+        status: RoomStatus.ACTIVATED,
+        room_users: {
+          status: RoomUserStatus.JOINED,
+        },
+      },
+      relations: ['room_users'],
+    });
   }
 }
