@@ -188,7 +188,6 @@ export class ChatController {
     @Req() req,
   ) {
     const user = req.user as JwtPayload;
-    const nickname = await this.userService.getNickname(user.uuid);
     const chat = await this.chatService.create(
       {
         roomUuid: roomUuid,
@@ -196,7 +195,7 @@ export class ChatController {
         message: body.message,
         messageType: ChatMessageType.TEXT,
       },
-      nickname?.nickname ?? undefined,
+      user.nickname,
     );
     this.chatGateway.sendMessage(roomUuid, chat);
     return chat;

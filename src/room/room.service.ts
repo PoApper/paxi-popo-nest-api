@@ -288,7 +288,7 @@ export class RoomService {
         const { user, kickedReason, ...rest } = ru;
         return {
           ...rest,
-          nickname: user.nickname?.nickname ?? null,
+          nickname: user.nickname,
         };
       }),
     };
@@ -379,7 +379,7 @@ export class RoomService {
           const { user, kickedReason, ...rest } = ru;
           return {
             ...rest,
-            nickname: user.nickname?.nickname ?? null,
+            nickname: user.nickname,
           };
         }),
       };
@@ -728,14 +728,14 @@ export class RoomService {
     );
 
     const payerNickname = await this.userService.getNickname(room.payerUuid);
-    // if (!payerNickname) {
-    //   throw new NotFoundException('정산자 닉네임을 찾을 수 없습니다.');
-    // }
+    if (!payerNickname) {
+      throw new NotFoundException('정산자 닉네임을 찾을 수 없습니다.');
+    }
 
     // Settlement DTO의 내용을 리턴함
     return new ResponseSettlementDto(
       room,
-      payerNickname,
+      payerNickname.nickname,
       account,
       payAmountPerPerson,
     );
