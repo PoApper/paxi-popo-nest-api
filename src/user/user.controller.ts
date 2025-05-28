@@ -17,7 +17,6 @@ import {
 } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/authorization/roles.guard';
 import { Roles } from 'src/auth/authorization/roles.decorator';
 
@@ -28,7 +27,6 @@ import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
 
 @ApiCookieAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('user')
 @ApiResponse({
   status: 401,

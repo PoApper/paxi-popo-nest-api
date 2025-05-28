@@ -6,7 +6,6 @@ import {
   Post,
   Query,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -17,12 +16,10 @@ import {
 
 import { FcmKey } from 'src/fcm/entities/fcm-key.entity';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.payload';
 import { FcmService } from './fcm.service';
 
 @ApiCookieAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('push')
 export class FcmController {
   constructor(private readonly pushService: FcmService) {}

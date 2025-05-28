@@ -25,14 +25,12 @@ import {
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { UserService } from 'src/user/user.service';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { Chat } from './entities/chat.entity';
 import { ChatSenderGuard } from './guards/chat-sender.guard';
 import { ChatGateway } from './chat.gateway';
 import { ChatMessageType } from './entities/chat.meta';
 @ApiCookieAuth()
-@UseGuards(JwtAuthGuard)
 @ApiResponse({
   status: 401,
   description: '로그인이 되어 있지 않은 경우',

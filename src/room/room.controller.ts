@@ -9,7 +9,6 @@ import {
   Put,
   Query,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -20,7 +19,6 @@ import {
 } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ChatGateway } from 'src/chat/chat.gateway';
 import { ChatMessageType } from 'src/chat/entities/chat.meta';
 import { ChatService } from 'src/chat/chat.service';
@@ -47,7 +45,6 @@ import { ResponseSettlementDto } from './dto/response-settlement.dto';
   status: 404,
   description: '방이 존재하지 않는 경우',
 })
-@UseGuards(JwtAuthGuard)
 @Controller('room')
 export class RoomController {
   constructor(

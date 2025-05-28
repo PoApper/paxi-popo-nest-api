@@ -17,7 +17,6 @@ import {
 } from '@nestjs/swagger';
 
 import { ReportService } from 'src/report/report.service';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { CreateReportDto } from 'src/report/dto/create-report.dto';
 import { RolesGuard } from 'src/auth/authorization/roles.guard';
@@ -26,7 +25,6 @@ import { Report } from 'src/report/entities/report.entity';
 
 @ApiCookieAuth()
 @UseGuards(RolesGuard)
-@UseGuards(JwtAuthGuard)
 @Controller('report')
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
