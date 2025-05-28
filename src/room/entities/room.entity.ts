@@ -56,6 +56,9 @@ export class Room extends Base {
   @Column({ type: 'int', nullable: true })
   payAmount: number | null;
 
+  @Column({ type: 'boolean', default: false, nullable: true })
+  departureAlertSent: boolean;
+
   /**
    * Database Relation
    */
