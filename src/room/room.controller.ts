@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Put,
-  Req,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -25,6 +24,7 @@ import { UserService } from 'src/user/user.service';
 import { FcmService } from 'src/fcm/fcm.service';
 import { NoContentException } from 'src/common/exception';
 import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
+import { User } from 'src/common/decorators/user.decorator';
 
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -71,8 +71,7 @@ export class RoomController {
     status: 500,
     description: '내부 트랜잭션 오류 등으로 방 생성이 실패할 경우',
   })
-  async create(@Req() req, @Body() dto: CreateRoomDto) {
-    const user = req.user as JwtPayload;
+  async create(@User() user: JwtPayload, @Body() dto: CreateRoomDto) {
     return await this.roomService.create(user.uuid, dto);
   }
 
@@ -99,8 +98,7 @@ export class RoomController {
       '자신이 참여중인 방을 반환, 참여중인 방이 없을 경우 빈 배열 반환',
     type: [ResponseMyRoomDto],
   })
-  findMyRoom(@Req() req) {
-    const user = req.user as JwtPayload;
+  findMyRoom(@User() user: JwtPayload) {
     return this.roomService.findMyRoomByUserUuid(user.uuid);
   }
 
@@ -136,10 +134,9 @@ export class RoomController {
   })
   async update(
     @Param('uuid') uuid: string,
-    @Req() req,
+    @User() user: JwtPayload,
     @Body() updateRoomDto: UpdateRoomDto,
   ) {
-    const user = req.user as JwtPayload;
     return await this.roomService.update(uuid, updateRoomDto, user);
   }
 
@@ -160,8 +157,7 @@ export class RoomController {
     status: 401,
     description: '로그인이 되어 있지 않은 경우, 방장이나 관리자가 아닌 경우',
   })
-  async remove(@Req() req, @Param('uuid') uuid: string) {
-    const user = req.user as JwtPayload;
+  async remove(@User() user: JwtPayload, @Param('uuid') uuid: string) {
     return this.roomService.remove(uuid, user.uuid);
   }
 
@@ -181,8 +177,7 @@ export class RoomController {
     description:
       '방에 가입할 수 없는 상태(방이 활성화되지 않은 경우, 이미 가입된 방, 강퇴된 방)인 경우',
   })
-  async joinRoom(@Req() req, @Param('uuid') uuid: string) {
-    const user = req.user as JwtPayload;
+  async joinRoom(@User() user: JwtPayload, @Param('uuid') uuid: string) {
     const { sendMessage, room } = await this.roomService.joinRoom(
       uuid,
       user.uuid,
@@ -217,8 +212,7 @@ export class RoomController {
     description:
       '방에 가입되어 있지 않은 경우, 방장이 탈퇴하는 경우에 다른 방장을 지정할 수 없는 경우, 이미 정산이 진행되고 있는 경우',
   })
-  async leaveRoom(@Req() req, @Param('uuid') uuid: string) {
-    const user = req.user as JwtPayload;
+  async leaveRoom(@User() user: JwtPayload, @Param('uuid') uuid: string) {
     const room = await this.roomService.leaveRoom(uuid, user.uuid);
     const message = `${user.nickname} 님이 방에서 나갔습니다.`;
     const chat = await this.chatService.create({
@@ -267,11 +261,10 @@ export class RoomController {
     description: '로그인이 되어 있지 않은 경우, 방장이 아닌 경우',
   })
   async kickUserFromRoom(
-    @Req() req,
+    @User() user: JwtPayload,
     @Param('uuid') uuid: string,
     @Body() dto: { userUuid: string; reason: string },
   ) {
-    const user = req.user as JwtPayload;
     const room = await this.roomService.kickUserFromRoom(
       uuid,
       user.uuid,
@@ -307,11 +300,10 @@ export class RoomController {
       '방에 가입되어 있지 않은 경우, 방장이 아닌 경우, 이미 방장인 경우',
   })
   async delegateRoom(
-    @Req() req,
+    @User() user: JwtPayload,
     @Param('uuid') uuid: string,
     @Body() dto: { userUuid: string },
   ) {
-    const user = req.user as JwtPayload;
     const room = await this.roomService.delegateRoom(
       uuid,
       user.uuid,
@@ -344,10 +336,9 @@ export class RoomController {
   })
   async requestSettlement(
     @Param('uuid') uuid: string,
-    @Req() req,
+    @User() user: JwtPayload,
     @Body() dto: CreateSettlementDto,
   ) {
-    const user = req.user as JwtPayload;
     const responseSettlement = await this.roomService.requestSettlement(
       uuid,
       user.uuid,
@@ -407,10 +398,9 @@ export class RoomController {
   })
   async updateSettlement(
     @Param('uuid') uuid: string,
-    @Req() req,
+    @User() user: JwtPayload,
     @Body() dto: UpdateSettlementDto,
   ) {
-    const user = req.user as JwtPayload;
     const responseSettlement = await this.roomService.updateSettlement(
       uuid,
       user.uuid,
@@ -446,8 +436,10 @@ export class RoomController {
     status: 401,
     description: '로그인이 되어 있지 않은 경우, 정산자가 아닌 경우',
   })
-  async cancelSettlement(@Param('uuid') uuid: string, @Req() req) {
-    const user = req.user as JwtPayload;
+  async cancelSettlement(
+    @Param('uuid') uuid: string,
+    @User() user: JwtPayload,
+  ) {
     const room = await this.roomService.cancelSettlement(uuid, user.uuid);
 
     const message = `결제자 ${user.nickname} 님이 정산 요청을 취소했습니다. 다시 정산을 진행해 주세요.`;
@@ -488,10 +480,9 @@ export class RoomController {
   })
   async updateIsPaid(
     @Param('uuid') uuid: string,
-    @Req() req,
+    @User() user: JwtPayload,
     @Body() body: { isPaid: boolean },
   ) {
-    const user = req.user as JwtPayload;
     const { payerUuid, roomUser } = await this.roomService.updateRoomUserIsPaid(
       uuid,
       user.uuid,
@@ -539,8 +530,7 @@ export class RoomController {
     name: 'uuid',
     description: '정산 완료를 요청할 방의 UUID',
   })
-  async completeRoom(@Param('uuid') uuid: string, @Req() req) {
-    const user = req.user as JwtPayload;
+  async completeRoom(@Param('uuid') uuid: string, @User() user: JwtPayload) {
     const room = await this.roomService.completeRoom(
       uuid,
       user.uuid,
@@ -578,9 +568,7 @@ export class RoomController {
     status: 401,
     description: '로그인이 되어 있지 않은 경우',
   })
-  async unfocus(@Req() req) {
-    const user = req.user as JwtPayload;
-
+  async unfocus(@User() user: JwtPayload) {
     const uuid = this.chatGateway.getUserFocusRoomUuid(user.uuid);
     if (!uuid || typeof uuid !== 'string') throw new NoContentException();
 

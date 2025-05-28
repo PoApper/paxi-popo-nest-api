@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Post,
-  Req,
   UseGuards,
   Body,
   Put,
@@ -21,13 +20,13 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/authorization/roles.decorator';
 import { PublicGuard } from 'src/common/public-guard.decorator';
 import { GuardName } from 'src/common/guard-name';
+import { User } from 'src/common/decorators/user.decorator';
 
 import { UserService } from './user.service';
 import { UserType } from './user.meta';
 import { Nickname } from './entities/nickname.entity';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UpdateAccountDto } from './dto/update-account.dto';
-
 @ApiCookieAuth()
 @Controller('user')
 @ApiResponse({
@@ -61,8 +60,7 @@ export class UserController {
     description:
       '낮은 확률이지만, 제한 횟수 초과로 랜덤 닉네임을 생성하는 데 실패한 경우',
   })
-  async getOnboardingStatus(@Req() req) {
-    const user = req.user as JwtPayload;
+  async getOnboardingStatus(@User() user: JwtPayload) {
     if (user.nickname) {
       return {
         onboardingStatus: true,
@@ -104,8 +102,10 @@ export class UserController {
     },
   })
   // TODO: 온보딩에서 유저의 닉네임과 계좌번호까지 같이 받을 수 있게 하면 좋을 것 같음
-  async createNickname(@Req() req, @Body() body: { nickname: string }) {
-    const user = req.user as JwtPayload;
+  async createNickname(
+    @User() user: JwtPayload,
+    @Body() body: { nickname: string },
+  ) {
     return await this.userService.createNickname(user.uuid, body.nickname);
   }
 
@@ -147,7 +147,7 @@ export class UserController {
   @UseGuards(RolesGuard)
   @Roles(UserType.student)
   async updateNickname(
-    @Req() req,
+    @User() user: JwtPayload,
     @Param('userUuid') userUuid: string,
     @Body() body: { nickname: string },
   ) {
@@ -189,8 +189,7 @@ export class UserController {
       },
     },
   })
-  async getUserInfo(@Req() req) {
-    const user = req.user as JwtPayload;
+  async getUserInfo(@User() user: JwtPayload) {
     return await this.userService.getUserInfo(user.uuid);
   }
 
@@ -211,8 +210,7 @@ export class UserController {
   @ApiBody({
     type: CreateAccountDto,
   })
-  async createAccount(@Req() req, @Body() dto: CreateAccountDto) {
-    const user = req.user as JwtPayload;
+  async createAccount(@User() user: JwtPayload, @Body() dto: CreateAccountDto) {
     return await this.userService.createAccount(user.uuid, dto);
   }
 
@@ -229,8 +227,7 @@ export class UserController {
   @ApiBody({
     type: UpdateAccountDto,
   })
-  async updateAccount(@Req() req, @Body() dto: UpdateAccountDto) {
-    const user = req.user as JwtPayload;
+  async updateAccount(@User() user: JwtPayload, @Body() dto: UpdateAccountDto) {
     return await this.userService.updateAccount(user.uuid, dto);
   }
 }

@@ -10,7 +10,6 @@ import {
   Post,
   Put,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -24,6 +23,7 @@ import {
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { UserService } from 'src/user/user.service';
+import { User } from 'src/common/decorators/user.decorator';
 
 import { ChatService } from './chat.service';
 import { Chat } from './entities/chat.entity';
@@ -185,9 +185,8 @@ export class ChatController {
   async create(
     @Param('roomUuid') roomUuid: string,
     @Body() body: { message: string },
-    @Req() req,
+    @User() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
     const chat = await this.chatService.create(
       {
         roomUuid: roomUuid,

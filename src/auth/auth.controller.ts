@@ -26,7 +26,6 @@ export class AuthController {
         throw new UnauthorizedException();
       }
     }
-    // this.userService.updateLogin(user.uuid);
     return user;
   }
 }
