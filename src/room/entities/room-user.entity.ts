@@ -8,7 +8,7 @@ import {
 import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
 
-import { RoomUserStatus } from 'src/room/entities/room.user.meta';
+import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 import { Room } from 'src/room/entities/room.entity';
 import { User } from 'src/user/entities/user.entity';
 import { Base } from 'src/common/base.entity';
@@ -26,6 +26,7 @@ export class RoomUser extends Base {
   roomUuid: string;
 
   @Column({ nullable: false, default: RoomUserStatus.JOINED })
+  @ApiProperty({ example: RoomUserStatus.JOINED })
   status: RoomUserStatus;
 
   @Column({ nullable: false, default: false })
@@ -35,7 +36,9 @@ export class RoomUser extends Base {
   @Column({ nullable: true })
   kickedReason: string;
 
-  // TODO: 유저 별 정산 금액 추가
+  @Column({ nullable: true })
+  @ApiProperty({ example: '25c930d5-f38e-4f28-813b-82eb49acd606' })
+  lastReadChatUuid: string;
 
   /**
    * Database Relation

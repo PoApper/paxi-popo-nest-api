@@ -24,6 +24,8 @@ import { Roles } from 'src/auth/authorization/roles.decorator';
 import { UserService } from './user.service';
 import { UserType } from './user.meta';
 import { Nickname } from './entities/nickname.entity';
+import { CreateAccountDto } from './dto/create-account.dto';
+import { UpdateAccountDto } from './dto/update-account.dto';
 
 @ApiCookieAuth()
 @UseGuards(JwtAuthGuard)
@@ -49,7 +51,7 @@ export class UserController {
       type: 'object',
       properties: {
         onboardingStatus: { type: 'boolean', example: true },
-        nickname: { type: 'string', example: '행복한_포닉스_1234' },
+        nickname: { type: 'string', example: '행복한_수소_1234' },
       },
     },
   })
@@ -96,7 +98,7 @@ export class UserController {
     schema: {
       type: 'object',
       properties: {
-        nickname: { type: 'string', example: '행복한_포닉스_1234' },
+        nickname: { type: 'string', example: '행복한_수소_1234' },
       },
     },
   })
@@ -116,7 +118,7 @@ export class UserController {
     description: '수정된 닉네임을 반환합니다.',
     schema: {
       type: 'string',
-      example: '행복한_포닉스_1234',
+      example: '행복한_수소_1234',
     },
   })
   @ApiResponse({
@@ -137,7 +139,7 @@ export class UserController {
     schema: {
       type: 'object',
       properties: {
-        nickname: { type: 'string', example: '행복한_포닉스_1234' },
+        nickname: { type: 'string', example: '행복한_수소_1234' },
       },
     },
   })
@@ -155,5 +157,79 @@ export class UserController {
     return nickname;
   }
 
-  // NOTE: 온보딩 체크 시 닉네임이 사용되므로 삭제 기능은 없음
+  @Get('my')
+  @ApiOperation({
+    summary: '유저의 정보를 반환합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      '닉네임, 계좌번호, 계좌주 이름, 은행명을 반환합니다. 닉네임, 계좌 정보가 없다면 아무것도 반환하지 않습니다.',
+    schema: {
+      type: 'object',
+      properties: {
+        uuid: {
+          type: 'string',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
+        nickname: {
+          type: 'string',
+          example: '행복한_수소_1234',
+        },
+        accountNumber: {
+          type: 'string',
+          example: '1234-5678-9012-3456',
+        },
+        accountHolderName: {
+          type: 'string',
+          example: '포닉스',
+        },
+        bankName: { type: 'string', example: '국민은행' },
+      },
+    },
+  })
+  async getUserInfo(@Req() req) {
+    const user = req.user as JwtPayload;
+    return await this.userService.getUserInfo(user.uuid);
+  }
+
+  @Post('account')
+  @ApiOperation({
+    summary: '유저의 계좌번호를 생성합니다.',
+  })
+  @ApiResponse({
+    status: 201,
+    description:
+      '유저의 계좌번호를 생성합니다. 생성된 계좌번호 정보를 반환합니다.',
+    type: CreateAccountDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '유저의 계좌번호가 이미 존재하는 경우',
+  })
+  @ApiBody({
+    type: CreateAccountDto,
+  })
+  async createAccount(@Req() req, @Body() dto: CreateAccountDto) {
+    const user = req.user as JwtPayload;
+    return await this.userService.createAccount(user.uuid, dto);
+  }
+
+  @Put('account')
+  @ApiOperation({
+    summary: '유저의 계좌번호를 수정합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      '유저의 계좌번호를 수정합니다. 수정된 계좌번호 정보를 반환합니다.',
+    type: UpdateAccountDto,
+  })
+  @ApiBody({
+    type: UpdateAccountDto,
+  })
+  async updateAccount(@Req() req, @Body() dto: UpdateAccountDto) {
+    const user = req.user as JwtPayload;
+    return await this.userService.updateAccount(user.uuid, dto);
+  }
 }

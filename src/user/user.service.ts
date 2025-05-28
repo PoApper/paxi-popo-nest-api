@@ -15,6 +15,8 @@ import { UserStatus } from './user.meta';
 import { Account } from './entities/account.entity';
 import { adjectives, nouns } from './nickname.meta';
 import { Nickname } from './entities/nickname.entity';
+import { CreateAccountDto } from './dto/create-account.dto';
+import { UpdateAccountDto } from './dto/update-account.dto';
 // 해당 UserService는 테스트 환경에서 가짜 유저를 만들어내기 위해서만 사용되며, 실제 환경에서는 사용되지 않음
 // 실제 환경에서 Paxi는 유저 정보를 읽기만 함
 // 실제 환경에서 사용되지 않기 때문에 controller 또한 없음
@@ -54,6 +56,17 @@ export class UserService {
     return this.userRepo.findOneBy({ uuid });
   }
 
+  getUserName(uuid: string) {
+    return this.userRepo
+      .findOne({
+        where: { uuid },
+        select: ['name'],
+      })
+      .then((user) => {
+        return user?.name;
+      });
+  }
+
   // password encrypt util
   private encryptPassword(password: string, cryptoSalt: string) {
     return crypto
@@ -74,7 +87,7 @@ export class UserService {
       : this.accountRepo;
 
     const account = await manager.findOne({
-      where: { userUuid },
+      where: { userUuid: userUuid },
     });
 
     const encryptedAccountNumber = accountNumber
@@ -99,7 +112,7 @@ export class UserService {
       });
     }
     return manager.findOne({
-      where: { userUuid },
+      where: { userUuid: userUuid },
     });
   }
 
@@ -121,6 +134,36 @@ export class UserService {
     };
   }
 
+  async createAccount(userUuid: string, dto: CreateAccountDto) {
+    const encryptedAccountNumber = this.encryptAccountNumber(dto.accountNumber);
+    try {
+      await this.accountRepo.save({
+        userUuid,
+        encryptedAccountNumber,
+        accountHolderName: dto.accountHolderName,
+        bankName: dto.bankName,
+      });
+    } catch (err) {
+      if (err.code === 'ER_DUP_ENTRY')
+        throw new BadRequestException('계좌번호가 이미 존재합니다.');
+    }
+    return this.getAccount(userUuid);
+  }
+
+  async updateAccount(userUuid: string, dto: UpdateAccountDto) {
+    const encryptedAccountNumber = dto.accountNumber
+      ? this.encryptAccountNumber(dto.accountNumber)
+      : undefined;
+    await this.accountRepo.update(
+      { userUuid },
+      {
+        encryptedAccountNumber,
+        accountHolderName: dto.accountHolderName,
+        bankName: dto.bankName,
+      },
+    );
+    return this.getAccount(userUuid);
+  }
   private encryptAccountNumber(accountNumber: string) {
     const key = Buffer.from(process.env.ACCOUNT_ENCRYPTION_KEY!, 'base64');
     const iv = crypto.randomBytes(16);
@@ -206,5 +249,18 @@ export class UserService {
 
     await this.nicknameRepo.update({ userUuid }, { nickname });
     return nickname;
+  }
+
+  async getUserInfo(userUuid: string) {
+    const account = await this.getAccount(userUuid);
+    const nickname = await this.getNickname(userUuid);
+
+    return {
+      uuid: userUuid,
+      nickname: nickname?.nickname,
+      accountNumber: account?.accountNumber,
+      accountHolderName: account?.accountHolderName,
+      bankName: account?.bankName,
+    };
   }
 }

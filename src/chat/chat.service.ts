@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { LessThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { v4 as uuidv4 } from 'uuid';
@@ -12,13 +17,15 @@ export class ChatService {
   constructor(
     @InjectRepository(Chat)
     private readonly chatRepo: Repository<Chat>,
+    @Inject(forwardRef(() => RoomService)) // 순환 참조 해결
     private readonly roomService: RoomService,
   ) {}
 
-  async create(createChatDto: CreateChatDto) {
+  async create(createChatDto: CreateChatDto, senderNickname?: string) {
     const chat = this.chatRepo.create({
       ...createChatDto,
       uuid: uuidv4(),
+      senderNickname: senderNickname ?? undefined,
     });
     return this.chatRepo.save(chat);
   }
@@ -86,13 +93,9 @@ export class ChatService {
     });
   }
 
-  async updateMessage(
-    roomUuid: string,
-    messageUuid: string,
-    body: { message: string },
-  ) {
+  async updateMessage(messageUuid: string, body: { message: string }) {
     const chat = await this.chatRepo.findOne({
-      where: { uuid: messageUuid, roomUuid: roomUuid },
+      where: { uuid: messageUuid },
     });
     if (!chat) {
       throw new NotFoundException('메세지를 찾을 수 없습니다.');
@@ -104,14 +107,23 @@ export class ChatService {
     });
   }
 
-  async deleteMessage(roomUuid: string, messageUuid: string) {
-    const message = await this.chatRepo.findOne({
-      where: { uuid: messageUuid, roomUuid: roomUuid },
+  async deleteMessage(messageUuid: string) {
+    const chat = await this.chatRepo.findOne({
+      where: { uuid: messageUuid },
     });
-    if (!message) {
+    if (!chat) {
       throw new NotFoundException('메세지를 찾을 수 없습니다.');
     }
-    await this.chatRepo.delete(message.id);
-    return messageUuid;
+    await this.chatRepo.delete(chat.id);
+    return { roomUuid: chat.roomUuid, deletedChatUuid: chat.uuid };
+  }
+
+  async getLastMessageOfRoom(roomUuid: string) {
+    const lastMessage = await this.chatRepo.findOne({
+      where: { roomUuid },
+      order: { id: 'DESC' },
+    });
+    if (!lastMessage) return null;
+    return lastMessage;
   }
 }

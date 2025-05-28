@@ -1,19 +1,18 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
   JoinColumn,
   OneToOne,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
 } from 'typeorm';
 import { ApiHideProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
 
-import { User } from './user.entity';
+import { Base } from 'src/common/base.entity';
 
+import { User } from './user.entity';
 @Entity('nickname')
-export class Nickname {
+export class Nickname extends Base {
   @PrimaryGeneratedColumn()
   @ApiHideProperty()
   @Exclude()
@@ -24,14 +23,6 @@ export class Nickname {
 
   @Column({ type: 'varchar', length: 20, nullable: false })
   nickname: string;
-
-  @CreateDateColumn()
-  @ApiHideProperty()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  @ApiHideProperty()
-  updatedAt: Date;
 
   @OneToOne(() => User, (user) => user.nickname, {
     onDelete: 'CASCADE',

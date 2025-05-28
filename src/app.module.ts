@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { FcmModule } from 'src/fcm/fcm.module';
 import { RoomModule } from 'src/room/room.module';
@@ -36,8 +37,12 @@ import configurations from './config/configurations';
         return dbConfig;
       },
     }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_ACCESS_TOKEN_SECRET'),
+      }),
     }),
     AuthModule,
     UserModule,
@@ -45,6 +50,7 @@ import configurations from './config/configurations';
     ChatModule,
     FcmModule,
     ReportModule,
+    ScheduleModule.forRoot(), // For cron jobs
   ],
   controllers: [AppController],
   providers: [AppService],

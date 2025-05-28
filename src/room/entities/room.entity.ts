@@ -10,7 +10,7 @@ import { ApiHideProperty } from '@nestjs/swagger';
 
 import { User } from 'src/user/entities/user.entity';
 import { RoomStatus } from 'src/room/entities/room.meta';
-import { RoomUser } from 'src/room/entities/room.user.entity';
+import { RoomUser } from 'src/room/entities/room-user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
 import { Report } from 'src/report/entities/report.entity';
 import { Base } from 'src/common/base.entity';
@@ -55,6 +55,9 @@ export class Room extends Base {
   // NOTE: 정산 요청 총 금액은 정수형으로 저장
   @Column({ type: 'int', nullable: true })
   payAmount: number | null;
+
+  @Column({ type: 'boolean', default: false, nullable: true })
+  departureAlertSent: boolean;
 
   /**
    * Database Relation

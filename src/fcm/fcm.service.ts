@@ -7,8 +7,9 @@ import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { getMessaging } from 'firebase-admin/messaging';
 
-import { FcmKey } from 'src/fcm/entities/fcm.key.entity';
+import { FcmKey } from 'src/fcm/entities/fcm-key.entity';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
+import { NoContentException } from 'src/common/exception';
 
 @Injectable()
 export class FcmService {
@@ -26,7 +27,7 @@ export class FcmService {
       return pushKey;
     } catch (err) {
       if (err.code === 'ER_DUP_ENTRY')
-        throw new BadRequestException('Push key already exists');
+        throw new NoContentException('Push key already exists'); // 204
       throw new InternalServerErrorException('Failed to create push key');
     }
   }
@@ -41,15 +42,11 @@ export class FcmService {
     }
   }
 
-  findByUserUuid(userUuid: string) {
+  findByUserUuids(userUuids: string | string[]) {
     return this.pushKeyRepository.find({
-      where: { userUuid },
-    });
-  }
-
-  findByMultipleUserUuid(userUuids: string[]) {
-    return this.pushKeyRepository.find({
-      where: { userUuid: In(userUuids) },
+      where: {
+        userUuid: In(Array.isArray(userUuids) ? userUuids : [userUuids]),
+      },
     });
   }
 
@@ -65,72 +62,52 @@ export class FcmService {
     });
   }
 
-  async sendPushNotificationByUuid(userUuid: string, message: string) {
-    await getMessaging()
-      .send({
-        data: {
-          message: message,
-        },
-        token: await this.findByUserUuid(userUuid).then((tokens) => {
-          if (tokens.length > 0) return tokens[0].pushKey;
-          throw new BadRequestException('유저의 푸시 키가 존재하지 않습니다.');
-        }),
-      })
-      .then((response) => {
-        return response;
-      });
+  async sendPushNotificationByUserUuid(
+    userUuids: string | string[],
+    title: string,
+    body: string,
+    data?: any,
+  ) {
+    const tokens = await this.findByUserUuids(userUuids);
+    return await this.sendPushNotificationByToken(
+      tokens.map((token) => token.pushKey),
+      title,
+      body,
+      data,
+    );
   }
 
-  async sendPushNotificationByToken(token: string, message: string) {
-    await getMessaging()
-      .send({
-        data: {
-          message: message,
-        },
-        token: token,
-      })
-      .then((response) => {
-        return response;
-      });
-  }
-
-  async sendMultiPushNotificationByUuids(userUuids: string[], message: string) {
-    const tokens = await this.findByMultipleUserUuid(userUuids);
-    if (tokens.length === 0) {
-      throw new BadRequestException('No push keys found for users');
-    }
-
-    getMessaging()
+  async sendPushNotificationByToken(
+    tokens: string | string[],
+    title: string,
+    body: string,
+    data?: any,
+  ) {
+    return getMessaging()
       .sendEachForMulticast({
-        data: {
-          message: message,
+        tokens: Array.isArray(tokens) ? tokens : [tokens],
+        notification: {
+          title: title,
+          body: body,
         },
-        tokens: await this.findByMultipleUserUuid(userUuids).then((tokens) => {
-          return tokens.map((token) => token.pushKey);
-        }),
-      })
-      .then((response) => {
-        if (response.failureCount > 0) {
-          throw new BadRequestException('유저의 푸시 키가 존재하지 않습니다.');
-        }
+        data: data,
+        // iOS
+        apns: {
+          payload: {
+            aps: {
+              // 프론트 포그라운드 처리를 위한 설정
+              alert: {
+                title: title,
+                body: body,
+              },
+              sound: 'default',
+              contentAvailable: true, // 백그라운드 푸시 알림을 위한 설정
+            },
+          },
+        },
       })
       .then((response) => {
         return response;
       });
   }
-
-  async sendMultiPushNotificationByTokens(tokens: string[], message: string) {
-    await getMessaging()
-      .sendEachForMulticast({
-        data: {
-          message: message,
-        },
-        tokens: tokens,
-      })
-      .then((response) => {
-        return response;
-      });
-  }
-
-  // TODO: message 형식 정하기
 }
