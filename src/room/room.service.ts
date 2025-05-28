@@ -390,7 +390,7 @@ export class RoomService {
       relations: ['room'],
     });
 
-    if (!roomUser) {
+    if (!roomUser || roomUser.status !== RoomUserStatus.JOINED) {
       throw new BadRequestException(
         '강퇴하려는 사용자가 방에 가입되어 있지 않습니다.',
       );
@@ -736,7 +736,7 @@ export class RoomService {
       where: { roomUuid, userUuid },
     });
 
-    if (!roomUser || roomUser.status != RoomUserStatus.JOINED) {
+    if (!roomUser || roomUser.status !== RoomUserStatus.JOINED) {
       throw new BadRequestException('방에 가입되어 있지 않습니다.');
     }
 
