@@ -25,7 +25,7 @@ export class ChatService {
     const chat = this.chatRepo.create({
       ...createChatDto,
       uuid: uuidv4(),
-      senderNickname: senderNickname ?? undefined,
+      senderNickname: senderNickname ?? undefined, // 시스템 메시지인 경우에만 undefined(=null)로 저장
     });
     return this.chatRepo.save(chat);
   }

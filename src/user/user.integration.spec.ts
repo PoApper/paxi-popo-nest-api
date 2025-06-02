@@ -10,6 +10,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 
 import configurations from 'src/config/configurations';
+import { JwtPayload } from 'src/auth/strategies/jwt.payload';
+import { TestUtils } from 'src/test/test-utils';
 
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
@@ -22,6 +24,8 @@ describe('UserModule - Integration Test', () => {
 
   let userController: UserController;
   let userService: UserService;
+  let testUtils: TestUtils;
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [
@@ -49,6 +53,11 @@ describe('UserModule - Integration Test', () => {
     userService = app.get<UserService>(UserService);
   });
 
+  beforeEach(async () => {
+    testUtils = new TestUtils();
+    await testUtils.initializeTestUsers(userService);
+  });
+
   afterEach(async () => {
     const dataSource = app.get(DataSource);
     await dataSource.synchronize(true);
@@ -65,23 +74,16 @@ describe('UserModule - Integration Test', () => {
 
   describe('createNickname', () => {
     it('should create a nickname', async () => {
-      const user = await userService.save({
-        email: 'test@test.com',
-        password: 'test',
-        name: 'test',
-        userType: UserType.student,
-      });
-      const req = {
-        user: {
-          uuid: user.uuid,
+      const userNickname = '포닉스';
+      const nickname: Nickname = await userController.createNickname(
+        testUtils.getTestUserJwtToken(),
+        {
+          nickname: userNickname,
         },
-      };
-      const nickname: Nickname = await userController.createNickname(req, {
-        nickname: 'test',
-      });
+      );
 
-      expect(nickname.nickname).toBe('test');
-      expect(nickname.userUuid).toBe(user.uuid);
+      expect(nickname.nickname).toBe(userNickname);
+      expect(nickname.userUuid).toBe(testUtils.getTestUser().uuid);
       expect(nickname.createdAt).toBeDefined();
       expect(nickname.updatedAt).toBeDefined();
       expect(nickname.id).toBeDefined();
@@ -89,23 +91,15 @@ describe('UserModule - Integration Test', () => {
 
     it('should not create a duplicated nickname', async () => {
       const sameNickname = 'test';
-      const user1 = await userService.save({
-        email: 'test@test.com',
-        password: 'test',
-        name: 'test',
-        userType: UserType.student,
-      });
-      const req = {
-        user: {
-          uuid: user1.uuid,
+      const user1Nickname: Nickname = await userController.createNickname(
+        testUtils.getTestUserJwtToken(),
+        {
+          nickname: sameNickname,
         },
-      };
-      const user1Nickname: Nickname = await userController.createNickname(req, {
-        nickname: sameNickname,
-      });
+      );
 
       expect(user1Nickname.nickname).toBe(sameNickname);
-      expect(user1Nickname.userUuid).toBe(user1.uuid);
+      expect(user1Nickname.userUuid).toBe(testUtils.getTestUser().uuid);
       expect(user1Nickname.createdAt).toBeDefined();
       expect(user1Nickname.updatedAt).toBeDefined();
       expect(user1Nickname.id).toBeDefined();
@@ -116,36 +110,27 @@ describe('UserModule - Integration Test', () => {
         name: 'test2',
         userType: UserType.student,
       });
-      const user2Req = {
-        user: {
-          uuid: user2.uuid,
-        },
+      const user2InToken: JwtPayload = {
+        uuid: user2.uuid,
+        name: user2.name,
+        nickname: user2.nickname?.nickname || '',
+        userType: user2.userType,
+        email: user2.email,
       };
       await expect(
-        userController.createNickname(user2Req, {
+        userController.createNickname(user2InToken, {
           nickname: sameNickname,
         }),
       ).rejects.toThrow(ConflictException);
     });
 
     it('should not create a nickname if the user already has a nickname', async () => {
-      const user = await userService.save({
-        email: 'test@test.com',
-        password: 'test',
-        name: 'test',
-        userType: UserType.student,
-      });
-      const req = {
-        user: {
-          uuid: user.uuid,
-        },
-      };
-      await userController.createNickname(req, {
+      await userController.createNickname(testUtils.getTestUserJwtToken(), {
         nickname: 'test',
       });
 
       await expect(
-        userController.createNickname(req, {
+        userController.createNickname(testUtils.getTestUserJwtToken(), {
           nickname: 'test',
         }),
       ).rejects.toThrow(BadRequestException);
@@ -154,24 +139,13 @@ describe('UserModule - Integration Test', () => {
 
   describe('updateNickname', () => {
     it('should update a nickname', async () => {
-      const user = await userService.save({
-        email: 'test@test.com',
-        password: 'test',
-        name: 'test',
-        userType: UserType.student,
-      });
-      const req = {
-        user: {
-          uuid: user.uuid,
-        },
-      };
-      await userController.createNickname(req, {
+      await userController.createNickname(testUtils.getTestUserJwtToken(), {
         nickname: 'test',
       });
 
       const updatedNickname = await userController.updateNickname(
-        req,
-        user.uuid,
+        testUtils.getTestUserJwtToken(),
+        testUtils.getTestUser().uuid,
         {
           nickname: 'test2',
         },
@@ -181,18 +155,7 @@ describe('UserModule - Integration Test', () => {
     });
 
     it('should not update a nickname if another user already has the nickname', async () => {
-      const user1 = await userService.save({
-        email: 'test@test.com',
-        password: 'test',
-        name: 'test',
-        userType: UserType.student,
-      });
-      const req = {
-        user: {
-          uuid: user1.uuid,
-        },
-      };
-      await userController.createNickname(req, {
+      await userController.createNickname(testUtils.getTestUserJwtToken(), {
         nickname: 'test',
       });
 
@@ -202,50 +165,38 @@ describe('UserModule - Integration Test', () => {
         name: 'test2',
         userType: UserType.student,
       });
-      const user2Req = {
-        user: {
-          uuid: user2.uuid,
-        },
+      const user2InToken: JwtPayload = {
+        uuid: user2.uuid,
+        name: user2.name,
+        nickname: user2.nickname?.nickname || '',
+        userType: user2.userType,
+        email: user2.email,
       };
-      await userController.createNickname(user2Req, {
+      await userController.createNickname(user2InToken, {
         nickname: 'test2',
       });
 
-      const admin = await userService.save({
-        email: 'admin@test.com',
-        password: 'test',
-        name: 'admin',
-        userType: UserType.admin,
-      });
-      const adminReq = {
-        user: {
-          uuid: admin.uuid,
-        },
-      };
       await expect(
-        userController.updateNickname(adminReq, user2.uuid, {
-          nickname: 'test',
-        }),
+        userController.updateNickname(
+          testUtils.getTestAdminJwtToken(),
+          user2.uuid,
+          {
+            nickname: 'test',
+          },
+        ),
       ).rejects.toThrow(ConflictException);
     });
 
     it('should not update a nickname if the user does not have a nickname', async () => {
-      const admin = await userService.save({
-        email: 'test@test.com',
-        password: 'test',
-        name: 'test',
-        userType: UserType.admin,
-      });
-      const req = {
-        user: {
-          uuid: admin.uuid,
-        },
-      };
       const nonExistedUserUuid = 'non-existed-user-uuid';
       await expect(
-        userController.updateNickname(req, nonExistedUserUuid, {
-          nickname: 'test',
-        }),
+        userController.updateNickname(
+          testUtils.getTestAdminJwtToken(),
+          nonExistedUserUuid,
+          {
+            nickname: 'test',
+          },
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });

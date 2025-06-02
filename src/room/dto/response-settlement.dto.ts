@@ -2,7 +2,6 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { NotFoundException } from '@nestjs/common';
 
-import { Nickname } from 'src/user/entities/nickname.entity';
 import { Room } from 'src/room/entities/room.entity';
 
 export class ResponseSettlementDto {
@@ -71,7 +70,7 @@ export class ResponseSettlementDto {
 
   constructor(
     room: Room,
-    payerNickname: Nickname | null, //TODO: nullable하지 않게 변경(updateSettlement 관련 문제로 nullable로 변경해둠)
+    payerNickname: string,
     account: {
       accountNumber: string | null;
       accountHolderName: string;
@@ -92,7 +91,7 @@ export class ResponseSettlementDto {
     }
     this.roomUuid = room.uuid;
     this.payerUuid = room.payerUuid;
-    this.payerNickname = payerNickname?.nickname ?? '';
+    this.payerNickname = payerNickname;
     this.payerAccountNumber = account.accountNumber;
     this.payerAccountHolderName = account.accountHolderName;
     this.payerBankName = account.bankName;
