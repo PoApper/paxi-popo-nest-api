@@ -404,17 +404,29 @@ export class RoomService {
       throw new BadRequestException('방장은 강퇴할 수 없습니다.');
     }
 
+    if (room.status == RoomStatus.IN_SETTLEMENT) {
+      throw new BadRequestException(
+        '정산이 진행되고 있어 사용자를 강퇴할 수 없습니다.',
+      );
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      this.logger.debug(`Kicking user ${kickedUserUuid} from room ${uuid}`);
+
       // RoomUser 상태 변경
-      await queryRunner.manager.update(
+      const updateResult = await queryRunner.manager.update(
         RoomUser,
         { roomUuid: uuid, userUuid: kickedUserUuid },
         { status: RoomUserStatus.KICKED, kickedReason: reason },
       );
+
+      if (updateResult.affected === 0) {
+        throw new Error('RoomUser 상태 업데이트 실패');
+      }
 
       // 참여 인원 감소 확인
       const participantsNumber = await this.getParticipantsNumber(
@@ -423,7 +435,7 @@ export class RoomService {
       );
       if (participantsNumber != room.currentParticipant - 1) {
         this.logger.warn(
-          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid},  ${room.currentParticipant} != ${participantsNumber}`,
+          `JOINED 상태인 방 유저 수와 참여 인원 수가 일치하지 않음!! roomUuid: ${room.uuid}, participantsNumber: ${participantsNumber}, currentParticipant: ${room.currentParticipant - 1}`,
         );
       }
 
@@ -437,6 +449,7 @@ export class RoomService {
 
       return await this.findOneWithRoomUsers(uuid);
     } catch (err) {
+      this.logger.error(`Error in kickUserFromRoom: ${err.message}`, err.stack);
       await queryRunner.rollbackTransaction();
       throw err;
     } finally {
