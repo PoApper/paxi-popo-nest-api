@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Post,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Query } from '@nestjs/common';
 import {
   ApiBody,
   ApiCookieAuth,
@@ -16,13 +7,12 @@ import {
 } from '@nestjs/swagger';
 
 import { FcmKey } from 'src/fcm/entities/fcm-key.entity';
+import { User } from 'src/common/decorators/user.decorator';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { JwtPayload } from '../auth/strategies/jwt.payload';
 import { FcmService } from './fcm.service';
 
 @ApiCookieAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('push')
 export class FcmController {
   constructor(private readonly pushService: FcmService) {}
@@ -57,9 +47,8 @@ export class FcmController {
     status: 400,
     description: '푸시 키 등록 실패',
   })
-  async registerPushKey(@Req() req, @Body('key') key: string) {
-    const user = req.user as JwtPayload;
-    return await this.pushService.createPushKey(key, user);
+  async registerPushKey(@User() user: JwtPayload, @Body('key') key: string) {
+    return await this.pushService.createPushKey(key, user.uuid);
   }
 
   @Delete('key')
@@ -74,9 +63,8 @@ export class FcmController {
     status: 400,
     description: '푸시 키 또는 유저가 존재하지 않는 경우 삭제 실패',
   })
-  async deletePushKey(@Req() req, @Query('key') key: string) {
-    const user = req.user as JwtPayload;
-    return await this.pushService.deletePushKey(key, user);
+  async deletePushKey(@User() user: JwtPayload, @Query('key') key: string) {
+    return await this.pushService.deletePushKey(key, user.uuid);
   }
 
   @Post('send')
@@ -140,7 +128,7 @@ export class FcmController {
     },
   })
   async sendPushNotificationToMultipleUsers(
-    @Req() req,
+    @User() user: JwtPayload,
     @Body()
     body: {
       userUuids: string[];
@@ -170,8 +158,7 @@ export class FcmController {
     status: 400,
     description: '푸시 키 조회 실패',
   })
-  async getMyPushKeys(@Req() req) {
-    const user = req.user as JwtPayload;
+  async getMyPushKeys(@User() user: JwtPayload) {
     return await this.pushService.findByUserUuids(user.uuid);
   }
 }

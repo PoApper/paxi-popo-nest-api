@@ -5,7 +5,6 @@ import {
   Param,
   Post,
   Put,
-  Req,
   SetMetadata,
   UseGuards,
 } from '@nestjs/common';
@@ -17,16 +16,14 @@ import {
 } from '@nestjs/swagger';
 
 import { ReportService } from 'src/report/report.service';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { CreateReportDto } from 'src/report/dto/create-report.dto';
-import { RolesGuard } from 'src/auth/authorization/roles.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { UserType } from 'src/user/user.meta';
 import { Report } from 'src/report/entities/report.entity';
-
+import { User } from 'src/common/decorators/user.decorator';
 @ApiCookieAuth()
 @UseGuards(RolesGuard)
-@UseGuards(JwtAuthGuard)
 @Controller('report')
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
@@ -43,8 +40,7 @@ export class ReportController {
     status: 401,
     description: '로그인이 되어 있지 않은 경우',
   })
-  async create(@Req() req, @Body() dto: CreateReportDto) {
-    const user = req.user as JwtPayload;
+  async create(@User() user: JwtPayload, @Body() dto: CreateReportDto) {
     return await this.reportService.create(user.uuid, dto);
   }
 
@@ -83,8 +79,7 @@ export class ReportController {
     status: 401,
     description: '로그인이 되어 있지 않은 경우',
   })
-  async findMyReports(@Req() req) {
-    const user = req.user as JwtPayload;
+  async findMyReports(@User() user: JwtPayload) {
     return await this.reportService.findByReporterUuid(user.uuid);
   }
 

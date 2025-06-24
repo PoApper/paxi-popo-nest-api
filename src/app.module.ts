@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
+import { APP_GUARD } from '@nestjs/core';
 
 import { FcmModule } from 'src/fcm/fcm.module';
 import { RoomModule } from 'src/room/room.module';
@@ -14,7 +15,8 @@ import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
 import configurations from './config/configurations';
-
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { NicknameExistsGuard } from './auth/guards/nickname.guard';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -53,6 +55,16 @@ import configurations from './config/configurations';
     ScheduleModule.forRoot(), // For cron jobs
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: NicknameExistsGuard,
+    },
+  ],
 })
 export class AppModule {}

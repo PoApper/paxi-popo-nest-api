@@ -8,7 +8,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { getMessaging } from 'firebase-admin/messaging';
 
 import { FcmKey } from 'src/fcm/entities/fcm-key.entity';
-import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { NoContentException } from 'src/common/exception';
 
 @Injectable()
@@ -17,10 +16,10 @@ export class FcmService {
     @InjectRepository(FcmKey)
     private readonly pushKeyRepository: Repository<FcmKey>,
   ) {}
-  async createPushKey(key: string, user: JwtPayload) {
+  async createPushKey(key: string, userUuid: string) {
     const pushKey = new FcmKey();
     pushKey.pushKey = key;
-    pushKey.userUuid = user.uuid;
+    pushKey.userUuid = userUuid;
 
     try {
       await this.pushKeyRepository.save(pushKey);
@@ -32,10 +31,10 @@ export class FcmService {
     }
   }
 
-  async deletePushKey(key: string, user: JwtPayload) {
+  async deletePushKey(key: string, userUuid: string) {
     const result = await this.pushKeyRepository.delete({
       pushKey: key,
-      userUuid: user.uuid,
+      userUuid: userUuid,
     });
     if (result.affected === 0) {
       throw new BadRequestException('Push key not found');

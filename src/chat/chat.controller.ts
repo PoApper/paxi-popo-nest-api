@@ -10,7 +10,6 @@ import {
   Post,
   Put,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -23,16 +22,14 @@ import {
 } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
-import { UserService } from 'src/user/user.service';
+import { User } from 'src/common/decorators/user.decorator';
 
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { Chat } from './entities/chat.entity';
 import { ChatSenderGuard } from './guards/chat-sender.guard';
 import { ChatGateway } from './chat.gateway';
 import { ChatMessageType } from './entities/chat.meta';
 @ApiCookieAuth()
-@UseGuards(JwtAuthGuard)
 @ApiResponse({
   status: 401,
   description: '로그인이 되어 있지 않은 경우',
@@ -43,12 +40,10 @@ import { ChatMessageType } from './entities/chat.meta';
 })
 @Controller('chat')
 // TODO: 덕지덕지 데코레이터 정리하기
-// TODO: POPO에서 nickname 토큰에 다는 작업 끝나면 nickname guard 추가해서 전체에 적용
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,
     private readonly chatGateway: ChatGateway,
-    private readonly userService: UserService,
   ) {}
 
   @Get(':roomUuid')
@@ -93,7 +88,7 @@ export class ChatController {
 
   @Put(':chatUuid')
   @ApiOperation({
-    summary: '[웹소켓 통합 버전-개발 중] 채팅 메세지를 수정합니다.',
+    summary: '채팅 메세지를 수정합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -134,7 +129,7 @@ export class ChatController {
 
   @Delete(':chatUuid')
   @ApiOperation({
-    summary: '[웹소켓 통합 버전-개발 중] 채팅 메세지를 삭제합니다.',
+    summary: '채팅 메세지를 삭제합니다.',
   })
   @ApiResponse({
     status: 200,
@@ -162,7 +157,7 @@ export class ChatController {
 
   @Post(':roomUuid')
   @ApiOperation({
-    summary: '[웹소켓 통합 버전-개발 중] 방에 채팅을 전송합니다.',
+    summary: '방에 채팅을 전송합니다.',
   })
   @ApiResponse({
     status: 201,
@@ -187,10 +182,8 @@ export class ChatController {
   async create(
     @Param('roomUuid') roomUuid: string,
     @Body() body: { message: string },
-    @Req() req,
+    @User() user: JwtPayload,
   ) {
-    const user = req.user as JwtPayload;
-    const nickname = await this.userService.getNickname(user.uuid);
     const chat = await this.chatService.create(
       {
         roomUuid: roomUuid,
@@ -198,7 +191,7 @@ export class ChatController {
         message: body.message,
         messageType: ChatMessageType.TEXT,
       },
-      nickname?.nickname ?? undefined,
+      user.nickname,
     );
     this.chatGateway.sendMessage(roomUuid, chat);
     return chat;
