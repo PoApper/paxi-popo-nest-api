@@ -220,9 +220,7 @@ export class RoomService {
     uuid: string,
     userUuid: string,
   ): Promise<{ sendMessage: boolean; room: RoomWithUsersDto }> {
-    const room = await this.roomRepo.findOne({
-      where: { uuid: uuid },
-    });
+    const room = await this.findOne(uuid);
 
     if (!room) {
       throw new NotFoundException('방이 존재하지 않습니다.');
@@ -295,9 +293,7 @@ export class RoomService {
   }
 
   async leaveRoom(uuid: string, userUuid: string): Promise<RoomWithUsersDto> {
-    const room = await this.roomRepo.findOne({
-      where: { uuid: uuid },
-    });
+    const room = await this.findOne(uuid);
 
     if (!room) {
       throw new NotFoundException('방이 존재하지 않습니다.');
