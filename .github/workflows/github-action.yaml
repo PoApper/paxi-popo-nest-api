@@ -1,4 +1,3 @@
-
 on:
   push:
   release:
@@ -122,12 +121,14 @@ jobs:
     needs: redeploy_dev_service
     runs-on: ubuntu-latest
     steps:
+      - name: Wait for 3 seconds before health check # dev 서버에 배포 반영되기까지 잠시 대기
+        run: sleep 3
       - name: Check the deployed service URL
         uses: jtalk/url-health-check-action@v4
         with:
           # TODO: https://api.paxi.popo.poapper.club 추가
           url: |
-            https://api.paxi-dev.popo.poapper.club
+            https://api.paxi.popo-dev.poapper.club
           follow-redirect: true
           max-attempts: 3
           retry-delay: 10s
