@@ -98,10 +98,14 @@ export class RoomService {
   }
 
   async findOneWithRoomUsers(uuid: string): Promise<RoomWithUsersDto> {
-    const room = await this.roomRepo.findOneOrFail({
+    const room = await this.roomRepo.findOne({
       where: { uuid: uuid },
       relations: ['room_users', 'room_users.user.nickname'],
     });
+
+    if (!room) {
+      throw new NotFoundException('방이 존재하지 않습니다.');
+    }
 
     return new RoomWithUsersDto(room);
   }
