@@ -108,7 +108,7 @@ export class RoomController {
   })
   @ApiResponse({
     status: 200,
-    description: '특정 방을 반환, 방이 존재하지 않을 경우 null 반환',
+    description: '특정 방을 반환',
     type: RoomWithUsersDto,
   })
   findOne(@Param('uuid') uuid: string) {
