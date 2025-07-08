@@ -10,6 +10,7 @@ import { UserModule } from 'src/user/user.module';
 import { TestUtils } from 'src/test/test-utils';
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { UserType } from 'src/user/user.meta';
+import { FcmService } from 'src/fcm/fcm.service';
 
 import { RoomController } from './room.controller';
 import { RoomService } from './room.service';
@@ -26,6 +27,7 @@ describe('RoomModule - Integration Test', () => {
   let roomService: RoomService;
   let userService: UserService;
   let testUtils: TestUtils;
+  let fcmService: FcmService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -54,6 +56,7 @@ describe('RoomModule - Integration Test', () => {
     roomController = moduleFixture.get<RoomController>(RoomController);
     roomService = moduleFixture.get<RoomService>(RoomService);
     userService = moduleFixture.get<UserService>(UserService);
+    fcmService = moduleFixture.get<FcmService>(FcmService);
   });
 
   beforeEach(async () => {
@@ -65,6 +68,17 @@ describe('RoomModule - Integration Test', () => {
       testUtils.getTestUser().uuid,
       '행복한_수소_1234',
     );
+
+    // sendPushNotificationByUserUuid 모킹
+    if (fcmService) {
+      jest
+        .spyOn(fcmService, 'sendPushNotificationByUserUuid')
+        .mockResolvedValue({
+          successCount: 1,
+          failureCount: 0,
+          responses: [],
+        });
+    }
   });
 
   afterEach(async () => {
