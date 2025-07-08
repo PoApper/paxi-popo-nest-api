@@ -11,6 +11,7 @@ import { MoreThan, Not, Repository, DataSource, Between } from 'typeorm';
 import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { instanceToPlain } from 'class-transformer';
 
 import { Room } from 'src/room/entities/room.entity';
 import { RoomUser } from 'src/room/entities/room-user.entity';
@@ -874,8 +875,13 @@ export class RoomService {
 
   getRoomDiff(originalRoom: Room, updatedRoom: Room): Record<string, any> {
     const diff = {};
-    // CreateRoomDto에 정의된 key만 추출
-    const dtoKeys = Object.keys(new CreateRoomDto());
+
+    // CreateRoomDto 인스턴스를 생성하고 instanceToPlain으로 변환해 키 추출
+    // Object.keys(new CreateRoomDto())는 런타임에 키 추출이 안될 수 있음
+    const dtoInstance = new CreateRoomDto();
+    const dtoPlain = instanceToPlain(dtoInstance);
+    const dtoKeys = Object.keys(dtoPlain);
+
     for (const key of dtoKeys) {
       const originalValue = originalRoom[key];
       const updatedValue = updatedRoom[key];
