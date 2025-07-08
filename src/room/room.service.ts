@@ -891,4 +891,57 @@ export class RoomService {
     }
     return diff;
   }
+
+  generateRoomUpdateMessage(
+    originalRoom: Room,
+    roomDiff: Record<string, any>,
+  ): string {
+    const changes: string[] = [];
+
+    if (roomDiff.title) {
+      changes.push(`제목: ${originalRoom.title} → ${roomDiff.title}`);
+    }
+    if (
+      roomDiff.description !== undefined &&
+      originalRoom.description !== roomDiff.description
+    ) {
+      const originalDesc = originalRoom.description || '(설명 없음)';
+      const newDesc = roomDiff.description || '(설명 없음)';
+      changes.push(`설명: ${originalDesc} → ${newDesc}`);
+    }
+    if (roomDiff.maxParticipant) {
+      changes.push(
+        `최대 인원: ${originalRoom.maxParticipant}명 → ${roomDiff.maxParticipant}명`,
+      );
+    }
+    if (roomDiff.departureLocation) {
+      changes.push(
+        `출발지: ${originalRoom.departureLocation} → ${roomDiff.departureLocation}`,
+      );
+    }
+    if (roomDiff.destinationLocation) {
+      changes.push(
+        `도착지: ${originalRoom.destinationLocation} → ${roomDiff.destinationLocation}`,
+      );
+    }
+    if (roomDiff.departureTime) {
+      const originalTime = originalRoom.departureTime.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const newTime = new Date(roomDiff.departureTime).toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      changes.push(`출발 시간: ${originalTime} → ${newTime}`);
+    }
+
+    return `방 정보가 수정되었습니다.\n${changes.join('\n')}`;
+  }
 }

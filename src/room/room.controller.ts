@@ -146,6 +146,21 @@ export class RoomController {
 
     const roomDiff = this.roomService.getRoomDiff(originalRoom, updatedRoom);
 
+    // 사용성을 위해 수정된 내용이 없으면 에러 없이 방 정보를 반환
+    if (Object.keys(roomDiff).length === 0) {
+      return updatedRoom;
+    }
+
+    const message = this.roomService.generateRoomUpdateMessage(
+      originalRoom,
+      roomDiff,
+    );
+    const chat = await this.chatService.create({
+      roomUuid: uuid,
+      message: message,
+      messageType: ChatMessageType.TEXT,
+    });
+    this.chatGateway.sendMessage(uuid, chat);
     this.chatGateway.sendUpdatedRoom(uuid, updatedRoom, roomDiff);
 
     return updatedRoom;
