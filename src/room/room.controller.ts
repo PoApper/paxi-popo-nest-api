@@ -121,7 +121,8 @@ export class RoomController {
   })
   @ApiResponse({
     status: 200,
-    description: '수정된 방 정보를 반환',
+    description:
+      '수정된 방 정보를 반환합니다. 웹소켓의 `updatedRoom` 이벤트를 통해 수정된 방 정보를 전파합니다. `newMessage` 이벤트로 방 정보가 수정되었다고 알리는 메세지를 전송합니다.',
     type: Room,
   })
   @ApiResponse({
