@@ -137,7 +137,18 @@ export class RoomController {
     @User() user: JwtPayload,
     @Body() updateRoomDto: UpdateRoomDto,
   ) {
-    return await this.roomService.update(uuid, updateRoomDto, user);
+    const originalRoom = await this.roomService.findOne(uuid);
+    const updatedRoom = await this.roomService.update(
+      uuid,
+      updateRoomDto,
+      user,
+    );
+
+    const roomDiff = this.roomService.getRoomDiff(originalRoom, updatedRoom);
+
+    this.chatGateway.sendUpdatedRoom(uuid, updatedRoom, roomDiff);
+
+    return updatedRoom;
   }
 
   @Delete(':uuid')

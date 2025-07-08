@@ -7,17 +7,17 @@ import {
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { instanceToPlain } from 'class-transformer';
+import { instanceToPlain, plainToInstance } from 'class-transformer';
 import { Logger, UseFilters, Injectable } from '@nestjs/common';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 import { RoomService } from 'src/room/room.service';
 import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 import { FcmService } from 'src/fcm/fcm.service';
-import { UserService } from 'src/user/user.service';
 import { ResponseSettlementDto } from 'src/room/dto/response-settlement.dto';
+import { Room } from 'src/room/entities/room.entity';
+import { UpdateRoomDto } from 'src/room/dto/update-room.dto';
 
-import { ChatService } from './chat.service';
 import { WsExceptionFilter } from './filters/ws-exception.filter';
 import { Chat } from './entities/chat.entity';
 @Injectable()
@@ -26,9 +26,7 @@ import { Chat } from './entities/chat.entity';
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly jwtService: JwtService,
-    private readonly chatService: ChatService,
     private readonly roomService: RoomService,
-    private readonly userService: UserService,
     private readonly fcmService: FcmService,
   ) {}
 
@@ -183,6 +181,31 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server
           .to(`user-${user.userUuid}`)
           .emit('deletedSettlement', { roomUuid: roomUuid });
+      }
+    }
+  }
+
+  async sendUpdatedRoom(
+    roomUuid: string,
+    updatedRoom: Room,
+    diff: Record<string, any>,
+  ) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    const updatedRoomDto = plainToInstance(
+      UpdateRoomDto,
+      instanceToPlain(updatedRoom),
+      { excludeExtraneousValues: true },
+    );
+    for (const user of roomUsers) {
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        this.server.to(`user-${user.userUuid}`).emit('updatedRoom', {
+          updatedRoom: updatedRoomDto,
+          diff: diff,
+        });
       }
     }
   }

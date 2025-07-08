@@ -6,7 +6,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 
 export class CreateRoomDto {
   @IsString()
@@ -14,6 +14,7 @@ export class CreateRoomDto {
   @ApiProperty({
     example: '캐리어 두 개 있습니다',
   })
+  @Expose()
   readonly description?: string;
 
   @IsString()
@@ -21,6 +22,7 @@ export class CreateRoomDto {
   @ApiProperty({
     example: '포항역 가는 택시 같이 타요 🚕',
   })
+  @Expose()
   readonly title: string;
 
   @Type(() => Date)
@@ -29,6 +31,7 @@ export class CreateRoomDto {
   @ApiProperty({
     example: '2026-01-01 12:00:00',
   })
+  @Expose()
   readonly departureTime: Date;
 
   @IsString()
@@ -36,6 +39,7 @@ export class CreateRoomDto {
   @ApiProperty({
     example: '지곡회관',
   })
+  @Expose()
   readonly departureLocation: string;
 
   @IsString()
@@ -43,6 +47,7 @@ export class CreateRoomDto {
   @ApiProperty({
     example: '포항역',
   })
+  @Expose()
   readonly destinationLocation: string;
 
   @IsNumber()
@@ -50,5 +55,6 @@ export class CreateRoomDto {
   @ApiProperty({
     example: 4,
   })
+  @Expose()
   readonly maxParticipant: number;
 }
