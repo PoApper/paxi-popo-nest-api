@@ -92,9 +92,15 @@ export class RoomService {
   }
 
   async findOne(uuid: string) {
-    return this.roomRepo.findOne({
+    const room = await this.roomRepo.findOne({
       where: { uuid: uuid },
     });
+
+    if (!room) {
+      throw new NotFoundException('방이 존재하지 않습니다.');
+    }
+
+    return room;
   }
 
   async findOneWithRoomUsers(uuid: string): Promise<RoomWithUsersDto> {
@@ -164,9 +170,7 @@ export class RoomService {
 
   async update(uuid: string, updateRoomDto: UpdateRoomDto, user: JwtPayload) {
     const room = await this.findOne(uuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
+
     if (
       room.status == RoomStatus.COMPLETED ||
       room.status == RoomStatus.DELETED
@@ -197,9 +201,7 @@ export class RoomService {
       { ...updateRoomDto, departureAlertSent: departureAlertSent },
     );
 
-    return await this.roomRepo.findOne({
-      where: { uuid: uuid },
-    });
+    return await this.findOne(uuid);
   }
 
   async remove(uuid: string, userUuid: string) {
@@ -868,5 +870,25 @@ export class RoomService {
       },
       relations: ['room_users'],
     });
+  }
+
+  getRoomDiff(originalRoom: Room, updatedRoom: Room): Record<string, any> {
+    const diff = {};
+    // CreateRoomDto에 정의된 key만 추출
+    const dtoKeys = Object.keys(new CreateRoomDto());
+    for (const key of dtoKeys) {
+      const originalValue = originalRoom[key];
+      const updatedValue = updatedRoom[key];
+
+      // Date 타입 비교
+      if (originalValue instanceof Date && updatedValue instanceof Date) {
+        if (originalValue.getTime() !== updatedValue.getTime()) {
+          diff[key] = updatedValue;
+        }
+      } else if (originalValue !== updatedValue) {
+        diff[key] = updatedValue;
+      }
+    }
+    return diff;
   }
 }
