@@ -121,7 +121,8 @@ export class RoomController {
   })
   @ApiResponse({
     status: 200,
-    description: '수정된 방 정보를 반환',
+    description:
+      '수정된 방 정보를 반환합니다. 웹소켓의 `updatedRoom` 이벤트를 통해 수정된 방 정보를 전파합니다. `newMessage` 이벤트로 방 정보가 수정되었다고 알리는 메세지를 전송합니다.',
     type: Room,
   })
   @ApiResponse({
@@ -137,7 +138,33 @@ export class RoomController {
     @User() user: JwtPayload,
     @Body() updateRoomDto: UpdateRoomDto,
   ) {
-    return await this.roomService.update(uuid, updateRoomDto, user);
+    const originalRoom = await this.roomService.findOne(uuid);
+    const updatedRoom = await this.roomService.update(
+      uuid,
+      updateRoomDto,
+      user,
+    );
+
+    const roomDiff = this.roomService.getRoomDiff(originalRoom, updatedRoom);
+
+    // 사용성을 위해 수정된 내용이 없으면 에러 없이 방 정보를 반환
+    if (Object.keys(roomDiff).length === 0) {
+      return updatedRoom;
+    }
+
+    const message = this.roomService.generateRoomUpdateMessage(
+      originalRoom,
+      roomDiff,
+    );
+    const chat = await this.chatService.create({
+      roomUuid: uuid,
+      message: message,
+      messageType: ChatMessageType.TEXT,
+    });
+    this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendUpdatedRoom(uuid, updatedRoom, roomDiff);
+
+    return updatedRoom;
   }
 
   @Delete(':uuid')

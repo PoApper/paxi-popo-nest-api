@@ -11,6 +11,7 @@ import { MoreThan, Not, Repository, DataSource, Between } from 'typeorm';
 import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { instanceToPlain } from 'class-transformer';
 
 import { Room } from 'src/room/entities/room.entity';
 import { RoomUser } from 'src/room/entities/room-user.entity';
@@ -92,9 +93,15 @@ export class RoomService {
   }
 
   async findOne(uuid: string) {
-    return this.roomRepo.findOne({
+    const room = await this.roomRepo.findOne({
       where: { uuid: uuid },
     });
+
+    if (!room) {
+      throw new NotFoundException('방이 존재하지 않습니다.');
+    }
+
+    return room;
   }
 
   async findOneWithRoomUsers(uuid: string): Promise<RoomWithUsersDto> {
@@ -164,9 +171,7 @@ export class RoomService {
 
   async update(uuid: string, updateRoomDto: UpdateRoomDto, user: JwtPayload) {
     const room = await this.findOne(uuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
+
     if (
       room.status == RoomStatus.COMPLETED ||
       room.status == RoomStatus.DELETED
@@ -197,9 +202,7 @@ export class RoomService {
       { ...updateRoomDto, departureAlertSent: departureAlertSent },
     );
 
-    return await this.roomRepo.findOne({
-      where: { uuid: uuid },
-    });
+    return await this.findOne(uuid);
   }
 
   async remove(uuid: string, userUuid: string) {
@@ -868,5 +871,83 @@ export class RoomService {
       },
       relations: ['room_users'],
     });
+  }
+
+  getRoomDiff(originalRoom: Room, updatedRoom: Room): Record<string, any> {
+    const diff = {};
+
+    // CreateRoomDto 인스턴스를 생성하고 instanceToPlain으로 변환해 키 추출
+    // Object.keys(new CreateRoomDto())는 런타임에 키 추출이 안될 수 있음
+    const dtoInstance = new CreateRoomDto();
+    const dtoPlain = instanceToPlain(dtoInstance);
+    const dtoKeys = Object.keys(dtoPlain);
+
+    for (const key of dtoKeys) {
+      const originalValue = originalRoom[key];
+      const updatedValue = updatedRoom[key];
+
+      // Date 타입 비교
+      if (originalValue instanceof Date && updatedValue instanceof Date) {
+        if (originalValue.getTime() !== updatedValue.getTime()) {
+          diff[key] = updatedValue;
+        }
+      } else if (originalValue !== updatedValue) {
+        diff[key] = updatedValue;
+      }
+    }
+    return diff;
+  }
+
+  generateRoomUpdateMessage(
+    originalRoom: Room,
+    roomDiff: Record<string, any>,
+  ): string {
+    const changes: string[] = [];
+
+    if (roomDiff.title) {
+      changes.push(`제목: ${originalRoom.title} → ${roomDiff.title}`);
+    }
+    if (
+      roomDiff.description !== undefined &&
+      originalRoom.description !== roomDiff.description
+    ) {
+      const originalDesc = originalRoom.description || '(설명 없음)';
+      const newDesc = roomDiff.description || '(설명 없음)';
+      changes.push(`설명: ${originalDesc} → ${newDesc}`);
+    }
+    if (roomDiff.maxParticipant) {
+      changes.push(
+        `최대 인원: ${originalRoom.maxParticipant}명 → ${roomDiff.maxParticipant}명`,
+      );
+    }
+    if (roomDiff.departureLocation) {
+      changes.push(
+        `출발지: ${originalRoom.departureLocation} → ${roomDiff.departureLocation}`,
+      );
+    }
+    if (roomDiff.destinationLocation) {
+      changes.push(
+        `도착지: ${originalRoom.destinationLocation} → ${roomDiff.destinationLocation}`,
+      );
+    }
+    if (roomDiff.departureTime) {
+      const originalTime = originalRoom.departureTime.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const newTime = new Date(roomDiff.departureTime).toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      changes.push(`출발 시간: ${originalTime} → ${newTime}`);
+    }
+
+    return `방 정보가 수정되었습니다.\n${changes.join('\n')}`;
   }
 }
