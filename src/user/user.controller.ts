@@ -145,7 +145,7 @@ export class UserController {
     },
   })
   @UseGuards(RolesGuard)
-  @Roles(UserType.student)
+  @Roles(UserType.admin)
   async updateNickname(
     @User() user: JwtPayload,
     @Param('userUuid') userUuid: string,
