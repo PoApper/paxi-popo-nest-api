@@ -71,30 +71,23 @@ export class ResponseSettlementDto {
   constructor(
     room: Room,
     payerNickname: string,
-    account: {
-      accountNumber: string | null;
-      accountHolderName: string;
-      bankName: string;
-    },
+    accountNumber: string,
+    accountHolderName: string,
+    bankName: string,
     payAmountPerPerson: number,
   ) {
     if (!room.payAmount || !room.payerUuid) {
       throw new NotFoundException('정산 내역이 없습니다.');
     }
-    if (
-      !account ||
-      !account.accountNumber ||
-      !account.accountHolderName ||
-      !account.bankName
-    ) {
+    if (!accountNumber || !accountHolderName || !bankName) {
       throw new NotFoundException('정산자의 계좌 정보가 없습니다.');
     }
     this.roomUuid = room.uuid;
     this.payerUuid = room.payerUuid;
     this.payerNickname = payerNickname;
-    this.payerAccountNumber = account.accountNumber;
-    this.payerAccountHolderName = account.accountHolderName;
-    this.payerBankName = account.bankName;
+    this.payerAccountNumber = accountNumber;
+    this.payerAccountHolderName = accountHolderName;
+    this.payerBankName = bankName;
     this.payAmount = room.payAmount;
     this.currentParticipant = room.currentParticipant;
     this.payAmountPerPerson = payAmountPerPerson;

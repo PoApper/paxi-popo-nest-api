@@ -56,6 +56,15 @@ export class Room extends Base {
   @Column({ type: 'int', nullable: true })
   payAmount: number | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  payerEncryptedAccountNumber: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  payerAccountHolderName: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  payerBankName: string | null;
+
   @Column({ type: 'boolean', default: false, nullable: true })
   departureAlertSent: boolean;
 
