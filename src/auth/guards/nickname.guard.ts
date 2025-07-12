@@ -8,12 +8,16 @@ import { Reflector } from '@nestjs/core';
 
 import { GuardName } from 'src/common/guard-name';
 import { PUBLIC_GUARDS_KEY } from 'src/common/public-guard.decorator';
+import { UserService } from 'src/user/user.service';
 
 @Injectable()
 export class NicknameExistsGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly userService: UserService,
+  ) {}
 
-  canActivate(context: ExecutionContext) {
+  async canActivate(context: ExecutionContext) {
     const publicGuardNames = this.reflector.getAllAndOverride<GuardName[]>(
       PUBLIC_GUARDS_KEY,
       [context.getHandler(), context.getClass()],
@@ -29,9 +33,14 @@ export class NicknameExistsGuard implements CanActivate {
     const nickname = user.nickname;
 
     if (!nickname) {
-      throw new UnauthorizedException(
-        '닉네임이 존재하지 않습니다. 닉네임을 먼저 생성해주세요.',
-      );
+      const userNickname = await this.userService.getNickname(user.uuid);
+      if (userNickname) {
+        request.user.nickname = userNickname.nickname;
+      } else {
+        throw new UnauthorizedException(
+          '닉네임이 존재하지 않습니다. 닉네임을 먼저 생성해주세요.',
+        );
+      }
     }
 
     return true;
