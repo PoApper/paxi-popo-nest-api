@@ -522,12 +522,6 @@ export class RoomService {
       throw new BadRequestException('이미 정산이 진행되고 있습니다.');
     }
 
-    // 방 상태별 필터링?
-
-    // 계좌번호는 무조건 전달됨
-    // 만약 update해야 한다면 dto 것으로 db에 넣기
-    // update하지 않기로 했다면 userService 호출하지 않기
-    // 두 가지 레포지토리에 대한 Transaction 처리
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -550,6 +544,11 @@ export class RoomService {
           status: RoomStatus.IN_SETTLEMENT,
           payerUuid: userUuid,
           payAmount: dto.payAmount,
+          payerEncryptedAccountNumber: this.userService.encryptAccountNumber(
+            dto.payerAccountNumber,
+          ),
+          payerAccountHolderName: dto.payerAccountHolderName,
+          payerBankName: dto.payerBankName,
         },
       );
 
@@ -611,6 +610,11 @@ export class RoomService {
         {
           status: RoomStatus.IN_SETTLEMENT,
           payAmount: dto.payAmount,
+          payerEncryptedAccountNumber: dto.payerAccountNumber
+            ? this.userService.encryptAccountNumber(dto.payerAccountNumber)
+            : room.payerEncryptedAccountNumber,
+          payerAccountHolderName: dto.payerAccountHolderName,
+          payerBankName: dto.payerBankName,
         },
       );
 
@@ -640,15 +644,15 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
-    if (room.payerUuid != userUuid) {
-      throw new UnauthorizedException(
-        '정산자가 아니므로 정산 요청을 취소할 수 없습니다.',
-      );
-    }
-
     if (room.status != RoomStatus.IN_SETTLEMENT) {
       throw new BadRequestException(
         '정산이 진행되고 있지 않으므로 정산 요청을 취소할 수 없습니다.',
+      );
+    }
+
+    if (room.payerUuid != userUuid) {
+      throw new UnauthorizedException(
+        '정산자가 아니므로 정산 요청을 취소할 수 없습니다.',
       );
     }
 
@@ -670,6 +674,9 @@ export class RoomService {
           // NOTE: update에 undefined를 넣으면 무시됨, 값을 초기화하고 싶으면 null을 넣어야 함
           payerUuid: null,
           payAmount: null,
+          payerEncryptedAccountNumber: null,
+          payerAccountHolderName: null,
+          payerBankName: null,
         },
       );
       await queryRunner.commitTransaction();
@@ -704,16 +711,17 @@ export class RoomService {
       throw new NotFoundException('정산 내역이 없습니다.');
     }
 
-    const account = await this.userService.getAccount(room.payerUuid);
-
     if (
-      !account ||
-      !account.accountNumber ||
-      !account.accountHolderName ||
-      !account.bankName
+      !room.payerEncryptedAccountNumber ||
+      !room.payerAccountHolderName ||
+      !room.payerBankName
     ) {
       throw new NotFoundException('정산자의 계좌 정보가 없습니다.');
     }
+
+    const decryptedAccountNumber = this.userService.decryptAccountNumber(
+      room.payerEncryptedAccountNumber,
+    );
 
     const payAmountPerPerson = this.calculatePayAmountPerPerson(
       room.payAmount,
@@ -729,7 +737,9 @@ export class RoomService {
     return new ResponseSettlementDto(
       room,
       payerNickname.nickname,
-      account,
+      decryptedAccountNumber,
+      room.payerAccountHolderName,
+      room.payerBankName,
       payAmountPerPerson,
     );
   }

@@ -164,7 +164,7 @@ export class UserService {
     );
     return this.getAccount(userUuid);
   }
-  private encryptAccountNumber(accountNumber: string) {
+  encryptAccountNumber(accountNumber: string) {
     const key = Buffer.from(process.env.ACCOUNT_ENCRYPTION_KEY!, 'base64');
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
@@ -175,7 +175,7 @@ export class UserService {
     return `${iv.toString('base64')}:${encrypted.toString('base64')}`;
   }
 
-  private decryptAccountNumber(encryptedAccountNumber: string) {
+  decryptAccountNumber(encryptedAccountNumber: string) {
     const key = Buffer.from(process.env.ACCOUNT_ENCRYPTION_KEY!, 'base64');
     const [ivBase64, encryptedBase64] = encryptedAccountNumber.split(':');
     const iv = Buffer.from(ivBase64, 'base64');
