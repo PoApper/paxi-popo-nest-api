@@ -98,25 +98,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.server
           .to(`user-${user.userUuid}`)
           .emit('newMessage', instanceToPlain(message));
+      } else {
+        // 소켓에 연결되어 있지 않은 유저들 중, 음소거 하지 않은 유저에게 알림 전송
+        if (respectMuteSetting && user.isMuted) continue;
+
+        this.fcmService
+          .sendPushNotificationByUserUuid(
+            [user.userUuid],
+            `${await this.roomService.getRoomTitle(roomUuid)}`,
+            message.message,
+          )
+          .catch(console.error);
       }
-    }
-
-    // 음소거 하지 않은 유저에게 알림 전송
-    const unmutedRoomUsers = respectMuteSetting
-      ? roomUsers.filter((user) => !user.isMuted)
-      : roomUsers;
-
-    if (unmutedRoomUsers.length > 0) {
-      this.fcmService
-        .sendPushNotificationByUserUuid(
-          unmutedRoomUsers.map((user) => user.userUuid),
-          `${await this.roomService.getRoomTitle(roomUuid)}`,
-          message.message,
-          {
-            roomUuid: roomUuid,
-          },
-        )
-        .catch(console.error);
     }
   }
 
