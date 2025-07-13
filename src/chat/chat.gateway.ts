@@ -91,12 +91,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       RoomUserStatus.JOINED,
     );
 
+    // FCM 알림 대상 사용자
+    const usersToNotify: string[] = [];
+
     // sockets.adapter.rooms 에서 `user-${userUuid}` 키가 있는지 확인하고 active user 필터링
     for (const user of roomUsers) {
       const isActive = this.server.sockets.adapter.rooms.has(
         `user-${user.userUuid}`,
       );
       const isFocused = this.getUserFocusRoomUuid(user.userUuid) === roomUuid;
+
       // 유저가 소켓에 연결되어 있고, 현재 있는 방이 메세지를 보낼 방이면 웹소켓 메시지 전송
       if (isActive && isFocused) {
         this.server
@@ -104,16 +108,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           .emit('newMessage', instanceToPlain(message));
       } else {
         // 다른 방에 있거나 앱에 없는 사용자에게 FCM 알림 전송
+        // 음소거 설정을 따르는지 확인
         if (respectMuteSetting && user.isMuted) continue;
-
-        this.fcmService
-          .sendPushNotificationByUserUuid(
-            [user.userUuid],
-            `${await this.roomService.getRoomTitle(roomUuid)}`,
-            message.message,
-          )
-          .catch(console.error);
+        usersToNotify.push(user.userUuid);
       }
+    }
+
+    // 수집된 사용자들에게 한 번에 FCM 알림 전송
+    if (usersToNotify.length > 0) {
+      this.fcmService
+        .sendPushNotificationByUserUuid(
+          usersToNotify,
+          `${await this.roomService.getRoomTitle(roomUuid)}`,
+          message.message,
+        )
+        .catch(console.error);
     }
   }
 
