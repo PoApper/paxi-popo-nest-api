@@ -93,13 +93,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // sockets.adapter.rooms 에서 `user-${userUuid}` 키가 있는지 확인하고 active user 필터링
     for (const user of roomUsers) {
-      // 유저가 소켓에 연결되어 있다면 메시지 전송
-      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+      const isActive = this.server.sockets.adapter.rooms.has(
+        `user-${user.userUuid}`,
+      );
+      const isFocused = this.getUserFocusRoomUuid(user.userUuid) === roomUuid;
+      // 유저가 소켓에 연결되어 있고, 현재 있는 방이 메세지를 보낼 방이면 웹소켓 메시지 전송
+      if (isActive && isFocused) {
         this.server
           .to(`user-${user.userUuid}`)
           .emit('newMessage', instanceToPlain(message));
       } else {
-        // 소켓에 연결되어 있지 않은 유저들 중, 음소거 하지 않은 유저에게 알림 전송
+        // 다른 방에 있거나 앱에 없는 사용자에게 FCM 알림 전송
         if (respectMuteSetting && user.isMuted) continue;
 
         this.fcmService
