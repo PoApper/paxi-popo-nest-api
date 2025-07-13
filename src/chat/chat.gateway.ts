@@ -79,7 +79,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     delete client.data;
   }
 
-  async sendMessage(roomUuid: string, message: Chat) {
+  async sendMessage(
+    roomUuid: string,
+    message: Chat,
+    // 해당 함수를 호출하는 함수가 중요한 이벤트(정산 요청 등)라면, 유저의 음소거 요청을 무시하고 모든 유저에게 알림 전송
+    // 현재는 일반 유저의 메세지(chatController.create())만 mute 가능함
+    respectMuteSetting: boolean = false,
+  ) {
     const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
       roomUuid,
       RoomUserStatus.JOINED,
@@ -94,17 +100,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           .emit('newMessage', instanceToPlain(message));
       }
     }
-    // 모든 유저에게 알림 전송
-    this.fcmService
-      .sendPushNotificationByUserUuid(
-        roomUsers.map((user) => user.userUuid),
-        `${await this.roomService.getRoomTitle(roomUuid)}`,
-        message.message,
-        {
-          roomUuid: roomUuid,
-        },
-      )
-      .catch(console.error);
+
+    // 음소거 하지 않은 유저에게 알림 전송
+    const unmutedRoomUsers = respectMuteSetting
+      ? roomUsers.filter((user) => !user.isMuted)
+      : roomUsers;
+
+    if (unmutedRoomUsers.length > 0) {
+      this.fcmService
+        .sendPushNotificationByUserUuid(
+          unmutedRoomUsers.map((user) => user.userUuid),
+          `${await this.roomService.getRoomTitle(roomUuid)}`,
+          message.message,
+          {
+            roomUuid: roomUuid,
+          },
+        )
+        .catch(console.error);
+    }
   }
 
   async sendUpdatedMessage(chat: Chat) {
