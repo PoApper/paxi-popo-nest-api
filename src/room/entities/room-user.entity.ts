@@ -40,6 +40,10 @@ export class RoomUser extends Base {
   @ApiProperty({ example: '25c930d5-f38e-4f28-813b-82eb49acd606' })
   lastReadChatUuid: string;
 
+  @Column({ nullable: false, default: false })
+  @ApiProperty({ example: false })
+  isMuted: boolean;
+
   /**
    * Database Relation
    */

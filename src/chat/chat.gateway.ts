@@ -79,32 +79,51 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     delete client.data;
   }
 
-  async sendMessage(roomUuid: string, message: Chat) {
+  async sendMessage(
+    roomUuid: string,
+    message: Chat,
+    // 해당 함수를 호출하는 함수가 중요한 이벤트(정산 요청 등)라면, 유저의 음소거 요청을 무시하고 모든 유저에게 알림 전송
+    // 현재는 일반 유저의 메세지(chatController.create())만 mute 가능함
+    respectMuteSetting: boolean = false,
+  ) {
     const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
       roomUuid,
       RoomUserStatus.JOINED,
     );
 
+    // FCM 알림 대상 사용자
+    const usersToNotify: string[] = [];
+
     // sockets.adapter.rooms 에서 `user-${userUuid}` 키가 있는지 확인하고 active user 필터링
     for (const user of roomUsers) {
-      // 유저가 소켓에 연결되어 있다면 메시지 전송
-      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+      const isActive = this.server.sockets.adapter.rooms.has(
+        `user-${user.userUuid}`,
+      );
+      const isFocused = this.getUserFocusRoomUuid(user.userUuid) === roomUuid;
+
+      // 유저가 소켓에 연결되어 있고, 현재 있는 방이 메세지를 보낼 방이면 웹소켓 메시지 전송
+      if (isActive && isFocused) {
         this.server
           .to(`user-${user.userUuid}`)
           .emit('newMessage', instanceToPlain(message));
+      } else {
+        // 다른 방에 있거나 앱에 없는 사용자에게 FCM 알림 전송
+        // 음소거 설정을 따르는지 확인
+        if (respectMuteSetting && user.isMuted) continue;
+        usersToNotify.push(user.userUuid);
       }
     }
-    // 모든 유저에게 알림 전송
-    this.fcmService
-      .sendPushNotificationByUserUuid(
-        roomUsers.map((user) => user.userUuid),
-        `${await this.roomService.getRoomTitle(roomUuid)}`,
-        message.message,
-        {
-          roomUuid: roomUuid,
-        },
-      )
-      .catch(console.error);
+
+    // 수집된 사용자들에게 한 번에 FCM 알림 전송
+    if (usersToNotify.length > 0) {
+      this.fcmService
+        .sendPushNotificationByUserUuid(
+          usersToNotify,
+          `${await this.roomService.getRoomTitle(roomUuid)}`,
+          message.message,
+        )
+        .catch(console.error);
+    }
   }
 
   async sendUpdatedMessage(chat: Chat) {

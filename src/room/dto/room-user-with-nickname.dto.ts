@@ -1,5 +1,5 @@
 // dto/room-user-with-nickname.dto.ts
-import { ApiProperty, PickType } from '@nestjs/swagger';
+import { ApiProperty, OmitType } from '@nestjs/swagger';
 import { instanceToPlain } from 'class-transformer';
 
 import { RoomUser } from 'src/room/entities/room-user.entity';
@@ -7,11 +7,8 @@ import { RoomUser } from 'src/room/entities/room-user.entity';
 import { Room } from '../entities/room.entity';
 
 // TODO: Swagger 문서화 간편하게 하는 개선방안 필요
-export class RoomUserWithNicknameDto extends PickType(RoomUser, [
-  'userUuid',
-  'roomUuid',
-  'status',
-  'isPaid',
+export class RoomUserWithNicknameDto extends OmitType(RoomUser, [
+  'kickedReason',
 ]) {
   @ApiProperty({ nullable: false })
   nickname: string;
@@ -22,23 +19,14 @@ export class RoomUserWithNicknameDto extends PickType(RoomUser, [
     /* eslint-disable-next-line */
     const { user, kickedReason, ...rest } = plain;
     Object.assign(this, rest);
-    this.nickname = roomUser.user.nickname.nickname;
+    this.nickname = user.nickname.nickname;
   }
 }
 
-export class RoomWithUsersDto extends PickType(Room, [
-  'uuid',
-  'title',
-  'ownerUuid',
-  'departureLocation',
-  'destinationLocation',
-  'maxParticipant',
-  'currentParticipant',
-  'departureTime',
-  'status',
-  'description',
-  'payerUuid',
-  'payAmount',
+export class RoomWithUsersDto extends OmitType(Room, [
+  // 닉네임을 넣은 room_users를 만들기 위해 기존 room_users는 제외
+  'room_users',
+  'departureAlertSent',
 ]) {
   @ApiProperty({
     type: [RoomUserWithNicknameDto],
@@ -48,8 +36,10 @@ export class RoomWithUsersDto extends PickType(Room, [
   constructor(room: Room) {
     super();
     const plain = instanceToPlain(room);
-    Object.assign(this, plain);
+    /* eslint-disable-next-line */
+    const { room_users, departureAlertSent, ...rest } = plain;
+    Object.assign(this, rest);
     this.room_users =
-      room.room_users?.map((ru) => new RoomUserWithNicknameDto(ru)) ?? [];
+      room_users?.map((ru) => new RoomUserWithNicknameDto(ru)) ?? [];
   }
 }
