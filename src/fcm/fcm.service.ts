@@ -85,22 +85,21 @@ export class FcmService {
     return getMessaging()
       .sendEachForMulticast({
         tokens: Array.isArray(tokens) ? tokens : [tokens],
-        data: {
+        notification: {
           title: title,
           body: body,
-          seokyun: 'ha',
-          ...data,
         },
-        // iOS: https://developer.apple.com/documentation/usernotifications/generating-a-remote-notification#Create-the-JSON-payload
+        data: data,
+        // iOS
         apns: {
           payload: {
             aps: {
               // 프론트 포그라운드 처리를 위한 설정
-              // alert: {
-              //   title: title,
-              //   body: body,
-              // },
-              // sound: 'default',
+              alert: {
+                title: title,
+                body: body,
+              },
+              sound: 'default',
               contentAvailable: true, // 백그라운드 푸시 알림을 위한 설정
             },
           },
