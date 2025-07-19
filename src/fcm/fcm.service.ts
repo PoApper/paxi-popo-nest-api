@@ -102,9 +102,9 @@ export class FcmService {
               sound: 'default',
               contentAvailable: true, // 백그라운드 푸시 알림을 위한 설정
             },
-            // custom key
-            ...data,
           },
+          // custom key
+          ...data,
         },
       })
       .then((response) => {
