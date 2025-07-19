@@ -96,11 +96,11 @@ export class FcmService {
           payload: {
             aps: {
               // 프론트 포그라운드 처리를 위한 설정
-              alert: {
-                title: title,
-                body: body,
-              },
-              sound: 'default',
+              // alert: {
+              //   title: title,
+              //   body: body,
+              // },
+              // sound: 'default',
               contentAvailable: true, // 백그라운드 푸시 알림을 위한 설정
             },
           },
