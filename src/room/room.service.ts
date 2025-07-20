@@ -122,6 +122,7 @@ export class RoomService {
     const rooms: Room[] = await this.roomRepo.find({
       where: {
         room_users: { userUuid: userUuid },
+        status: Not(RoomStatus.DELETED),
       },
       select: {
         room_users: {
