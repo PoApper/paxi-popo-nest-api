@@ -822,6 +822,25 @@ export class RoomService {
     });
   }
 
+  async updateMuteStatus(uuid: string, userUuid: string, isMuted: boolean) {
+    const roomUser = await this.roomUserRepo.findOne({
+      where: { roomUuid: uuid, userUuid },
+    });
+
+    if (!roomUser) {
+      throw new BadRequestException('방에 가입되어 있지 않습니다.');
+    }
+
+    await this.roomUserRepo.update(
+      { roomUuid: uuid, userUuid },
+      { isMuted: isMuted },
+    );
+
+    return await this.roomUserRepo.findOne({
+      where: { roomUuid: uuid, userUuid },
+    });
+  }
+
   @Cron(CronExpression.EVERY_MINUTE)
   async sendDepartureAlert() {
     const targetRooms = await this.getDepartureAlertTargetRooms();

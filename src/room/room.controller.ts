@@ -600,6 +600,36 @@ export class RoomController {
     this.chatGateway.updateUserFocusRoomUuid(user.uuid);
     return await this.roomService.saveLastReadChat(uuid, user.uuid);
   }
+
+  @Patch(':uuid/mute')
+  @ApiOperation({
+    summary: '특정 채팅방의 채팅 알림 음소거 상태를 변경합니다.',
+  })
+  @ApiBody({
+    description: '음소거 여부를 전달합니다.',
+    schema: {
+      type: 'object',
+      properties: {
+        isMuted: { type: 'boolean' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: '음소거 상태가 변경된 RoomUser 정보를 반환',
+    type: RoomUser,
+  })
+  async updateMuteStatus(
+    @Param('uuid') uuid: string,
+    @User() user: JwtPayload,
+    @Body() body: { isMuted: boolean },
+  ) {
+    return await this.roomService.updateMuteStatus(
+      uuid,
+      user.uuid,
+      body.isMuted,
+    );
+  }
 }
 
 /* docs 데코레이터 간소화 */
