@@ -164,7 +164,7 @@ export class UserService {
     );
     return this.getAccount(userUuid);
   }
-  private encryptAccountNumber(accountNumber: string) {
+  encryptAccountNumber(accountNumber: string) {
     const key = Buffer.from(process.env.ACCOUNT_ENCRYPTION_KEY!, 'base64');
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
@@ -175,9 +175,13 @@ export class UserService {
     return `${iv.toString('base64')}:${encrypted.toString('base64')}`;
   }
 
-  private decryptAccountNumber(encryptedAccountNumber: string) {
+  decryptAccountNumber(encryptedAccountNumber: string) {
     const key = Buffer.from(process.env.ACCOUNT_ENCRYPTION_KEY!, 'base64');
-    const [ivBase64, encryptedBase64] = encryptedAccountNumber.split(':');
+    const parts = encryptedAccountNumber.split(':');
+    if (parts.length !== 2) {
+      throw new BadRequestException('Invalid encrypted account number format.');
+    }
+    const [ivBase64, encryptedBase64] = parts;
     const iv = Buffer.from(ivBase64, 'base64');
     const encrypted = Buffer.from(encryptedBase64, 'base64');
     const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
