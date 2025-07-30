@@ -6,6 +6,8 @@ import {
   Body,
   Put,
   Param,
+  Delete,
+  Query,
 } from '@nestjs/common';
 import {
   ApiCookieAuth,
@@ -13,6 +15,7 @@ import {
   ApiResponse,
   ApiBody,
   ApiParam,
+  ApiExcludeEndpoint,
 } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
@@ -229,5 +232,33 @@ export class UserController {
   })
   async updateAccount(@User() user: JwtPayload, @Body() dto: UpdateAccountDto) {
     return await this.userService.updateAccount(user.uuid, dto);
+  }
+
+  @Delete('cheat/nickname')
+  @ApiExcludeEndpoint()
+  async deleteAllNicknames(
+    @User() user: JwtPayload,
+    @Query('userUuid') userUuid: string,
+  ) {
+    // if (user.userType !== UserType.admin)
+    //   throw new ForbiddenException({
+    //     error: 'Forbidden',
+    //     message: '관리자 권한이 필요합니다.',
+    //   });
+    return await this.userService.deleteAllNickname(userUuid);
+  }
+
+  @Delete('cheat/account')
+  @ApiExcludeEndpoint()
+  async deleteAllAccounts(
+    @User() user: JwtPayload,
+    @Query('userUuid') userUuid: string,
+  ) {
+    // if (user.userType !== UserType.admin)
+    //   throw new ForbiddenException({
+    //     error: 'Forbidden',
+    //     message: '관리자 권한이 필요합니다.',
+    //   });
+    return await this.userService.deleteAllAccount(userUuid);
   }
 }

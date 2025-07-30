@@ -7,10 +7,12 @@ import {
   Patch,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBody,
   ApiCookieAuth,
+  ApiExcludeEndpoint,
   ApiOperation,
   ApiParam,
   ApiResponse,
@@ -629,6 +631,21 @@ export class RoomController {
       user.uuid,
       body.isMuted,
     );
+  }
+
+  @Delete('cheat')
+  @ApiExcludeEndpoint()
+  async deleteAllRooms(
+    @User() user: JwtPayload,
+    @Query('roomUuid') roomUuid?: string,
+  ) {
+    // if (user.userType !== UserType.admin)
+    //   throw new ForbiddenException({
+    //     error: 'Forbidden',
+    //     message: '관리자 권한이 필요합니다.',
+    //   });
+    console.log(roomUuid);
+    return await this.roomService.deleteAll(roomUuid);
   }
 }
 

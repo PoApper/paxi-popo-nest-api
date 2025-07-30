@@ -267,4 +267,20 @@ export class UserService {
       bankName: account?.bankName,
     };
   }
+
+  async deleteAllNickname(userUuid?: string) {
+    if (userUuid) {
+      await this.nicknameRepo.delete({ userUuid: userUuid });
+    } else {
+      await this.nicknameRepo.delete({});
+    }
+  }
+
+  async deleteAllAccount(userUuid?: string) {
+    if (userUuid) {
+      await this.accountRepo.delete({ userUuid: userUuid });
+    } else {
+      await this.accountRepo.delete({});
+    }
+  }
 }
