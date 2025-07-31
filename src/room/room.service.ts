@@ -983,6 +983,7 @@ export class RoomService {
 
   async deleteAll(roomUuid?: string) {
     if (roomUuid) {
+      await this.findOne(roomUuid);
       await this.roomRepo.delete({ uuid: roomUuid });
     } else {
       await this.roomRepo.delete({});
