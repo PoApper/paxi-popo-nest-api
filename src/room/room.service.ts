@@ -980,4 +980,13 @@ export class RoomService {
 
     return `방 정보가 수정되었습니다.\n${changes.join('\n')}`;
   }
+
+  async deleteAll(roomUuid?: string) {
+    if (roomUuid) {
+      await this.findOne(roomUuid);
+      await this.roomRepo.delete({ uuid: roomUuid });
+    } else {
+      await this.roomRepo.delete({});
+    }
+  }
 }
