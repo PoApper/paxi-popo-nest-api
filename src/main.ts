@@ -8,12 +8,42 @@ import {
 import { credential as firebaseCredential } from 'firebase-admin';
 import { ConfigService } from '@nestjs/config';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
+import * as fs from 'fs';
 
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const isLocalDeploy = process.env.NODE_ENV == 'local';
+  const httpsOptions = isLocalDeploy
+    ? {
+        key: fs.readFileSync('./local-certs/localhost-key.pem'),
+        cert: fs.readFileSync('./local-certs/localhost.pem'),
+      }
+    : undefined;
+
+  const app = await NestFactory.create(AppModule, { httpsOptions });
   const configService = app.get(ConfigService);
+
+  app.use(cookieParser());
+
+  if (isLocalDeploy) {
+    app.enableCors({
+      origin: ['https://localhost:3000', 'https://localhost:3001'],
+      credentials: true,
+    });
+  } else {
+    app.enableCors({
+      origin: [
+        'https://popo.poapper.club',
+        'https://popo-dev.poapper.club',
+        'https://admin.popo.poapper.club',
+        'https://admin.popo-dev.poapper.club',
+        'https://popo.postech.ac.kr',
+      ],
+      credentials: true,
+    });
+  }
+
   app.use(cookieParser());
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.useGlobalPipes(
