@@ -769,7 +769,7 @@ export class RoomService {
 
     await this.roomUserRepo.update({ roomUuid, userUuid }, { isPaid });
 
-    const result = await this.roomUserRepo.findOne({
+    const result = await this.roomUserRepo.findOneOrFail({
       where: { roomUuid, userUuid },
     });
 
