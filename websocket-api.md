@@ -1,7 +1,7 @@
 # WebSocket API Documentation
 
 ## 연결 정보
-- local server URL: `ws://localhost:4100`
+- local server URL: `wss://localhost:4100`
 - dev server URL: `wss://api.paxi-dev.popo.poapper.club?Authentication=[토큰값]`
 - 인증: Cookie에 'Authentication' 토큰 필요
   - 토큰이 없거나 유효하지 않은 경우 연결이 거부됨
