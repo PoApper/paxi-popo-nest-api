@@ -256,6 +256,10 @@ export class UserService {
   }
 
   async getUserInfo(userUuid: string) {
+    const user = await this.findOne(userUuid);
+    if (!user) {
+      throw new NotFoundException('유저를 찾을 수 없습니다.');
+    }
     const account = await this.getAccount(userUuid);
     const nickname = await this.getNickname(userUuid);
 
