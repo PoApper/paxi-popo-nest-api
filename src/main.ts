@@ -24,8 +24,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { httpsOptions });
   const configService = app.get(ConfigService);
 
-  app.use(cookieParser());
-
   if (isLocalDeploy) {
     app.enableCors({
       origin: ['https://localhost:3000', 'https://localhost:3001'],
