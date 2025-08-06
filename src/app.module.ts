@@ -8,6 +8,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { FcmModule } from 'src/fcm/fcm.module';
 import { RoomModule } from 'src/room/room.module';
 import { ReportModule } from 'src/report/report.module';
+import { CheatModule } from 'src/cheat/cheat.module';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -52,6 +53,7 @@ import { NicknameExistsGuard } from './auth/guards/nickname.guard';
     ChatModule,
     FcmModule,
     ReportModule,
+    CheatModule,
     ScheduleModule.forRoot(), // For cron jobs
   ],
   controllers: [AppController],

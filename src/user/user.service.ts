@@ -267,4 +267,26 @@ export class UserService {
       bankName: account?.bankName,
     };
   }
+
+  async deleteAllNickname(userUuid?: string) {
+    if (userUuid) {
+      if (!(await this.findOne(userUuid))) {
+        throw new NotFoundException('유저를 찾을 수 없습니다.');
+      }
+      await this.nicknameRepo.delete({ userUuid: userUuid });
+    } else {
+      await this.nicknameRepo.delete({});
+    }
+  }
+
+  async deleteAllAccount(userUuid?: string) {
+    if (userUuid) {
+      if (!(await this.findOne(userUuid))) {
+        throw new NotFoundException('유저를 찾을 수 없습니다.');
+      }
+      await this.accountRepo.delete({ userUuid: userUuid });
+    } else {
+      await this.accountRepo.delete({});
+    }
+  }
 }

@@ -126,4 +126,13 @@ export class ChatService {
     if (!lastMessage) return null;
     return lastMessage;
   }
+
+  async deleteAll(roomUuid?: string) {
+    const query = this.chatRepo.createQueryBuilder('chat');
+    if (roomUuid) {
+      await this.roomService.findOne(roomUuid);
+      query.where('chat.roomUuid = :roomUuid', { roomUuid });
+    }
+    await query.delete().execute();
+  }
 }
