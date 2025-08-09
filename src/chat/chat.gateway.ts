@@ -229,6 +229,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  async sendUpdateIsPaid(
+    roomUuid: string,
+    isPaid: boolean,
+    userUuid: string,
+    nickname: string,
+  ) {
+    const roomUsers = await this.roomService.findUsersByRoomUuidAndStatus(
+      roomUuid,
+      RoomUserStatus.JOINED,
+    );
+
+    for (const user of roomUsers) {
+      if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
+        this.server
+          .to(`user-${user.userUuid}`)
+          .emit('updatedIsPaid', { isPaid, userUuid, nickname });
+      }
+    }
+  }
+
   updateUserFocusRoomUuid(userUuid: string, roomUuid?: string) {
     const userSocket = Array.from(this.server.sockets.sockets.values()).find(
       (socket) => socket.data.user.uuid === userUuid,
