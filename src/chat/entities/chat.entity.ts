@@ -46,6 +46,9 @@ export class Chat {
   })
   messageType: ChatMessageType;
 
+  @Column({ type: 'boolean', default: false })
+  isEdited: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 
