@@ -745,6 +745,23 @@ export class RoomService {
     );
   }
 
+  async getUserPayStatus(roomUuid: string, userUuid: string) {
+    const room = await this.findOne(roomUuid);
+    if (!room) {
+      throw new NotFoundException('방이 존재하지 않습니다.');
+    }
+
+    const roomUser = await this.roomUserRepo.findOne({
+      where: { roomUuid, userUuid },
+    });
+
+    if (!roomUser) {
+      throw new NotFoundException('유저가 방에 가입되어 있지 않습니다.');
+    }
+
+    return roomUser.isPaid;
+  }
+
   async updateRoomUserIsPaid(
     roomUuid: string,
     userUuid: string,

@@ -507,6 +507,32 @@ export class RoomController {
     return room;
   }
 
+  @Get(':uuid/pay/:userUuid')
+  @ApiOperation({
+    summary: '[관리자 전용] 카풀 방에 대한 유저의 정산 여부를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '정산 여부를 조회합니다.',
+    type: Boolean,
+  })
+  @ApiResponse({
+    status: 403,
+    description: '관리자 권한이 없는 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '유저가 존재하지 않는 경우, 방이 존재하지 않는 경우',
+  })
+  @UseGuards(RolesGuard)
+  @Roles(UserType.admin)
+  async getUserPayStatus(
+    @Param('uuid') uuid: string,
+    @Param('userUuid') userUuid: string,
+  ) {
+    return { isPaid: await this.roomService.getUserPayStatus(uuid, userUuid) };
+  }
+
   @Patch(':uuid/pay')
   @ApiOperation({
     summary: '카풀 방에 대한 유저의 정산 여부를 수정합니다.',
