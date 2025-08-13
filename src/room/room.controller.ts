@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -25,6 +26,9 @@ import { FcmService } from 'src/fcm/fcm.service';
 import { NoContentException } from 'src/common/exception';
 import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
 import { User } from 'src/common/decorators/user.decorator';
+import { UserType } from 'src/user/user.meta';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/authorization/roles.decorator';
 
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -86,6 +90,29 @@ export class RoomController {
   })
   findAll() {
     return this.roomService.findAll();
+  }
+
+  @Get('my/:userUuid')
+  @ApiOperation({
+    summary: '[관리자 전용] 특정 유저가 참여중인 방의 정보를 반환합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '특정 유저가 참여중인 방을 반환',
+    type: [ResponseMyRoomDto],
+  })
+  @ApiResponse({
+    status: 403,
+    description: '관리자 권한이 없는 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '유저가 존재하지 않는 경우',
+  })
+  @UseGuards(RolesGuard)
+  @Roles(UserType.admin)
+  findUserRooms(@Param('userUuid') userUuid: string) {
+    return this.roomService.findMyRoomByUserUuid(userUuid);
   }
 
   @Get('my')
