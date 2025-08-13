@@ -582,6 +582,12 @@ export class RoomController {
           console.error(error);
         });
     }
+    this.chatGateway.sendUpdateIsPaid(
+      uuid,
+      body.isPaid,
+      user.uuid,
+      user.nickname,
+    );
     return roomUser;
   }
 

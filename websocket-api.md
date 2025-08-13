@@ -1,7 +1,7 @@
 # WebSocket API Documentation
 
 ## 연결 정보
-- local server URL: `ws://localhost:4100`
+- local server URL: `wss://localhost:4100`
 - dev server URL: `wss://api.paxi-dev.popo.poapper.club?Authentication=[토큰값]`
 - 인증: Cookie에 'Authentication' 토큰 필요
   - 토큰이 없거나 유효하지 않은 경우 연결이 거부됨
@@ -26,7 +26,7 @@
   - 메시지 전송 실패
   - 방 참여/나가기 실패
 
-## 프론트에서 Listening 해야 할 이벤트
+## 프론트에서 Listening 해야 할 이벤트 리스트
 
 ### 1. 메세지 받기
 - `newMessage`를 통해 채팅 혹은 공지 등 새로운 메세지를 받을 수 있음
@@ -119,5 +119,17 @@
 ```json
 {
   "roomUuid": "45281c1e-61e5-4628-8821-6e0cb0940fd3",
+}
+```
+
+### 7. 개별 정산 완료
+- `updatedIsPaid`를 통해 **개별 정산 완료 정보가 담긴 메세지**를 받을 수 있음
+- 유저 별 정산 완료 여부 표시를 위해 사용
+- 응답 메세지 예시:
+```json
+{
+  "isPaid": true,
+  "userUuid": "12e18adf-9a25-42e7-b0b9-88d222542c5e",
+  "nickname": "포닉스"
 }
 ```
