@@ -101,7 +101,10 @@ export class ChatService {
       throw new NotFoundException('메세지를 찾을 수 없습니다.');
     }
     // 수정은 PK로 해줘야 함
-    await this.chatRepo.update(chat.id, { message: body.message });
+    await this.chatRepo.update(chat.id, {
+      message: body.message,
+      isEdited: true,
+    });
     return await this.chatRepo.findOne({
       where: { uuid: messageUuid },
     });
