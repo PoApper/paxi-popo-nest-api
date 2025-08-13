@@ -81,13 +81,16 @@ export class RoomService {
     }
   }
 
-  findAll() {
+  findAll(all: boolean) {
     // NOTE: 프론트에서 필터링을 하기 때문에 페이지네이션을 하지 않는다.
+    const where = all
+      ? {}
+      : {
+          status: RoomStatus.ACTIVATED,
+          departureTime: MoreThan(new Date()),
+        };
     return this.roomRepo.find({
-      where: {
-        status: RoomStatus.ACTIVATED,
-        departureTime: MoreThan(new Date()),
-      },
+      where,
       order: { departureTime: 'ASC' },
     });
   }
@@ -114,7 +117,13 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
-    return new RoomWithUsersDto(room);
+    let decryptedAccountNumber: string | undefined = undefined;
+    if (room.payerEncryptedAccountNumber) {
+      decryptedAccountNumber = this.userService.decryptAccountNumber(
+        room.payerEncryptedAccountNumber,
+      );
+    }
+    return new RoomWithUsersDto(room, decryptedAccountNumber);
   }
 
   async findMyRoomByUserUuid(userUuid: string) {

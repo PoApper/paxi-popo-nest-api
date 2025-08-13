@@ -5,6 +5,7 @@ import { instanceToPlain } from 'class-transformer';
 import { RoomUser } from 'src/room/entities/room-user.entity';
 
 import { Room } from '../entities/room.entity';
+import { ResponseRoomDto } from './response-room.dto';
 
 // TODO: Swagger 문서화 간편하게 하는 개선방안 필요
 export class RoomUserWithNicknameDto extends OmitType(RoomUser, [
@@ -23,7 +24,7 @@ export class RoomUserWithNicknameDto extends OmitType(RoomUser, [
   }
 }
 
-export class RoomWithUsersDto extends OmitType(Room, [
+export class RoomWithUsersDto extends OmitType(ResponseRoomDto, [
   // 닉네임을 넣은 room_users를 만들기 위해 기존 room_users는 제외
   'room_users',
   'departureAlertSent',
@@ -33,13 +34,18 @@ export class RoomWithUsersDto extends OmitType(Room, [
   })
   room_users: RoomUserWithNicknameDto[];
 
-  constructor(room: Room) {
+  constructor(room: Room, payerAccountNumber?: string) {
     super();
-    const plain = instanceToPlain(room);
-    /* eslint-disable-next-line */
-    const { room_users, departureAlertSent, ...rest } = plain;
+    const plain = instanceToPlain(room) as Record<string, unknown>;
+    const rest: Record<string, unknown> = { ...plain };
+    delete rest['room_users'];
+    delete rest['departureAlertSent'];
+    delete rest['payerEncryptedAccountNumber'];
     Object.assign(this, rest);
+
+    this.payerAccountNumber = payerAccountNumber;
+
     this.room_users =
-      room_users?.map((ru) => new RoomUserWithNicknameDto(ru)) ?? [];
+      room.room_users?.map((ru) => new RoomUserWithNicknameDto(ru)) ?? [];
   }
 }

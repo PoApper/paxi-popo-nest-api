@@ -8,6 +8,8 @@ import {
   Post,
   Put,
   UseGuards,
+  Query,
+  ParseBoolPipe,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -15,6 +17,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiResponse,
+  ApiQuery,
 } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
@@ -83,13 +86,22 @@ export class RoomController {
   @ApiOperation({
     summary: '모든 방의 정보를 반환합니다.',
   })
+  @ApiQuery({
+    name: 'all',
+    required: false,
+    type: Boolean,
+    description:
+      'true면 모든 방을, 미설정 또는 false면 활성화되고 출발 시간이 미래인 방만 반환',
+  })
   @ApiResponse({
     status: 200,
     description: '출발 시간이 현재보다 이후이고, 모집 중인 모든 방을 반환',
     type: [Room],
   })
-  findAll() {
-    return this.roomService.findAll();
+  findAll(
+    @Query('all', new ParseBoolPipe({ optional: true })) all: boolean = false,
+  ) {
+    return this.roomService.findAll(all);
   }
 
   @Get('my/:userUuid')
@@ -131,11 +143,11 @@ export class RoomController {
 
   @Get(':uuid')
   @ApiOperation({
-    summary: '특정 방의 정보를 반환합니다.',
+    summary: '특정 방의 정보를 반환합니다. (복호화된 계좌번호 포함)',
   })
   @ApiResponse({
     status: 200,
-    description: '특정 방을 반환',
+    description: '복호화된 계좌번호가 포함된 방 정보를 반환',
     type: RoomWithUsersDto,
   })
   findOne(@Param('uuid') uuid: string) {
