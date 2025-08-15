@@ -7,7 +7,13 @@ import * as importPlugin from 'eslint-plugin-import';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs', 'node_modules', 'dist', 'coverage'],
+    ignores: [
+      'eslint.config.mjs',
+      'node_modules',
+      'dist',
+      'coverage',
+      'src/database/migrations/**',
+    ],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
