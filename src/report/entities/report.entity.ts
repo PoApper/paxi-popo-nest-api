@@ -9,9 +9,9 @@ import {
 import { ReportStatus } from 'src/report/entities/report.meta';
 import { User } from 'src/user/entities/user.entity';
 import { Room } from 'src/room/entities/room.entity';
-
+import { Base } from 'src/common/base.entity';
 @Entity()
-export class Report {
+export class Report extends Base {
   @PrimaryGeneratedColumn()
   id: number;
 
