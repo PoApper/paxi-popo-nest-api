@@ -18,24 +18,28 @@ export class Account extends Base {
   @Exclude()
   id: number;
 
-  @Column({ type: 'uuid', nullable: false, unique: true })
+  @Column({ name: 'user_uuid', type: 'uuid', nullable: false, unique: true })
   userUuid: string;
 
-  @Column({ type: 'varchar', nullable: false })
+  @Column({
+    name: 'encrypted_account_number',
+    type: 'varchar',
+    nullable: false,
+  })
   @ApiHideProperty()
   @Exclude()
   encryptedAccountNumber: string;
 
-  @Column({ type: 'varchar', nullable: false })
+  @Column({ name: 'account_holder_name', type: 'varchar', nullable: false })
   accountHolderName: string;
 
-  @Column({ type: 'varchar', nullable: false })
+  @Column({ name: 'bank_name', type: 'varchar', nullable: false })
   bankName: string;
 
   @OneToOne(() => User, (user) => user.account, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'userUuid' })
+  @JoinColumn({ name: 'user_uuid' })
   @ApiHideProperty()
   user: User;
 }

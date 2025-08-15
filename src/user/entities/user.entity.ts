@@ -1,7 +1,5 @@
 import {
-  BaseEntity,
   Column,
-  CreateDateColumn,
   Entity,
   OneToMany,
   OneToOne,
@@ -16,13 +14,14 @@ import { Room } from 'src/room/entities/room.entity';
 import { RoomUser } from 'src/room/entities/room-user.entity';
 import { Chat } from 'src/chat/entities/chat.entity';
 import { Report } from 'src/report/entities/report.entity';
+import { Base } from 'src/common/base.entity';
 
 import { UserStatus, UserType } from '../user.meta';
 import { Account } from './account.entity';
 import { Nickname } from './nickname.entity';
 @Entity()
 @Unique(['email'])
-export class User extends BaseEntity {
+export class User extends Base {
   @PrimaryGeneratedColumn('uuid')
   uuid: string;
 
@@ -32,10 +31,14 @@ export class User extends BaseEntity {
   @Column({ nullable: false })
   name: string;
 
-  @Column({ nullable: false, default: UserType.student })
+  @Column({ name: 'user_type', nullable: false, default: UserType.student })
   userType: UserType;
 
-  @Column({ nullable: false, default: UserStatus.deactivated })
+  @Column({
+    name: 'user_status',
+    nullable: false,
+    default: UserStatus.deactivated,
+  })
   userStatus: UserStatus;
 
   // 아래 변수들은 DATABASE_SYNC=true일 때 개발 DB에 있는 값들을 삭제시키지 않고 유지시키기 위해 살려둔 것들임
@@ -47,25 +50,19 @@ export class User extends BaseEntity {
   password: string;
 
   // 여기서는 변경될 수 없음
-  @Column({ nullable: false })
+  @Column({ name: 'crypto_salt', nullable: false })
   @Exclude()
   @ApiHideProperty()
   cryptoSalt: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'hashed_refresh_token', nullable: true })
   hashedRefreshToken: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'refresh_token_expires_at', nullable: true })
   refreshTokenExpiresAt: Date;
 
   // 여기서는 변경될 수 없음
-  @CreateDateColumn()
-  @Exclude()
-  @ApiHideProperty()
-  createdAt: Date;
-
-  // 여기서는 변경될 수 없음
-  @Column()
+  @Column({ name: 'last_login_at' })
   @Exclude()
   @ApiHideProperty()
   lastLoginAt: Date;
