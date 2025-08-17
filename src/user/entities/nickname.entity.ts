@@ -18,10 +18,10 @@ export class Nickname extends Base {
   @Exclude()
   id: number;
 
-  @Column({ name: 'user_uuid', type: 'uuid', nullable: false, unique: true })
+  @Column({ name: 'user_uuid', type: 'uuid', nullable: false })
   userUuid: string;
 
-  @Column({ name: 'nickname', type: 'varchar', length: 20, nullable: false })
+  @Column({ type: 'varchar', length: 20, nullable: false })
   nickname: string;
 
   @OneToOne(() => User, (user) => user.nickname, {
