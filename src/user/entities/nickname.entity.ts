@@ -11,14 +11,14 @@ import { Exclude } from 'class-transformer';
 import { Base } from 'src/common/base.entity';
 
 import { User } from './user.entity';
-@Entity('nickname')
+@Entity()
 export class Nickname extends Base {
   @PrimaryGeneratedColumn()
   @ApiHideProperty()
   @Exclude()
   id: number;
 
-  @Column({ type: 'uuid', nullable: false, unique: true })
+  @Column({ name: 'user_uuid', type: 'uuid', nullable: false })
   userUuid: string;
 
   @Column({ type: 'varchar', length: 20, nullable: false })
@@ -27,7 +27,7 @@ export class Nickname extends Base {
   @OneToOne(() => User, (user) => user.nickname, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'userUuid' })
+  @JoinColumn({ name: 'user_uuid' })
   @ApiHideProperty()
   user: User;
 }
