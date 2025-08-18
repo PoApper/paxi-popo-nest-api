@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -25,6 +26,9 @@ import { FcmService } from 'src/fcm/fcm.service';
 import { NoContentException } from 'src/common/exception';
 import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
 import { User } from 'src/common/decorators/user.decorator';
+import { UserType } from 'src/user/user.meta';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/authorization/roles.decorator';
 
 import { RoomService } from './room.service';
 import { CreateRoomDto } from './dto/create-room.dto';
@@ -86,6 +90,29 @@ export class RoomController {
   })
   findAll() {
     return this.roomService.findAll();
+  }
+
+  @Get('my/:userUuid')
+  @ApiOperation({
+    summary: '[관리자 전용] 특정 유저가 참여중인 방의 정보를 반환합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '특정 유저가 참여중인 방을 반환',
+    type: [ResponseMyRoomDto],
+  })
+  @ApiResponse({
+    status: 403,
+    description: '관리자 권한이 없는 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '유저가 존재하지 않는 경우',
+  })
+  @UseGuards(RolesGuard)
+  @Roles(UserType.admin)
+  findUserRooms(@Param('userUuid') userUuid: string) {
+    return this.roomService.findMyRoomByUserUuid(userUuid);
   }
 
   @Get('my')
@@ -326,6 +353,18 @@ export class RoomController {
     description:
       '방에 가입되어 있지 않은 경우, 방장이 아닌 경우, 이미 방장인 경우',
   })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        userUuid: {
+          type: 'string',
+          description: '방장을 위임할 사용자의 UUID',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
+      },
+    },
+  })
   async delegateRoom(
     @User() user: JwtPayload,
     @Param('uuid') uuid: string,
@@ -478,6 +517,32 @@ export class RoomController {
     this.chatGateway.sendDeletedSettlement(uuid);
 
     return room;
+  }
+
+  @Get(':uuid/pay/:userUuid')
+  @ApiOperation({
+    summary: '[관리자 전용] 카풀 방에 대한 유저의 정산 여부를 조회합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '정산 여부를 조회합니다.',
+    type: Boolean,
+  })
+  @ApiResponse({
+    status: 403,
+    description: '관리자 권한이 없는 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '유저가 존재하지 않는 경우, 방이 존재하지 않는 경우',
+  })
+  @UseGuards(RolesGuard)
+  @Roles(UserType.admin)
+  async getUserPayStatus(
+    @Param('uuid') uuid: string,
+    @Param('userUuid') userUuid: string,
+  ) {
+    return { isPaid: await this.roomService.getUserPayStatus(uuid, userUuid) };
   }
 
   @Patch(':uuid/pay')

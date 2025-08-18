@@ -20,52 +20,65 @@ export class Room extends Base {
   @PrimaryGeneratedColumn('uuid')
   uuid: string;
 
-  @Column({ nullable: false })
+  @Column({ name: 'title', nullable: false })
   title: string;
 
-  @Column({ nullable: false })
+  @Column({ name: 'owner_uuid', nullable: false })
   ownerUuid: string;
 
-  @Column({ nullable: false })
+  @Column({ name: 'departure_location', nullable: false })
   departureLocation: string;
 
-  @Column({ nullable: false })
+  @Column({ name: 'destination_location', nullable: false })
   destinationLocation: string;
 
-  @Column({ nullable: false, default: 4 })
+  @Column({ name: 'max_participant', nullable: false, default: 4 })
   maxParticipant: number;
 
-  @Column({ nullable: false, default: 1 })
+  @Column({ name: 'current_participant', nullable: false, default: 1 })
   currentParticipant: number;
 
-  @Column({ nullable: false })
+  @Column({ name: 'departure_time', nullable: false })
   departureTime: Date;
 
-  @Column({ nullable: false, default: RoomStatus.ACTIVATED })
+  @Column({ name: 'status', nullable: false, default: RoomStatus.ACTIVATED })
   status: RoomStatus;
 
-  @Column({ nullable: true, type: 'text' })
+  @Column({ name: 'description', nullable: true, type: 'text' })
   description: string;
 
   // 정산관련
   // NOTE: null 값을 넣기 위해서는 type을 명시해줘야 함
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ name: 'payer_uuid', type: 'uuid', nullable: true })
   payerUuid: string | null;
 
   // NOTE: 정산 요청 총 금액은 정수형으로 저장
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'pay_amount', type: 'int', nullable: true })
   payAmount: number | null;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({
+    name: 'payer_encrypted_account_number',
+    type: 'varchar',
+    nullable: true,
+  })
   payerEncryptedAccountNumber: string | null;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({
+    name: 'payer_account_holder_name',
+    type: 'varchar',
+    nullable: true,
+  })
   payerAccountHolderName: string | null;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ name: 'payer_bank_name', type: 'varchar', nullable: true })
   payerBankName: string | null;
 
-  @Column({ type: 'boolean', default: false, nullable: true })
+  @Column({
+    name: 'departure_alert_sent',
+    type: 'boolean',
+    default: false,
+    nullable: true,
+  })
   departureAlertSent: boolean;
 
   /**
@@ -75,14 +88,14 @@ export class Room extends Base {
   @ManyToOne(() => User, (user) => user.own_rooms, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'ownerUuid' })
+  @JoinColumn({ name: 'owner_uuid' })
   @ApiHideProperty()
   owner: User;
 
   @ManyToOne(() => User, (user) => user.pay_rooms, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'payerUuid' })
+  @JoinColumn({ name: 'payer_uuid' })
   @ApiHideProperty()
   payer: User;
 
