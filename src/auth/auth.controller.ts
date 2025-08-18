@@ -1,4 +1,5 @@
 import { Controller, Get, Req, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { ApiCookieAuth } from '@nestjs/swagger';
 import ms from 'ms';
@@ -7,8 +8,6 @@ import { UserType } from 'src/user/user.meta';
 import { GuardName } from 'src/common/guard-name';
 import { PublicGuard } from 'src/common/public-guard.decorator';
 
-import { jwtConstants } from './constants';
-import { AuthService } from './auth.service';
 import { JwtPayload } from './strategies/jwt.payload';
 
 const requiredRoles = [UserType.admin, UserType.association, UserType.staff];
@@ -17,7 +16,7 @@ const requiredRoles = [UserType.admin, UserType.association, UserType.staff];
 @PublicGuard([GuardName.NicknameGuard])
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly configService: ConfigService) {}
 
   @Get(['verifyToken', 'verifyToken/admin'])
   verifyToken(@Req() req: Request) {
@@ -43,13 +42,17 @@ export class AuthController {
           ? 'popo-dev.poapper.club'
           : 'localhost';
 
+    const refreshTokenExpirationTime = this.configService.get<string>(
+      'JWT_REFRESH_TOKEN_EXPIRATION_TIME',
+    );
+
     res.cookie('Authentication', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'local' ? false : true,
       path: '/',
       domain: domain,
       sameSite: 'lax',
-      maxAge: ms(jwtConstants.refreshTokenExpirationTime),
+      maxAge: ms(refreshTokenExpirationTime),
     });
 
     res.cookie('Refresh', refreshToken, {
@@ -58,7 +61,7 @@ export class AuthController {
       path: '/auth/refresh',
       domain: domain,
       sameSite: 'lax',
-      maxAge: ms(jwtConstants.refreshTokenExpirationTime),
+      maxAge: ms(refreshTokenExpirationTime),
     });
   }
 }
