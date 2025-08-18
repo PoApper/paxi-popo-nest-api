@@ -353,6 +353,18 @@ export class RoomController {
     description:
       '방에 가입되어 있지 않은 경우, 방장이 아닌 경우, 이미 방장인 경우',
   })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        userUuid: {
+          type: 'string',
+          description: '방장을 위임할 사용자의 UUID',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
+      },
+    },
+  })
   async delegateRoom(
     @User() user: JwtPayload,
     @Param('uuid') uuid: string,
