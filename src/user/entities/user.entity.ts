@@ -19,6 +19,7 @@ import { Base } from 'src/common/base.entity';
 import { UserStatus, UserType } from '../user.meta';
 import { Account } from './account.entity';
 import { Nickname } from './nickname.entity';
+
 @Entity()
 @Unique(['email'])
 export class User extends Base {
@@ -62,7 +63,7 @@ export class User extends Base {
   refreshTokenExpiresAt: Date;
 
   // 여기서는 변경될 수 없음
-  @Column({ name: 'last_login_at' })
+  @Column({ name: 'last_login_at', nullable: true })
   @Exclude()
   @ApiHideProperty()
   lastLoginAt: Date;
