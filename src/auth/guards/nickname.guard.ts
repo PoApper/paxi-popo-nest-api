@@ -5,16 +5,23 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Response } from 'express';
 
 import { GuardName } from 'src/common/guard-name';
 import { PUBLIC_GUARDS_KEY } from 'src/common/public-guard.decorator';
 import { UserService } from 'src/user/user.service';
+
+import { AuthService } from '../auth.service';
+import { AuthController } from '../auth.controller';
+import { JwtPayload } from '../strategies/jwt.payload';
 
 @Injectable()
 export class NicknameExistsGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly userService: UserService,
+    private readonly authService: AuthService,
+    private readonly authController: AuthController,
   ) {}
 
   async canActivate(context: ExecutionContext) {
@@ -29,12 +36,30 @@ export class NicknameExistsGuard implements CanActivate {
 
     // 닉네임이 토큰에 포함되어 있는지 확인
     const request = context.switchToHttp().getRequest();
+    const response = context.switchToHttp().getResponse<Response>();
     const user = request.user;
     const nickname = user.nickname;
 
     if (!nickname) {
-      const userNickname = await this.userService.getNickname(user.uuid);
+      const userNickname = await this.userService.getNickname(
+        user.uuid as string,
+      );
       if (userNickname) {
+        // 닉네임을 포함한 새로운 토큰 생성 및 쿠키 재발급
+        const updatedPayload = {
+          ...user,
+          nickname: userNickname.nickname,
+        } as JwtPayload;
+        const tokens = this.authService.generateTokens(updatedPayload);
+
+        // 쿠키 재설정
+        this.authController.setCookies(
+          response,
+          tokens.accessToken,
+          tokens.refreshToken,
+        );
+
+        // request.user도 업데이트
         request.user.nickname = userNickname.nickname;
       } else {
         throw new UnauthorizedException(
