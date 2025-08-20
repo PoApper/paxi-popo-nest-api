@@ -12,7 +12,6 @@ import { PUBLIC_GUARDS_KEY } from 'src/common/public-guard.decorator';
 import { UserService } from 'src/user/user.service';
 
 import { AuthService } from '../auth.service';
-import { AuthController } from '../auth.controller';
 import { JwtPayload } from '../strategies/jwt.payload';
 
 @Injectable()
@@ -21,7 +20,6 @@ export class NicknameExistsGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly userService: UserService,
     private readonly authService: AuthService,
-    private readonly authController: AuthController,
   ) {}
 
   async canActivate(context: ExecutionContext) {
@@ -53,7 +51,7 @@ export class NicknameExistsGuard implements CanActivate {
         const tokens = this.authService.generateTokens(updatedPayload);
 
         // 쿠키 재설정
-        this.authController.setCookies(
+        this.authService.setCookies(
           response,
           tokens.accessToken,
           tokens.refreshToken,
