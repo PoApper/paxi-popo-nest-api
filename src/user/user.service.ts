@@ -123,22 +123,9 @@ export class UserService {
     if (!account) {
       return null;
     }
-    let decryptedAccountNumber: string | null = null;
-    if (account.encryptedAccountNumber) {
-      try {
-        decryptedAccountNumber = this.decryptAccountNumber(
-          account.encryptedAccountNumber,
-        );
-      } catch (error) {
-        console.error(
-          'Failed to decrypt account number for user:',
-          userUuid,
-          error.message,
-        );
-        // 복호화 실패 시 null 반환 (계좌 정보를 다시 등록하도록 유도)
-        decryptedAccountNumber = null;
-      }
-    }
+    const decryptedAccountNumber = account.encryptedAccountNumber
+      ? this.decryptAccountNumber(account.encryptedAccountNumber)
+      : null;
 
     return {
       accountNumber: decryptedAccountNumber,
@@ -189,46 +176,20 @@ export class UserService {
   }
 
   decryptAccountNumber(encryptedAccountNumber: string) {
-    try {
-      const encryptionKey = process.env.ACCOUNT_ENCRYPTION_KEY;
-      if (!encryptionKey) {
-        throw new Error(
-          'ACCOUNT_ENCRYPTION_KEY is not set in environment variables',
-        );
-      }
-
-      const key = Buffer.from(encryptionKey, 'base64');
-      const parts = encryptedAccountNumber.split(':');
-      if (parts.length !== 2) {
-        throw new BadRequestException(
-          'Invalid encrypted account number format.',
-        );
-      }
-
-      const [ivBase64, encryptedBase64] = parts;
-      const iv = Buffer.from(ivBase64, 'base64');
-      const encrypted = Buffer.from(encryptedBase64, 'base64');
-      const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
-      const decrypted = Buffer.concat([
-        decipher.update(encrypted),
-        decipher.final(),
-      ]);
-      return decrypted.toString('utf8');
-    } catch (error) {
-      console.error('Decryption error:', {
-        error: error.message,
-        encryptedData: encryptedAccountNumber,
-        hasEncryptionKey: !!process.env.ACCOUNT_ENCRYPTION_KEY,
-      });
-
-      // 복호화 실패 시 null 반환하거나 적절한 에러 처리
-      if (error.code === 'ERR_OSSL_BAD_DECRYPT') {
-        throw new BadRequestException(
-          'Failed to decrypt account number. The encryption key may have changed or the data is corrupted.',
-        );
-      }
-      throw error;
+    const key = Buffer.from(process.env.ACCOUNT_ENCRYPTION_KEY!, 'base64');
+    const parts = encryptedAccountNumber.split(':');
+    if (parts.length !== 2) {
+      throw new BadRequestException('Invalid encrypted account number format.');
     }
+    const [ivBase64, encryptedBase64] = parts;
+    const iv = Buffer.from(ivBase64, 'base64');
+    const encrypted = Buffer.from(encryptedBase64, 'base64');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    const decrypted = Buffer.concat([
+      decipher.update(encrypted),
+      decipher.final(),
+    ]);
+    return decrypted.toString('utf8');
   }
 
   async generateRandomNickname() {
@@ -333,32 +294,5 @@ export class UserService {
     } else {
       await this.accountRepo.delete({});
     }
-  }
-
-  // 개발 환경에서만 사용: 손상된 암호화 데이터 정리
-  async cleanupCorruptedAccounts() {
-    if (process.env.NODE_ENV === 'prod') {
-      throw new Error('This method should not be used in production');
-    }
-
-    const accounts = await this.accountRepo.find();
-    const corruptedAccounts: string[] = [];
-
-    for (const account of accounts) {
-      if (account.encryptedAccountNumber) {
-        try {
-          this.decryptAccountNumber(account.encryptedAccountNumber);
-        } catch {
-          corruptedAccounts.push(account.userUuid);
-          // 손상된 계좌 정보 삭제 (userUuid로 삭제)
-          await this.accountRepo.delete({ userUuid: account.userUuid });
-        }
-      }
-    }
-
-    return {
-      message: `Cleaned up ${corruptedAccounts.length} corrupted accounts`,
-      deletedAccounts: corruptedAccounts,
-    };
   }
 }
