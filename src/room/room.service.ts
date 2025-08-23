@@ -945,6 +945,18 @@ export class RoomService {
     return diff;
   }
 
+  private formatKst(date: Date | string): string {
+    const target = typeof date === 'string' ? new Date(date) : date;
+    return target.toLocaleString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
   generateRoomUpdateMessage(
     originalRoom: Room,
     roomDiff: Record<string, any>,
@@ -978,21 +990,9 @@ export class RoomService {
       );
     }
     if (roomDiff.departureTime) {
-      const originalTime = originalRoom.departureTime.toLocaleString('ko-KR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      const newTime = new Date(roomDiff.departureTime).toLocaleString('ko-KR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      changes.push(`출발 시간: ${originalTime} → ${newTime}`);
+      const originalTime = this.formatKst(originalRoom.departureTime);
+      const newTime = this.formatKst(roomDiff.departureTime);
+      changes.push(`출발 시각: ${originalTime} → ${newTime}`);
     }
 
     return `방 정보가 수정되었습니다.\n${changes.join('\n')}`;
