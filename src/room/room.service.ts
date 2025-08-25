@@ -319,31 +319,17 @@ export class RoomService {
       throw new BadRequestException('이미 정산이 진행되고 있습니다.');
     }
 
+    if (room.ownerUuid == userUuid) {
+      throw new BadRequestException(
+        '방장은 방을 나갈 수 없습니다. 방장을 위임해 주세요.',
+      );
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      if (room.ownerUuid == userUuid) {
-        const newOwnerRoomUser = await this.roomUserRepo.findOneBy({
-          roomUuid: uuid,
-          userUuid: Not(userUuid),
-          status: RoomUserStatus.JOINED,
-        });
-
-        if (!newOwnerRoomUser) {
-          throw new BadRequestException(
-            '위임된 방장이 없어 방을 나갈 수 없습니다.',
-          );
-        }
-
-        await queryRunner.manager.update(
-          Room,
-          { uuid: uuid },
-          { ownerUuid: newOwnerRoomUser.userUuid },
-        );
-      }
-
       // RoomUser 삭제
       await queryRunner.manager.delete(RoomUser, {
         roomUuid: uuid,
