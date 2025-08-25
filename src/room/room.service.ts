@@ -471,6 +471,13 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
+    if (room.status !== RoomStatus.ACTIVATED) {
+      throw new BadRequestException(
+        '방장을 위임할 수 있는 방 상태가 아닙니다. 정산이 요청되기 전까지만 방장을 위임할 수 있습니다. 현재 방 상태: ' +
+          room.status,
+      );
+    }
+
     if (room.ownerUuid != ownerUuid) {
       throw new UnauthorizedException('방장이 아닙니다.');
     }
@@ -485,10 +492,7 @@ export class RoomService {
       throw new BadRequestException('유저가 방에 가입되어 있지 않습니다.');
     }
 
-    await this.roomRepo.update(
-      { uuid: uuid },
-      { ownerUuid: newOwnerUuid, status: RoomStatus.ACTIVATED },
-    );
+    await this.roomRepo.update({ uuid: uuid }, { ownerUuid: newOwnerUuid });
 
     return await this.roomRepo.findOne({
       where: { uuid: uuid },
