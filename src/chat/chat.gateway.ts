@@ -257,8 +257,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (userSocket) {
       userSocket.data.focusedRoomUuid = roomUuid;
-
-      console.log(userSocket.data.focusedRoomUuid);
     }
   }
 
