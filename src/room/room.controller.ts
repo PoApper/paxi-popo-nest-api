@@ -280,6 +280,7 @@ export class RoomController {
   })
   async leaveRoom(@User() user: JwtPayload, @Param('uuid') uuid: string) {
     const room = await this.roomService.leaveRoom(uuid, user.uuid);
+    this.chatGateway.updateUserFocusRoomUuid(user.uuid, null);
     const message = `${user.nickname} 님이 방에서 나갔습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
@@ -748,7 +749,7 @@ export class RoomController {
     const uuid = this.chatGateway.getUserFocusRoomUuid(user.uuid);
     if (!uuid || typeof uuid !== 'string') throw new NoContentException();
 
-    this.chatGateway.updateUserFocusRoomUuid(user.uuid);
+    this.chatGateway.updateUserFocusRoomUuid(user.uuid, null);
     return await this.roomService.saveLastReadChat(uuid, user.uuid);
   }
 
