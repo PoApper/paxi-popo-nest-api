@@ -39,7 +39,7 @@ export class ReportService {
 
   async findAll() {
     return await this.reportRepository.find({
-      relations: ['reporter', 'targetUser', 'targetRoom'],
+      relations: ['reporter.nickname', 'targetUser.nickname', 'targetRoom'],
     });
   }
 
@@ -50,17 +50,28 @@ export class ReportService {
     });
   }
 
-  async updateReportStatus(id: number, status: string) {
+  async resolve(
+    id: number,
+    resolverUuid: string,
+    resolverName: string,
+    status: ReportStatus,
+    resolutionMessage: string,
+  ) {
     const report = await this.reportRepository.findOne({ where: { id } });
     if (!report) {
       throw new NotFoundException('신고를 찾을 수 없습니다.');
     }
-    report.status = ReportStatus[status];
+    report.status = status;
+    report.resolutionMessage = resolutionMessage || '';
     if (!report.status) {
       throw new BadRequestException('잘못된 신고 상태입니다.');
     }
     await this.reportRepository.update(id, {
       status: report.status,
+      resolutionMessage: report.resolutionMessage,
+      resolvedAt: new Date(),
+      resolverUuid: resolverUuid,
+      resolverName: resolverName,
     });
     return report;
   }
