@@ -392,6 +392,7 @@ export class RoomService {
     ownerUuid: string,
     kickedUserUuid: string,
     reason: string,
+    userType: UserType,
   ) {
     const room = await this.findOne(uuid);
     if (!room) {
@@ -409,8 +410,8 @@ export class RoomService {
       );
     }
 
-    if (room.ownerUuid != ownerUuid) {
-      throw new UnauthorizedException('방장이 아닙니다.');
+    if (room.ownerUuid != ownerUuid && userType != UserType.admin) {
+      throw new UnauthorizedException('방장이나 관리자가 아닙니다.');
     }
 
     if (room.ownerUuid == kickedUserUuid) {

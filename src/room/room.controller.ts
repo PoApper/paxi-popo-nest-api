@@ -291,7 +291,7 @@ export class RoomController {
   @Put('kick/:uuid')
   @ApiOperation({
     summary:
-      '사용자를 추방합니다. 방장만 가능하며, 사용자의 상태를 KICKED로 변경합니다.',
+      '사용자를 추방합니다. 방장 및 관리자만 가능하며, 사용자의 상태를 KICKED로 변경합니다.',
   })
   @ApiBody({
     schema: {
@@ -322,7 +322,7 @@ export class RoomController {
   })
   @ApiResponse({
     status: 401,
-    description: '로그인이 되어 있지 않은 경우, 방장이 아닌 경우',
+    description: '로그인이 되어 있지 않은 경우, 방장이나 관리자가 아닌 경우',
   })
   async kickUserFromRoom(
     @User() user: JwtPayload,
@@ -334,12 +334,15 @@ export class RoomController {
       user.uuid,
       dto.kickedUserUuid,
       dto.reason,
+      user.userType,
     );
 
     const kickedUserNickname = await this.userService.getNickname(
       dto.kickedUserUuid,
     );
-    const message = `방장에 의해 ${kickedUserNickname?.nickname} 님이 방에서 강제퇴장 되었습니다.`;
+
+    const kicker = user.uuid == room.ownerUuid ? '방장' : '관리자';
+    const message = `${kicker}에 의해 ${kickedUserNickname?.nickname} 님이 방에서 강제퇴장 되었습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
