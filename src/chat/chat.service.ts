@@ -144,11 +144,11 @@ export class ChatService {
     return lastMessage;
   }
 
-  async deleteAll(roomUuid?: string) {
+  async deleteAll(chatUuid?: string) {
     const query = this.chatRepo.createQueryBuilder('chat');
-    if (roomUuid) {
-      await this.roomService.findOne(roomUuid);
-      query.where('chat.roomUuid = :roomUuid', { roomUuid });
+    if (chatUuid) {
+      await this.findOne(chatUuid);
+      query.where('chat.uuid = :chatUuid', { chatUuid });
     }
     await query.delete().execute();
   }
