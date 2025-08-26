@@ -46,7 +46,7 @@ export class ReportService {
   async findByReporterUuid(reporterUuid: string) {
     return await this.reportRepository.find({
       where: { reporterUuid: reporterUuid },
-      relations: ['reporter', 'targetUser', 'targetRoom'],
+      relations: ['reporter.nickname', 'targetUser.nickname', 'targetRoom'],
     });
   }
 

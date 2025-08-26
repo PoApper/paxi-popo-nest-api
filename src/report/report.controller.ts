@@ -20,7 +20,6 @@ import { CreateReportDto } from 'src/report/dto/create-report.dto';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/authorization/roles.decorator';
 import { UserType } from 'src/user/user.meta';
-import { Report } from 'src/report/entities/report.entity';
 import { User } from 'src/common/decorators/user.decorator';
 
 import { ReportStatus } from './entities/report.meta';
@@ -77,14 +76,15 @@ export class ReportController {
   @ApiResponse({
     status: 200,
     description: '신고 목록을 반환',
-    type: [Report],
+    type: [ReportResponseDto],
   })
   @ApiResponse({
     status: 401,
     description: '로그인이 되어 있지 않은 경우',
   })
   async findMyReports(@User() user: JwtPayload) {
-    return await this.reportService.findByReporterUuid(user.uuid);
+    const reports = await this.reportService.findByReporterUuid(user.uuid);
+    return reports.map((report) => new ReportResponseDto(report));
   }
 
   @Put('/:id/resolve')
