@@ -319,31 +319,17 @@ export class RoomService {
       throw new BadRequestException('이미 정산이 진행되고 있습니다.');
     }
 
+    if (room.ownerUuid == userUuid) {
+      throw new BadRequestException(
+        '방장은 방을 나갈 수 없습니다. 방장을 위임해 주세요.',
+      );
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      if (room.ownerUuid == userUuid) {
-        const newOwnerRoomUser = await this.roomUserRepo.findOneBy({
-          roomUuid: uuid,
-          userUuid: Not(userUuid),
-          status: RoomUserStatus.JOINED,
-        });
-
-        if (!newOwnerRoomUser) {
-          throw new BadRequestException(
-            '위임된 방장이 없어 방을 나갈 수 없습니다.',
-          );
-        }
-
-        await queryRunner.manager.update(
-          Room,
-          { uuid: uuid },
-          { ownerUuid: newOwnerRoomUser.userUuid },
-        );
-      }
-
       // RoomUser 삭제
       await queryRunner.manager.delete(RoomUser, {
         roomUuid: uuid,
@@ -485,6 +471,13 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
+    if (room.status !== RoomStatus.ACTIVATED) {
+      throw new BadRequestException(
+        '방장을 위임할 수 있는 방 상태가 아닙니다. 정산이 요청되기 전까지만 방장을 위임할 수 있습니다. 현재 방 상태: ' +
+          room.status,
+      );
+    }
+
     if (room.ownerUuid != ownerUuid) {
       throw new UnauthorizedException('방장이 아닙니다.');
     }
@@ -499,10 +492,7 @@ export class RoomService {
       throw new BadRequestException('유저가 방에 가입되어 있지 않습니다.');
     }
 
-    await this.roomRepo.update(
-      { uuid: uuid },
-      { ownerUuid: newOwnerUuid, status: RoomStatus.ACTIVATED },
-    );
+    await this.roomRepo.update({ uuid: uuid }, { ownerUuid: newOwnerUuid });
 
     return await this.roomRepo.findOne({
       where: { uuid: uuid },
