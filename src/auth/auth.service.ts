@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import ms from 'ms';
-import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 import { UserService } from 'src/user/user.service';
 
@@ -55,10 +55,9 @@ export class AuthService {
     userUuid: string,
     refreshToken: string,
   ): Promise<void> {
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-    const expiresAt = new Date();
-    expiresAt.setTime(
-      expiresAt.getTime() + ms(jwtConstants.refreshTokenExpirationTime),
+    const hashedRefreshToken = this.hashToken(refreshToken);
+    const expiresAt = new Date(
+      Date.now() + ms(jwtConstants.refreshTokenExpirationTime),
     );
 
     await this.userService.updateRefreshToken(
@@ -66,6 +65,10 @@ export class AuthService {
       hashedRefreshToken,
       expiresAt,
     );
+  }
+
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
   }
 
   async validateRefreshToken(
@@ -78,12 +81,13 @@ export class AuthService {
     }
 
     // 토큰 만료 확인
-    if (user.refreshTokenExpiresAt < new Date()) {
+    if (user.refreshTokenExpiresAt <= new Date()) {
       return false;
     }
 
     // 토큰 검증
-    return bcrypt.compare(refreshToken, user.hashedRefreshToken);
+    const hashedToken = this.hashToken(refreshToken);
+    return user.hashedRefreshToken === hashedToken;
   }
 
   async removeRefreshToken(userUuid: string): Promise<void> {
