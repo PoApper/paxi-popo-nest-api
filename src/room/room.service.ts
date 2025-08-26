@@ -1016,4 +1016,46 @@ export class RoomService {
       await this.roomRepo.delete({});
     }
   }
+
+  async cancelKickUserFromRoom(
+    roomUuid: string,
+    ownerUuid: string,
+    kickedUserUuid: string,
+    userType: UserType,
+  ) {
+    // 방장 또는 관리자만 가능
+    if (userType !== UserType.admin) {
+      const room = await this.findOne(roomUuid);
+      if (room.ownerUuid !== ownerUuid) {
+        throw new UnauthorizedException(
+          '방장 또는 관리자만 강퇴를 취소할 수 있습니다.',
+        );
+      }
+    }
+
+    this.logger.debug(
+      `Canceling kick for user ${kickedUserUuid} from room ${roomUuid}`,
+    );
+
+    // KICKED 상태인 RoomUser 찾기
+    const roomUser = await this.roomUserRepo.findOne({
+      where: {
+        roomUuid: roomUuid,
+        userUuid: kickedUserUuid,
+        status: RoomUserStatus.KICKED,
+      },
+    });
+
+    if (!roomUser) {
+      throw new NotFoundException('강퇴된 사용자를 찾을 수 없습니다.');
+    }
+
+    // RoomUser 데이터 삭제
+    await this.roomUserRepo.delete({
+      roomUuid: roomUuid,
+      userUuid: kickedUserUuid,
+    });
+
+    return await this.findOneWithRoomUsers(roomUuid);
+  }
 }
