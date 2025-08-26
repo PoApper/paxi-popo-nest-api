@@ -57,10 +57,10 @@ export class User extends Base {
   cryptoSalt: string;
 
   @Column({ name: 'hashed_refresh_token', nullable: true })
-  hashedRefreshToken: string;
+  hashedRefreshToken: string | null;
 
   @Column({ name: 'refresh_token_expires_at', nullable: true })
-  refreshTokenExpiresAt: Date;
+  refreshTokenExpiresAt: Date | null;
 
   // 여기서는 변경될 수 없음
   @Column({ name: 'last_login_at', nullable: true })

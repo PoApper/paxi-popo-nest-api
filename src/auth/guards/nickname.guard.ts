@@ -48,7 +48,7 @@ export class NicknameExistsGuard implements CanActivate {
           ...user,
           nickname: userNickname.nickname,
         } as JwtPayload;
-        const tokens = this.authService.generateTokens(updatedPayload);
+        const tokens = await this.authService.generateTokens(updatedPayload);
 
         // 쿠키 재설정
         this.authService.setCookies(

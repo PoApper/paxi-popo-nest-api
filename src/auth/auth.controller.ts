@@ -41,7 +41,7 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @PublicGuard([GuardName.JwtGuard, GuardName.NicknameGuard])
+  @PublicGuard([GuardName.JwtGuard])
   @ApiOperation({
     summary: '리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다.',
   })
@@ -53,7 +53,6 @@ export class AuthController {
     status: 401,
     description: '리프레시 토큰이 유효하지 않습니다.',
   })
-  // eslint-disable-next-line @typescript-eslint/require-await
   async refresh(@Req() req: Request, @Res() res: Response) {
     const refreshToken = req.cookies?.Refresh as string;
 
@@ -63,7 +62,18 @@ export class AuthController {
 
     try {
       const payload = this.authService.verifyRefreshToken(refreshToken);
-      const tokens = this.authService.generateTokens(payload);
+
+      // DB에서 리프레시 토큰 검증
+      const isValidRefreshToken = await this.authService.validateRefreshToken(
+        payload.uuid,
+        refreshToken,
+      );
+
+      if (!isValidRefreshToken) {
+        throw new UnauthorizedException('리프레시 토큰이 유효하지 않습니다.');
+      }
+
+      const tokens = await this.authService.generateTokens(payload);
 
       this.authService.setCookies(res, tokens.accessToken, tokens.refreshToken);
 
