@@ -669,7 +669,7 @@ export class RoomController {
     const uuid = this.chatGateway.getUserFocusRoomUuid(user.uuid);
     if (!uuid || typeof uuid !== 'string') throw new NoContentException();
 
-    this.chatGateway.updateUserFocusRoomUuid(user.uuid, uuid);
+    this.chatGateway.updateUserFocusRoomUuid(user.uuid, null);
     return await this.roomService.saveLastReadChat(uuid, user.uuid);
   }
 
