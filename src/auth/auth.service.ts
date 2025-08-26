@@ -2,72 +2,92 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
+import ms from 'ms';
+import * as bcrypt from 'bcrypt';
+
+import { UserService } from 'src/user/user.service';
 
 import { JwtPayload } from './strategies/jwt.payload';
+import { jwtConstants } from './constants';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly userService: UserService,
   ) {}
 
   generateAccessToken(payload: JwtPayload): string {
     return this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_ACCESS_TOKEN_SECRET'),
-      expiresIn:
-        this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION_TIME') ||
-        '1d',
+      secret: jwtConstants.accessTokenSecret,
+      expiresIn: jwtConstants.accessTokenExpirationTime,
     });
   }
 
   generateRefreshToken(payload: JwtPayload): string {
     return this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_REFRESH_TOKEN_SECRET'),
-      expiresIn:
-        this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION_TIME') ||
-        '7d',
+      secret: jwtConstants.refreshTokenSecret,
+      expiresIn: jwtConstants.refreshTokenExpirationTime,
     });
   }
 
   verifyRefreshToken(token: string): JwtPayload {
     return this.jwtService.verify(token, {
-      secret: this.configService.get<string>('JWT_REFRESH_TOKEN_SECRET'),
+      secret: jwtConstants.refreshTokenSecret,
     });
   }
 
-  generateTokens(payload: JwtPayload): {
+  async generateTokens(payload: JwtPayload): Promise<{
     accessToken: string;
     refreshToken: string;
-  } {
+  }> {
     const accessToken = this.generateAccessToken(payload);
     const refreshToken = this.generateRefreshToken(payload);
+
+    // 리프레시 토큰을 DB에 저장
+    await this.saveRefreshToken(payload.uuid, refreshToken);
 
     return { accessToken, refreshToken };
   }
 
-  private parseTimeToMs(timeStr: string): number {
-    // Simple parser for common time formats like '7d', '1h', '30m', '60s'
-    const match = timeStr.match(/^(\d+)([dhms])$/);
-    if (!match) {
-      return 7 * 24 * 60 * 60 * 1000; // Default to 7 days
+  private async saveRefreshToken(
+    userUuid: string,
+    refreshToken: string,
+  ): Promise<void> {
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    const expiresAt = new Date();
+    expiresAt.setTime(
+      expiresAt.getTime() + ms(jwtConstants.refreshTokenExpirationTime),
+    );
+
+    await this.userService.updateRefreshToken(
+      userUuid,
+      hashedRefreshToken,
+      expiresAt,
+    );
+  }
+
+  async validateRefreshToken(
+    userUuid: string,
+    refreshToken: string,
+  ): Promise<boolean> {
+    const user = await this.userService.findOne(userUuid);
+    if (!user || !user.hashedRefreshToken || !user.refreshTokenExpiresAt) {
+      return false;
     }
 
-    const value = parseInt(match[1], 10);
-    const unit = match[2];
-
-    switch (unit) {
-      case 'd':
-        return value * 24 * 60 * 60 * 1000; // days to ms
-      case 'h':
-        return value * 60 * 60 * 1000; // hours to ms
-      case 'm':
-        return value * 60 * 1000; // minutes to ms
-      case 's':
-        return value * 1000; // seconds to ms
-      default:
-        return 7 * 24 * 60 * 60 * 1000; // Default to 7 days
+    // 토큰 만료 확인
+    if (user.refreshTokenExpiresAt < new Date()) {
+      return false;
     }
+
+    // 토큰 검증
+    return bcrypt.compare(refreshToken, user.hashedRefreshToken);
+  }
+
+  async removeRefreshToken(userUuid: string): Promise<void> {
+    await this.userService.updateRefreshToken(userUuid, null, null);
   }
 
   setCookies(res: Response, accessToken: string, refreshToken: string): void {
@@ -78,19 +98,13 @@ export class AuthService {
           ? 'popo-dev.poapper.club'
           : 'localhost';
 
-    const refreshTokenExpirationTime =
-      this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION_TIME') ||
-      '7d';
-
-    const maxAgeMs = this.parseTimeToMs(refreshTokenExpirationTime);
-
     res.cookie('Authentication', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'local' ? false : true,
       path: '/',
       domain: domain,
       sameSite: 'lax',
-      maxAge: maxAgeMs,
+      maxAge: ms(jwtConstants.refreshTokenExpirationTime),
     });
 
     res.cookie('Refresh', refreshToken, {
@@ -99,7 +113,7 @@ export class AuthService {
       path: '/auth/refresh',
       domain: domain,
       sameSite: 'lax',
-      maxAge: maxAgeMs,
+      maxAge: ms(jwtConstants.refreshTokenExpirationTime),
     });
   }
 }
