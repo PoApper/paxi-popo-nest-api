@@ -56,10 +56,14 @@ export class User extends Base {
   @ApiHideProperty()
   cryptoSalt: string;
 
-  @Column({ name: 'hashed_refresh_token', nullable: true })
+  @Column({ name: 'hashed_refresh_token', type: 'varchar', nullable: true })
   hashedRefreshToken: string | null;
 
-  @Column({ name: 'refresh_token_expires_at', nullable: true })
+  @Column({
+    name: 'refresh_token_expires_at',
+    type: 'datetime',
+    nullable: true,
+  })
   refreshTokenExpiresAt: Date | null;
 
   // 여기서는 변경될 수 없음
