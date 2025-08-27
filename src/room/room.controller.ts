@@ -63,6 +63,8 @@ export class RoomController {
     private readonly fcmService: FcmService,
   ) {}
 
+  // 아래쪽 GET :uuid 랑 겹쳐서 위쪽으로 컨트롤러 올림
+  // TODO: 주간 통계 추가
   @Get('statistics')
   @ApiOperation({
     summary: '[관리자 전용] 기간별 방 생성 통계를 조회합니다.',
