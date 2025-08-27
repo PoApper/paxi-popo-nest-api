@@ -48,7 +48,8 @@ export class ChatController {
 
   @Get(':roomUuid')
   @ApiOperation({
-    summary: '채팅방 메세지를 불러옵니다.',
+    summary:
+      '채팅방 메세지를 불러옵니다. 관리자 혹은 방에 속한 유저만 가능합니다.',
     description: 'before 이전 take개의 메세지를 불러옵니다.',
   })
   @ApiResponse({
@@ -57,8 +58,9 @@ export class ChatController {
     type: [Chat],
   })
   @ApiResponse({
-    status: 400,
-    description: '메세지를 불러오지 못했습니다.',
+    status: 403,
+    description:
+      '채팅을 볼 권한이 없습니다. 관리자 혹은 방에 속한 유저만 가능합니다.',
   })
   @ApiParam({
     name: 'roomUuid',
@@ -82,8 +84,15 @@ export class ChatController {
     @Param('roomUuid') roomUuid: string,
     @Query('before', new DefaultValuePipe(null)) before: string | null,
     @Query('take', new DefaultValuePipe(30), ParseIntPipe) take: number,
+    @User() user: JwtPayload,
   ) {
-    return this.chatService.getMessagesByCursor(roomUuid, before, take);
+    return this.chatService.getMessagesByCursor(
+      roomUuid,
+      before,
+      take,
+      user.userType,
+      user.uuid,
+    );
   }
 
   @Put(':chatUuid')
