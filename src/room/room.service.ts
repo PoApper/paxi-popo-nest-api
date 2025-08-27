@@ -1071,20 +1071,26 @@ export class RoomService {
 
       const targetEndDate = query_idx.format('YYYY-MM-DD');
 
-      // 전체 방 생성 수
-      const [totalRooms, totalRoomsCount] = await this.roomRepo.findAndCount({
-        select: {
-          status: true,
-          departureLocation: true,
-          destinationLocation: true,
-        },
-        where: {
-          createdAt: Between(
-            new Date(targetStartDate),
-            new Date(targetEndDate),
-          ),
-        },
-      });
+      // 상태별 카운트 (DB GROUP BY)
+      const statusRows = await this.roomRepo
+        .createQueryBuilder('room')
+        .select('room.status', 'status')
+        .addSelect('COUNT(*)', 'count')
+        .where('room.created_at BETWEEN :start AND :end', {
+          start: targetStartDate,
+          end: targetEndDate,
+        })
+        .groupBy('room.status')
+        .getRawMany();
+
+      // 총 개수
+      const totalRoomsCount = await this.roomRepo
+        .createQueryBuilder('room')
+        .where('room.created_at BETWEEN :start AND :end', {
+          start: targetStartDate,
+          end: targetEndDate,
+        })
+        .getCount();
 
       const statusCounts: Record<string, number> = {
         TOTAL: totalRoomsCount,
@@ -1095,11 +1101,10 @@ export class RoomService {
         [RoomStatus.DELETED]: 0,
       };
 
-      for (const room of totalRooms) {
-        if (statusCounts[room.status] === undefined) {
-          statusCounts[room.status] = 0;
-        }
-        statusCounts[room.status] += 1;
+      for (const row of statusRows) {
+        const key = row.status as string;
+        const count = parseInt(row.count);
+        if (key) statusCounts[key] = count;
       }
 
       // 출발지/도착지 GROUP BY (DB 레벨)
