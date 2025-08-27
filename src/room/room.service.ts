@@ -1076,19 +1076,22 @@ export class RoomService {
         .createQueryBuilder('room')
         .select('room.status', 'status')
         .addSelect('COUNT(*)', 'count')
-        .where('room.created_at BETWEEN :start AND :end', {
+        .where('room.createdAt BETWEEN :start AND :end', {
           start: targetStartDate,
           end: targetEndDate,
         })
         .groupBy('room.status')
         .getRawMany();
 
-      const statusCounts: Record<string, number> = {};
+      const statusCounts: Record<string, number> = { total: 0 };
 
       for (const row of statusRows) {
         const key = row.status as string;
         const count = parseInt(row.count);
-        if (key) statusCounts[key] = count;
+        if (key) {
+          statusCounts[key] = count;
+          statusCounts.total += count;
+        }
       }
 
       // 출발지/도착지 GROUP BY (DB 레벨)
@@ -1096,34 +1099,36 @@ export class RoomService {
         .createQueryBuilder('room')
         .select('room.departureLocation', 'location')
         .addSelect('COUNT(*)', 'count')
-        .where('room.created_at BETWEEN :start AND :end', {
+        .where('room.createdAt BETWEEN :start AND :end', {
           start: targetStartDate,
           end: targetEndDate,
         })
         .groupBy('room.departureLocation')
         .getRawMany();
 
+      const departureLocationCounts: Record<string, number> = { total: 0 };
+      for (const row of departureRows) {
+        if (row.location)
+          departureLocationCounts[row.location] = parseInt(row.count);
+        departureLocationCounts.total += parseInt(row.count);
+      }
+
       const destinationRows = await this.roomRepo
         .createQueryBuilder('room')
         .select('room.destinationLocation', 'location')
         .addSelect('COUNT(*)', 'count')
-        .where('room.created_at BETWEEN :start AND :end', {
+        .where('room.createdAt BETWEEN :start AND :end', {
           start: targetStartDate,
           end: targetEndDate,
         })
         .groupBy('room.destinationLocation')
         .getRawMany();
 
-      const departureLocationCounts: Record<string, number> = {};
-      for (const row of departureRows) {
-        if (row.location)
-          departureLocationCounts[row.location] = parseInt(row.count);
-      }
-
-      const destinationLocationCounts: Record<string, number> = {};
+      const destinationLocationCounts: Record<string, number> = { total: 0 };
       for (const row of destinationRows) {
         if (row.location)
           destinationLocationCounts[row.location] = parseInt(row.count);
+        destinationLocationCounts.total += parseInt(row.count);
       }
 
       data[targetMonth] = {
