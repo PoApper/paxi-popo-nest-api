@@ -12,6 +12,7 @@ import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { instanceToPlain } from 'class-transformer';
+import * as moment from 'moment';
 
 import { Room } from 'src/room/entities/room.entity';
 import { RoomUser } from 'src/room/entities/room-user.entity';
@@ -30,6 +31,7 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
 import { ResponseSettlementDto } from './dto/response-settlement.dto';
+import { RoomStatisticsDto } from './dto/room-statistics.dto';
 
 @Injectable()
 export class RoomService {
@@ -189,7 +191,7 @@ export class RoomService {
       throw new BadRequestException('이미 종료된 방입니다.');
     }
 
-    if (!(user.userType == UserType.admin || room?.ownerUuid == user.uuid)) {
+    if (!(user.userType == UserType.admin || room.ownerUuid == user.uuid)) {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
 
@@ -1047,5 +1049,77 @@ export class RoomService {
     });
 
     return await this.findOneWithRoomUsers(roomUuid);
+  }
+
+  // 통계 데이터 로직
+  async getRoomStatistics(
+    startDate: string,
+    endDate: string,
+  ): Promise<{ [key: string]: RoomStatisticsDto }> {
+    const data: { [key: string]: RoomStatisticsDto } = {};
+
+    const query_start = moment(startDate);
+    const query_end = moment(endDate);
+
+    const query_idx = query_start;
+
+    while (query_idx.isBefore(query_end)) {
+      const targetMonth = query_idx.format('YYYY-MM');
+      const targetStartDate = query_idx.format('YYYY-MM-DD');
+      // 1달 더하기
+      query_idx.add(1, 'M');
+
+      const targetEndDate = query_idx.format('YYYY-MM-DD');
+
+      // 전체 방 생성 수
+      const [totalRooms, totalRoomsCount] = await this.roomRepo.findAndCount({
+        select: {
+          status: true,
+        },
+        where: {
+          createdAt: Between(
+            new Date(targetStartDate),
+            new Date(targetEndDate),
+          ),
+        },
+      });
+
+      let activatedRoomsCount = 0;
+      let inSettlementRoomsCount = 0;
+      let completedRoomsCount = 0;
+      let deletedRoomsCount = 0;
+      let deactivatedRoomsCount = 0;
+
+      for (const room of totalRooms) {
+        switch (room.status) {
+          case RoomStatus.ACTIVATED:
+            activatedRoomsCount++;
+            break;
+          case RoomStatus.IN_SETTLEMENT:
+            inSettlementRoomsCount++;
+            break;
+          case RoomStatus.COMPLETED:
+            completedRoomsCount++;
+            break;
+          case RoomStatus.DEACTIVATED:
+            deactivatedRoomsCount++;
+            break;
+          case RoomStatus.DELETED:
+            deletedRoomsCount++;
+            break;
+        }
+      }
+
+      data[targetMonth] = {
+        totalRoomsCount: totalRoomsCount,
+        activatedRoomsCount: activatedRoomsCount,
+        inSettlementRoomsCount: inSettlementRoomsCount,
+        deactivatedRoomsCount: deactivatedRoomsCount,
+        completedRoomsCount: completedRoomsCount,
+        deletedRoomsCount: deletedRoomsCount,
+      };
+    }
+
+    return data;
   }
 }
