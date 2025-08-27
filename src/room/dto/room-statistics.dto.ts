@@ -3,9 +3,8 @@ import { ApiProperty } from '@nestjs/swagger';
 export class RoomStatisticsDto {
   @ApiProperty({
     description:
-      '방 상태별 카운트 맵 (TOTAL, ACTIVE, IN_SETTLEMENT, COMPLETED, DEACTIVATED, DELETED)',
+      '방 상태별 카운트 맵 (ACTIVE, IN_SETTLEMENT, COMPLETED, DEACTIVATED, DELETED)',
     example: {
-      TOTAL: 155,
       ACTIVE: 120,
       IN_SETTLEMENT: 10,
       COMPLETED: 25,
@@ -46,7 +45,6 @@ export class RoomStatisticsResponseDto {
     example: {
       '2024-01': {
         statusCounts: {
-          TOTAL: 165,
           ACTIVE: 120,
           IN_SETTLEMENT: 10,
           COMPLETED: 25,
@@ -66,7 +64,6 @@ export class RoomStatisticsResponseDto {
       },
       '2024-02': {
         statusCounts: {
-          TOTAL: 195,
           ACTIVE: 140,
           IN_SETTLEMENT: 10,
           COMPLETED: 35,

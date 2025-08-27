@@ -1083,17 +1083,7 @@ export class RoomService {
         .groupBy('room.status')
         .getRawMany();
 
-      // 총 개수
-      const totalRoomsCount = await this.roomRepo
-        .createQueryBuilder('room')
-        .where('room.created_at BETWEEN :start AND :end', {
-          start: targetStartDate,
-          end: targetEndDate,
-        })
-        .getCount();
-
       const statusCounts: Record<string, number> = {
-        TOTAL: totalRoomsCount,
         [RoomStatus.ACTIVATED]: 0,
         [RoomStatus.IN_SETTLEMENT]: 0,
         [RoomStatus.COMPLETED]: 0,
