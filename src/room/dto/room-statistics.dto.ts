@@ -19,8 +19,8 @@ export class RoomStatisticsDto {
     example: {
       학생회관: 15,
       지곡회관: 12,
-      포항역: 8,
-      기숙사: 5,
+      'KTX 포항역': 8,
+      '포항 터미널': 5,
     },
   })
   departureLocationCounts: Record<string, number>;
@@ -30,8 +30,8 @@ export class RoomStatisticsDto {
     example: {
       학생회관: 10,
       지곡회관: 18,
-      포항역: 12,
-      기숙사: 8,
+      'KTX 포항역': 12,
+      '포항 터미널': 8,
     },
   })
   destinationLocationCounts: Record<string, number>;
@@ -54,12 +54,12 @@ export class RoomStatisticsResponseDto {
         departureLocationCounts: {
           학생회관: 15,
           지곡회관: 12,
-          포항역: 8,
+          'KTX 포항역': 8,
         },
         destinationLocationCounts: {
           학생회관: 10,
           지곡회관: 18,
-          포항역: 12,
+          'KTX 포항역': 12,
         },
       },
       '2024-02': {
@@ -73,12 +73,12 @@ export class RoomStatisticsResponseDto {
         departureLocationCounts: {
           학생회관: 16,
           지곡회관: 14,
-          포항역: 11,
+          'KTX 포항역': 11,
         },
         destinationLocationCounts: {
           학생회관: 13,
           지곡회관: 19,
-          포항역: 11,
+          'KTX 포항역': 11,
         },
       },
     },
