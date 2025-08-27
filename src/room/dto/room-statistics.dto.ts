@@ -2,40 +2,18 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class RoomStatisticsDto {
   @ApiProperty({
-    description: '전체 방 생성 수',
-    example: 155,
+    description:
+      '방 상태별 카운트 맵 (TOTAL, ACTIVE, IN_SETTLEMENT, COMPLETED, DEACTIVATED, DELETED)',
+    example: {
+      TOTAL: 155,
+      ACTIVE: 120,
+      IN_SETTLEMENT: 10,
+      COMPLETED: 25,
+      DEACTIVATED: 5,
+      DELETED: 5,
+    },
   })
-  totalRoomsCount: number;
-
-  @ApiProperty({
-    description: '활성화된 방 수',
-    example: 120,
-  })
-  activatedRoomsCount: number;
-
-  @ApiProperty({
-    description: '정산 중인 방 수',
-    example: 10,
-  })
-  inSettlementRoomsCount: number;
-
-  @ApiProperty({
-    description: '완료된 방 수',
-    example: 25,
-  })
-  completedRoomsCount: number;
-
-  @ApiProperty({
-    description: '비활성화/만료된 방 수',
-    example: 5,
-  })
-  deactivatedRoomsCount: number;
-
-  @ApiProperty({
-    description: '삭제된 방 수',
-    example: 5,
-  })
-  deletedRoomsCount: number;
+  statusCounts: Record<string, number>;
 
   @ApiProperty({
     description: '출발지별 방 생성 수',
@@ -67,12 +45,14 @@ export class RoomStatisticsResponseDto {
     additionalProperties: false,
     example: {
       '2024-01': {
-        totalRoomsCount: 165,
-        activatedRoomsCount: 120,
-        inSettlementRoomsCount: 10,
-        completedRoomsCount: 25,
-        deactivatedRoomsCount: 5,
-        deletedRoomsCount: 5,
+        statusCounts: {
+          TOTAL: 165,
+          ACTIVE: 120,
+          IN_SETTLEMENT: 10,
+          COMPLETED: 25,
+          DEACTIVATED: 5,
+          DELETED: 5,
+        },
         departureLocationCounts: {
           학생회관: 15,
           지곡회관: 12,
@@ -85,12 +65,14 @@ export class RoomStatisticsResponseDto {
         },
       },
       '2024-02': {
-        totalRoomsCount: 195,
-        activatedRoomsCount: 140,
-        inSettlementRoomsCount: 10,
-        completedRoomsCount: 35,
-        deactivatedRoomsCount: 5,
-        deletedRoomsCount: 5,
+        statusCounts: {
+          TOTAL: 195,
+          ACTIVE: 140,
+          IN_SETTLEMENT: 10,
+          COMPLETED: 35,
+          DEACTIVATED: 5,
+          DELETED: 5,
+        },
         departureLocationCounts: {
           학생회관: 16,
           지곡회관: 14,

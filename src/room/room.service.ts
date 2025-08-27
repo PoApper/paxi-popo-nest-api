@@ -1086,30 +1086,20 @@ export class RoomService {
         },
       });
 
-      let activatedRoomsCount = 0;
-      let inSettlementRoomsCount = 0;
-      let completedRoomsCount = 0;
-      let deletedRoomsCount = 0;
-      let deactivatedRoomsCount = 0;
+      const statusCounts: Record<string, number> = {
+        TOTAL: totalRoomsCount,
+        [RoomStatus.ACTIVATED]: 0,
+        [RoomStatus.IN_SETTLEMENT]: 0,
+        [RoomStatus.COMPLETED]: 0,
+        [RoomStatus.DEACTIVATED]: 0,
+        [RoomStatus.DELETED]: 0,
+      };
 
       for (const room of totalRooms) {
-        switch (room.status) {
-          case RoomStatus.ACTIVATED:
-            activatedRoomsCount++;
-            break;
-          case RoomStatus.IN_SETTLEMENT:
-            inSettlementRoomsCount++;
-            break;
-          case RoomStatus.COMPLETED:
-            completedRoomsCount++;
-            break;
-          case RoomStatus.DEACTIVATED:
-            deactivatedRoomsCount++;
-            break;
-          case RoomStatus.DELETED:
-            deletedRoomsCount++;
-            break;
+        if (statusCounts[room.status] === undefined) {
+          statusCounts[room.status] = 0;
         }
+        statusCounts[room.status] += 1;
       }
 
       // 출발지/도착지 GROUP BY (DB 레벨)
@@ -1148,15 +1138,10 @@ export class RoomService {
       }
 
       data[targetMonth] = {
-        totalRoomsCount: totalRoomsCount,
-        activatedRoomsCount: activatedRoomsCount,
-        inSettlementRoomsCount: inSettlementRoomsCount,
-        deactivatedRoomsCount: deactivatedRoomsCount,
-        completedRoomsCount: completedRoomsCount,
-        deletedRoomsCount: deletedRoomsCount,
+        statusCounts,
         departureLocationCounts,
         destinationLocationCounts,
-      };
+      } as RoomStatisticsDto;
     }
 
     return data;
