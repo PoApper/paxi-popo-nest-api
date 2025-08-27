@@ -1083,13 +1083,7 @@ export class RoomService {
         .groupBy('room.status')
         .getRawMany();
 
-      const statusCounts: Record<string, number> = {
-        [RoomStatus.ACTIVATED]: 0,
-        [RoomStatus.IN_SETTLEMENT]: 0,
-        [RoomStatus.COMPLETED]: 0,
-        [RoomStatus.DEACTIVATED]: 0,
-        [RoomStatus.DELETED]: 0,
-      };
+      const statusCounts: Record<string, number> = {};
 
       for (const row of statusRows) {
         const key = row.status as string;
