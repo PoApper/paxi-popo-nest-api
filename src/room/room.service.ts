@@ -1075,6 +1075,8 @@ export class RoomService {
       const [totalRooms, totalRoomsCount] = await this.roomRepo.findAndCount({
         select: {
           status: true,
+          departureLocation: true,
+          destinationLocation: true,
         },
         where: {
           createdAt: Between(
@@ -1110,6 +1112,41 @@ export class RoomService {
         }
       }
 
+      // 출발지/도착지 GROUP BY (DB 레벨)
+      const departureRows = await this.roomRepo
+        .createQueryBuilder('room')
+        .select('room.departureLocation', 'location')
+        .addSelect('COUNT(*)', 'count')
+        .where('room.created_at BETWEEN :start AND :end', {
+          start: targetStartDate,
+          end: targetEndDate,
+        })
+        .groupBy('room.departureLocation')
+        .getRawMany();
+
+      const destinationRows = await this.roomRepo
+        .createQueryBuilder('room')
+        .select('room.destinationLocation', 'location')
+        .addSelect('COUNT(*)', 'count')
+        .where('room.created_at BETWEEN :start AND :end', {
+          start: targetStartDate,
+          end: targetEndDate,
+        })
+        .groupBy('room.destinationLocation')
+        .getRawMany();
+
+      const departureLocationCounts: Record<string, number> = {};
+      for (const row of departureRows) {
+        if (row.location)
+          departureLocationCounts[row.location] = parseInt(row.count);
+      }
+
+      const destinationLocationCounts: Record<string, number> = {};
+      for (const row of destinationRows) {
+        if (row.location)
+          destinationLocationCounts[row.location] = parseInt(row.count);
+      }
+
       data[targetMonth] = {
         totalRoomsCount: totalRoomsCount,
         activatedRoomsCount: activatedRoomsCount,
@@ -1117,6 +1154,8 @@ export class RoomService {
         deactivatedRoomsCount: deactivatedRoomsCount,
         completedRoomsCount: completedRoomsCount,
         deletedRoomsCount: deletedRoomsCount,
+        departureLocationCounts,
+        destinationLocationCounts,
       };
     }
 
