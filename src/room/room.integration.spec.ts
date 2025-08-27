@@ -382,4 +382,145 @@ describe('RoomModule - Integration Test', () => {
       ).rejects.toThrow('이미 종료된 방입니다.');
     });
   });
+
+  describe('cancelKickUserFromRoom', () => {
+    let testRoom: any;
+    let kickedUser: any;
+    let testUserJwt: JwtPayload;
+
+    beforeEach(async () => {
+      testRoom = await roomService.create(testUtils.getTestUser().uuid, {
+        description: '테스트 방입니다',
+        title: '테스트 방',
+        departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24),
+        departureLocation: '출발지',
+        destinationLocation: '도착지',
+        maxParticipant: 4,
+      });
+
+      // 강퇴할 유저 생성
+      kickedUser = await userService.save({
+        email: 'kicked@test.com',
+        password: 'password123',
+        name: 'Kicked User',
+        userType: UserType.student,
+      });
+
+      await userService.createNickname(kickedUser.uuid, '강퇴된_유저_1234');
+
+      // 방에 참여시킨 후 강퇴
+      await roomService.joinRoom(testRoom.uuid, kickedUser.uuid);
+      await roomService.kickUserFromRoom(
+        testRoom.uuid,
+        testUtils.getTestUser().uuid,
+        kickedUser.uuid,
+        '테스트 강퇴',
+        UserType.student,
+      );
+
+      testUserJwt = {
+        uuid: testUtils.getTestUser().uuid,
+        email: testUtils.getTestUser().email,
+        name: testUtils.getTestUser().name,
+        nickname: '행복한_수소_1234',
+        userType: UserType.student,
+      };
+    });
+
+    it('should cancel kick user from room successfully', async () => {
+      const result = await roomService.cancelKickUserFromRoom(
+        testRoom.uuid,
+        testUtils.getTestUser().uuid,
+        kickedUser.uuid,
+        UserType.student,
+      );
+
+      expect(result).toBeDefined();
+      expect(result.uuid).toBe(testRoom.uuid);
+
+      // 강퇴된 사용자가 방에 다시 참여할 수 있는지 확인
+      const joinResult = await roomService.joinRoom(
+        testRoom.uuid,
+        kickedUser.uuid,
+      );
+      expect(joinResult.room.uuid).toBe(testRoom.uuid);
+    });
+
+    it('should throw NotFoundException when kicked user does not exist', async () => {
+      const nonExistentUserUuid = '123e4567-e89b-12d3-a456-426614174000';
+
+      await expect(
+        roomService.cancelKickUserFromRoom(
+          testRoom.uuid,
+          testUtils.getTestUser().uuid,
+          nonExistentUserUuid,
+          UserType.student,
+        ),
+      ).rejects.toThrow('강퇴된 사용자를 찾을 수 없습니다.');
+    });
+
+    it('should throw UnauthorizedException when user is not the owner or admin', async () => {
+      // 다른 유저 생성
+      const anotherUser = await userService.save({
+        email: 'another@test.com',
+        password: 'password123',
+        name: 'Another User',
+        userType: UserType.student,
+      });
+
+      await expect(
+        roomService.cancelKickUserFromRoom(
+          testRoom.uuid,
+          anotherUser.uuid,
+          kickedUser.uuid,
+          UserType.student,
+        ),
+      ).rejects.toThrow('방장 또는 관리자만 강퇴를 취소할 수 있습니다.');
+    });
+
+    it('should allow admin to cancel kick any user', async () => {
+      const adminJwt: JwtPayload = {
+        uuid: 'admin-uuid',
+        email: 'admin@test.com',
+        name: 'Admin User',
+        nickname: 'admin',
+        userType: UserType.admin,
+      };
+
+      const result = await roomService.cancelKickUserFromRoom(
+        testRoom.uuid,
+        adminJwt.uuid,
+        kickedUser.uuid,
+        UserType.admin,
+      );
+
+      expect(result).toBeDefined();
+      expect(result.uuid).toBe(testRoom.uuid);
+
+      // 방 재입장
+      const joinResult = await roomService.joinRoom(
+        testRoom.uuid,
+        kickedUser.uuid,
+      );
+      expect(joinResult.room.uuid).toBe(testRoom.uuid);
+    });
+
+    it('should work through controller', async () => {
+      const result = await roomController.cancelKickUserFromRoom(
+        testUserJwt,
+        testRoom.uuid,
+        { kickedUserUuid: kickedUser.uuid },
+      );
+
+      expect(result).toBeDefined();
+      expect(result.uuid).toBe(testRoom.uuid);
+
+      // 방 재입장
+      const joinResult = await roomService.joinRoom(
+        testRoom.uuid,
+        kickedUser.uuid,
+      );
+      expect(joinResult.room.uuid).toBe(testRoom.uuid);
+    });
+  });
 });

@@ -3,12 +3,15 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { LessThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { v4 as uuidv4 } from 'uuid';
 
 import { RoomService } from 'src/room/room.service';
+import { UserType } from 'src/user/user.meta';
+import { RoomUser } from 'src/room/entities/room-user.entity';
 
 import { Chat } from './entities/chat.entity';
 import { CreateChatDto } from './dto/create-chat.dto';
@@ -19,6 +22,8 @@ export class ChatService {
     private readonly chatRepo: Repository<Chat>,
     @Inject(forwardRef(() => RoomService)) // 순환 참조 해결
     private readonly roomService: RoomService,
+    @InjectRepository(RoomUser)
+    private readonly roomUserRepo: Repository<RoomUser>,
   ) {}
 
   async create(createChatDto: CreateChatDto, senderNickname?: string) {
@@ -58,9 +63,18 @@ export class ChatService {
     roomUuid: string,
     before: string | null,
     take: number,
+    userType: UserType,
+    userUuid: string,
   ) {
-    if (!(await this.roomService.findOne(roomUuid))) {
-      throw new NotFoundException('방을 찾을 수 없습니다.');
+    if (
+      userType !== UserType.admin &&
+      !(await this.roomUserRepo.findOne({
+        where: { roomUuid, userUuid: userUuid },
+      }))
+    ) {
+      throw new UnauthorizedException(
+        '채팅을 볼 권한이 없습니다. 관리자 혹은 방에 속한 유저만 가능합니다.',
+      );
     }
 
     const queryBuilder = this.chatRepo

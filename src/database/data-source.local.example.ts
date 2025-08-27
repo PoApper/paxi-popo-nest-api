@@ -1,7 +1,7 @@
 import { DataSource } from 'typeorm';
 
 export const LocalDataSource = new DataSource({
-  type: 'mysql',
+  type: 'mariadb',
   host: 'localhost',
   port: 3306,
   username: 'local-username', // local 환경의 username

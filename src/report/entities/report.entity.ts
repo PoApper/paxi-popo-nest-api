@@ -28,6 +28,22 @@ export class Report extends Base {
   @Column({ nullable: true, type: 'text' })
   reason: string;
 
+  // 관리자 처리 결과 메시지
+  @Column({ name: 'resolution_message', nullable: true, type: 'text' })
+  resolutionMessage: string;
+
+  // 처리한 관리자 UUID
+  @Column({ name: 'resolver_uuid', nullable: true })
+  resolverUuid: string;
+
+  // 처리한 관리자 이름
+  @Column({ name: 'resolver_name', nullable: true })
+  resolverName: string;
+
+  // 처리 날짜
+  @Column({ name: 'resolved_at', nullable: true })
+  resolvedAt: Date;
+
   @Column({ nullable: false, default: ReportStatus.PENDING })
   status: ReportStatus;
 

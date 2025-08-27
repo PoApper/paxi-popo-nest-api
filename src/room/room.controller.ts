@@ -8,6 +8,8 @@ import {
   Post,
   Put,
   UseGuards,
+  Query,
+  ParseBoolPipe,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -15,6 +17,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiResponse,
+  ApiQuery,
 } from '@nestjs/swagger';
 
 import { JwtPayload } from 'src/auth/strategies/jwt.payload';
@@ -39,6 +42,7 @@ import { RoomUser } from './entities/room-user.entity';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
 import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
 import { ResponseSettlementDto } from './dto/response-settlement.dto';
+
 @ApiCookieAuth()
 @ApiResponse({
   status: 401,
@@ -83,13 +87,23 @@ export class RoomController {
   @ApiOperation({
     summary: '모든 방의 정보를 반환합니다.',
   })
+  @ApiQuery({
+    name: 'all',
+    required: false,
+    type: Boolean,
+    default: false,
+    description:
+      'true면 모든 방을, 미설정 또는 false면 출발 시간이 현재보다 이후인 활성화된 방만 반환. 관리자 페이지에서 모든 방을 조회하기 위해 true를 설정함.',
+  })
   @ApiResponse({
     status: 200,
     description: '출발 시간이 현재보다 이후이고, 모집 중인 모든 방을 반환',
     type: [Room],
   })
-  findAll() {
-    return this.roomService.findAll();
+  findAll(
+    @Query('all', new ParseBoolPipe({ optional: true })) all: boolean = false,
+  ) {
+    return this.roomService.findAll(all);
   }
 
   @Get('my/:userUuid')
@@ -131,11 +145,11 @@ export class RoomController {
 
   @Get(':uuid')
   @ApiOperation({
-    summary: '특정 방의 정보를 반환합니다.',
+    summary: '특정 방의 정보를 반환합니다. (복호화된 계좌번호 포함)',
   })
   @ApiResponse({
     status: 200,
-    description: '특정 방을 반환',
+    description: '복호화된 계좌번호가 포함된 방 정보를 반환',
     type: RoomWithUsersDto,
   })
   findOne(@Param('uuid') uuid: string) {
@@ -280,7 +294,7 @@ export class RoomController {
   @Put('kick/:uuid')
   @ApiOperation({
     summary:
-      '사용자를 추방합니다. 방장만 가능하며, 사용자의 상태를 KICKED로 변경합니다.',
+      '사용자를 추방합니다. 방장 및 관리자만 가능하며, 사용자의 상태를 KICKED로 변경합니다.',
   })
   @ApiBody({
     schema: {
@@ -311,7 +325,7 @@ export class RoomController {
   })
   @ApiResponse({
     status: 401,
-    description: '로그인이 되어 있지 않은 경우, 방장이 아닌 경우',
+    description: '로그인이 되어 있지 않은 경우, 방장이나 관리자가 아닌 경우',
   })
   async kickUserFromRoom(
     @User() user: JwtPayload,
@@ -323,12 +337,78 @@ export class RoomController {
       user.uuid,
       dto.kickedUserUuid,
       dto.reason,
+      user.userType,
     );
 
     const kickedUserNickname = await this.userService.getNickname(
       dto.kickedUserUuid,
     );
-    const message = `방장에 의해 ${kickedUserNickname?.nickname} 님이 방에서 강제퇴장 되었습니다.`;
+
+    const kicker = user.uuid == room.ownerUuid ? '방장' : '관리자';
+    const message = `${kicker}에 의해 ${kickedUserNickname?.nickname} 님이 방에서 강제퇴장 되었습니다.`;
+    const chat = await this.chatService.create({
+      roomUuid: uuid,
+      message: message,
+      messageType: ChatMessageType.TEXT,
+    });
+    this.chatGateway.sendMessage(uuid, chat);
+
+    return room;
+  }
+
+  @Delete('kick/:uuid')
+  @ApiOperation({
+    summary:
+      '사용자의 강퇴를 취소합니다. 방장 및 관리자만 가능하며, KICKED 상태인 RoomUser 데이터를 삭제합니다.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        kickedUserUuid: {
+          type: 'string',
+          description: '강퇴 취소할 사용자의 UUID',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      '강퇴가 취소된 방 정보를 반환, 방에 강퇴 취소 메세지를 전송합니다.',
+    type: RoomWithUsersDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: '강퇴된 사용자가 존재하지 않는 경우',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '방장이나 관리자가 아닌 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '강퇴된 사용자를 찾을 수 없는 경우',
+  })
+  async cancelKickUserFromRoom(
+    @User() user: JwtPayload,
+    @Param('uuid') uuid: string,
+    @Body() dto: { kickedUserUuid: string },
+  ) {
+    const room = await this.roomService.cancelKickUserFromRoom(
+      uuid,
+      user.uuid,
+      dto.kickedUserUuid,
+      user.userType,
+    );
+
+    const kickedUserNickname = await this.userService.getNickname(
+      dto.kickedUserUuid,
+    );
+
+    const canceler = user.uuid == room.ownerUuid ? '방장' : '관리자';
+    const message = `${canceler}에 의해 ${kickedUserNickname?.nickname} 님의 강퇴가 취소되었습니다.`;
     const chat = await this.chatService.create({
       roomUuid: uuid,
       message: message,
