@@ -31,7 +31,7 @@ export class ReportController {
 
   @Post()
   @ApiOperation({
-    summary: '방 또는 방의 특정 유저를 신고합니다.',
+    summary: '방의 특정 유저를 신고합니다.',
   })
   @ApiResponse({
     status: 201,
@@ -40,6 +40,10 @@ export class ReportController {
   @ApiResponse({
     status: 401,
     description: '로그인이 되어 있지 않은 경우',
+  })
+  @ApiResponse({
+    status: 400,
+    description: '자기 자신을 신고하는 경우',
   })
   async create(@User() user: JwtPayload, @Body() dto: CreateReportDto) {
     return await this.reportService.create(user.uuid, dto);

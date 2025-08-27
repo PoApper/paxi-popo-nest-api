@@ -22,6 +22,10 @@ export class ReportService {
   ) {}
 
   async create(reporterUuid: string, createReportDto: CreateReportDto) {
+    if (createReportDto.targetUserUuid === reporterUuid) {
+      throw new BadRequestException('자기 자신을 신고할 수 없습니다.');
+    }
+
     const room = await this.roomService.findOne(createReportDto.targetRoomUuid);
     if (!room) {
       throw new NotFoundException('방을 찾을 수 없습니다.');
@@ -31,6 +35,7 @@ export class ReportService {
     if (!user) {
       throw new NotFoundException('유저를 찾을 수 없습니다.');
     }
+
     return await this.reportRepository.save({
       ...createReportDto,
       reporterUuid: reporterUuid,
