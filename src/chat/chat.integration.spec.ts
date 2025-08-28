@@ -12,6 +12,7 @@ import { UserType } from 'src/user/user.meta';
 import { FcmService } from 'src/fcm/fcm.service';
 import { RoomService } from 'src/room/room.service';
 import { RoomModule } from 'src/room/room.module';
+import { JwtPayload } from 'src/auth/strategies/jwt.payload';
 
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
@@ -368,7 +369,12 @@ describe('ChatModule - Integration Test', () => {
     });
 
     it('should get messages without before parameter (latest messages)', async () => {
-      const result = await chatController.getMessages(testRoom.uuid, null, 5);
+      const result = await chatController.getMessages(
+        testRoom.uuid,
+        null,
+        5,
+        testUtils.getTestUserJwtToken(),
+      );
 
       expect(result).toHaveLength(5);
       // 최신 메시지부터 가져와야 함 (ID 내림차순)
@@ -381,6 +387,7 @@ describe('ChatModule - Integration Test', () => {
         testRoom.uuid,
         middleChat.uuid,
         3,
+        testUtils.getTestUserJwtToken(),
       );
 
       expect(result).toHaveLength(3);
@@ -394,6 +401,7 @@ describe('ChatModule - Integration Test', () => {
         testRoom.uuid,
         nonExistentUuid,
         5,
+        testUtils.getTestUserJwtToken(),
       );
 
       expect(result).toHaveLength(0);
@@ -403,12 +411,38 @@ describe('ChatModule - Integration Test', () => {
       const nonExistentRoomUuid = '123e4567-e89b-12d3-a456-426614174000';
 
       await expect(
-        chatController.getMessages(nonExistentRoomUuid, null, 5),
+        chatController.getMessages(
+          nonExistentRoomUuid,
+          null,
+          5,
+          testUtils.getTestUserJwtToken(),
+        ),
       ).rejects.toThrow('방이 존재하지 않습니다.');
     });
 
+    it('should throw ForbiddenException when user is not the room owner', async () => {
+      const anotherUserJwtToken: JwtPayload = {
+        uuid: '123e4567-e89b-12d3-a456-426614174000',
+        email: 'test@test.com',
+        name: 'test',
+        nickname: 'test',
+        userType: UserType.student,
+      };
+
+      await expect(
+        chatController.getMessages(testRoom.uuid, null, 5, anotherUserJwtToken),
+      ).rejects.toThrow(
+        '채팅을 볼 권한이 없습니다. 관리자 혹은 방에 속한 유저만 가능합니다.',
+      );
+    });
+
     it('should use default take value when not provided', async () => {
-      const result = await chatController.getMessages(testRoom.uuid, null, 30);
+      const result = await chatController.getMessages(
+        testRoom.uuid,
+        null,
+        30,
+        testUtils.getTestUserJwtToken(),
+      );
 
       expect(result).toHaveLength(10); // 실제 생성된 메시지 개수
     });
@@ -423,7 +457,12 @@ describe('ChatModule - Integration Test', () => {
         maxParticipant: 4,
       });
 
-      const result = await chatController.getMessages(emptyRoom.uuid, null, 5);
+      const result = await chatController.getMessages(
+        emptyRoom.uuid,
+        null,
+        5,
+        testUtils.getTestUserJwtToken(),
+      );
 
       expect(result).toHaveLength(0);
     });

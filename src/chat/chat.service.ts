@@ -66,6 +66,11 @@ export class ChatService {
     userType: UserType,
     userUuid: string,
   ) {
+    const room = await this.roomService.findOne(roomUuid);
+    if (!room) {
+      throw new NotFoundException('방이 존재하지 않습니다.');
+    }
+
     if (
       userType !== UserType.admin &&
       !(await this.roomUserRepo.findOne({
