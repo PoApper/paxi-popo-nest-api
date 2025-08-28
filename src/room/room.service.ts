@@ -1061,7 +1061,7 @@ export class RoomService {
     const query_start = moment(startDate);
     const query_end = moment(endDate);
 
-    const query_idx = query_start;
+    const query_idx = query_start.clone();
 
     while (query_idx.isBefore(query_end)) {
       const targetMonth = query_idx.format('YYYY-MM');
@@ -1108,9 +1108,10 @@ export class RoomService {
 
       const departureLocationCounts: Record<string, number> = { total: 0 };
       for (const row of departureRows) {
-        if (row.location)
+        if (row.location) {
           departureLocationCounts[row.location] = parseInt(row.count);
-        departureLocationCounts.total += parseInt(row.count);
+          departureLocationCounts.total += parseInt(row.count);
+        }
       }
 
       const destinationRows = await this.roomRepo
@@ -1126,9 +1127,10 @@ export class RoomService {
 
       const destinationLocationCounts: Record<string, number> = { total: 0 };
       for (const row of destinationRows) {
-        if (row.location)
+        if (row.location) {
           destinationLocationCounts[row.location] = parseInt(row.count);
-        destinationLocationCounts.total += parseInt(row.count);
+          destinationLocationCounts.total += parseInt(row.count);
+        }
       }
 
       data[targetMonth] = {
