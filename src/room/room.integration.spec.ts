@@ -35,7 +35,7 @@ describe('RoomModule - Integration Test', () => {
         ConfigModule.forRoot({
           load: [configurations],
           isGlobal: true,
-          envFilePath: ['.env'],
+          envFilePath: ['.env.test'],
         }),
         TypeOrmModule.forRootAsync({
           imports: [ConfigModule],
