@@ -42,6 +42,7 @@ import { RoomUser } from './entities/room-user.entity';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
 import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
 import { ResponseSettlementDto } from './dto/response-settlement.dto';
+import { RoomStatisticsResponseDto } from './dto/room-statistics.dto';
 
 @ApiCookieAuth()
 @ApiResponse({
@@ -61,6 +62,51 @@ export class RoomController {
     private readonly chatService: ChatService,
     private readonly fcmService: FcmService,
   ) {}
+
+  // 아래쪽 GET :uuid 랑 겹쳐서 위쪽으로 컨트롤러 올림
+  // TODO: 주간 통계 추가
+  @Get('statistics')
+  @ApiOperation({
+    summary: '[관리자 전용] 기간별 방 생성 통계를 조회합니다.',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: true,
+    type: String,
+    example: '20250101',
+    description: '시작 날짜 (YYYYMMDD 형식)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: true,
+    type: String,
+    example: '20251231',
+    description: '종료 날짜 (YYYYMMDD 형식)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '기간별 방 생성 통계를 반환',
+    type: RoomStatisticsResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: '로그인이 되어 있지 않은 경우',
+  })
+  @ApiResponse({
+    status: 403,
+    description: '관리자 권한이 없는 경우',
+  })
+  @UseGuards(RolesGuard)
+  @Roles(UserType.admin)
+  async getRoomStatistics(
+    @Query() query: { startDate: string; endDate: string },
+  ): Promise<RoomStatisticsResponseDto> {
+    const data = await this.roomService.getRoomStatistics(
+      query.startDate,
+      query.endDate,
+    );
+    return { data };
+  }
 
   @Post()
   @ApiOperation({

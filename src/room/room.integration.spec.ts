@@ -523,4 +523,130 @@ describe('RoomModule - Integration Test', () => {
       expect(joinResult.room.uuid).toBe(testRoom.uuid);
     });
   });
+
+  describe('statistics', () => {
+    it('should return monthly statistics with status and location dictionaries', async () => {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = (now.getMonth() + 1).toString().padStart(2, '0');
+      const startDate = `${y}${m}01`;
+      // 임의로 월말을 크게 잡아 다음달 01로 범위를 만들기 위해 31일 지정
+      const endDate = `${y}${m}31`;
+
+      // Room A (ACTIVE)
+      await roomService.create(testUtils.getTestUser().uuid, {
+        description: 'A desc',
+        title: 'A 제목',
+        departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 1),
+        departureLocation: '학생회관',
+        destinationLocation: '포항역',
+        maxParticipant: 4,
+      });
+
+      // Room B (IN_SETTLEMENT)
+      const roomB = await roomService.create(testUtils.getTestUser().uuid, {
+        description: 'B desc',
+        title: 'B 제목',
+        departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2),
+        departureLocation: '지곡회관',
+        destinationLocation: '포항역',
+        maxParticipant: 4,
+      });
+      await roomService.requestSettlement(
+        roomB.uuid,
+        testUtils.getTestUser().uuid,
+        {
+          payAmount: 1000,
+          payerAccountNumber: '111-222',
+          payerAccountHolderName: '테스터',
+          payerBankName: '국민',
+          updateAccount: true,
+        },
+      );
+
+      // Room C (COMPLETED)
+      const roomC = await roomService.create(testUtils.getTestUser().uuid, {
+        description: 'C desc',
+        title: 'C 제목',
+        departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3),
+        departureLocation: '학생회관',
+        destinationLocation: '지곡회관',
+        maxParticipant: 4,
+      });
+      await roomService.requestSettlement(
+        roomC.uuid,
+        testUtils.getTestUser().uuid,
+        {
+          payAmount: 2000,
+          payerAccountNumber: '333-444',
+          payerAccountHolderName: '테스터',
+          payerBankName: '농협',
+          updateAccount: true,
+        },
+      );
+      await roomService.completeRoom(
+        roomC.uuid,
+        testUtils.getTestUser().uuid,
+        UserType.student,
+      );
+
+      // Room D (DELETED)
+      const roomD = await roomService.create(testUtils.getTestUser().uuid, {
+        description: 'D desc',
+        title: 'D 제목',
+        departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 4),
+        departureLocation: '포항역',
+        destinationLocation: '학생회관',
+        maxParticipant: 4,
+      });
+      await roomService.remove(roomD.uuid, testUtils.getTestUser().uuid);
+
+      const res = await roomController.getRoomStatistics({
+        startDate,
+        endDate,
+      });
+      expect(res).toBeDefined();
+      const monthKey = `${y}-${m}`;
+      const monthData = res.data[monthKey];
+      expect(monthData).toBeDefined();
+      if (!monthData) {
+        throw new Error('Month data not found');
+      }
+
+      // statusCounts dictionary
+      expect(monthData.statusCounts).toBeDefined();
+      expect(typeof monthData.statusCounts.total).toBe('number');
+      expect(monthData.statusCounts.total).toBeGreaterThanOrEqual(4);
+      // ACTIVE는 총 1개 (A)
+      expect(
+        monthData.statusCounts[RoomStatus.ACTIVATED],
+      ).toBeGreaterThanOrEqual(1);
+      // IN_SETTLEMENT는 총 1개 (B)
+      expect(
+        monthData.statusCounts[RoomStatus.IN_SETTLEMENT],
+      ).toBeGreaterThanOrEqual(1);
+      // COMPLETED는 총 1개 (C)
+      expect(
+        monthData.statusCounts[RoomStatus.COMPLETED],
+      ).toBeGreaterThanOrEqual(1);
+      // DELETED는 총 1개 (D)
+      expect(monthData.statusCounts[RoomStatus.DELETED]).toBeGreaterThanOrEqual(
+        1,
+      );
+
+      // locations dictionary
+      expect(monthData.departureLocationCounts).toBeDefined();
+      expect(monthData.destinationLocationCounts).toBeDefined();
+      // 키-값 형태 검증
+      expect(typeof monthData.departureLocationCounts).toBe('object');
+      expect(typeof monthData.destinationLocationCounts).toBe('object');
+      // 총합 검증
+      expect(monthData.departureLocationCounts.total).toBe(
+        monthData.statusCounts.total,
+      );
+      expect(monthData.destinationLocationCounts.total).toBe(
+        monthData.statusCounts.total,
+      );
+    });
+  });
 });
