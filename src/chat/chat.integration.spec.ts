@@ -20,6 +20,7 @@ import { ChatModule } from './chat.module';
 import { Chat } from './entities/chat.entity';
 import { ChatMessageType } from './entities/chat.meta';
 import { CreateChatDto } from './dto/create-chat.dto';
+import { ChatSenderGuard } from './guards/chat-sender.guard';
 
 describe('ChatModule - Integration Test', () => {
   let app: INestApplication;
@@ -819,9 +820,7 @@ describe('ChatModule - Integration Test', () => {
       };
 
       // ChatSenderGuard 인스턴스 생성
-      const chatSenderGuard = new (
-        await import('./guards/chat-sender.guard')
-      ).ChatSenderGuard(chatService);
+      const chatSenderGuard = new ChatSenderGuard(chatService);
 
       // 다른 유저로 메시지 수정 시도 시 ForbiddenException 발생
       await expect(
@@ -843,9 +842,7 @@ describe('ChatModule - Integration Test', () => {
       };
 
       // ChatSenderGuard 인스턴스 생성
-      const chatSenderGuard = new (
-        await import('./guards/chat-sender.guard')
-      ).ChatSenderGuard(chatService);
+      const chatSenderGuard = new ChatSenderGuard(chatService);
 
       // 메시지 발신자는 통과해야 함
       const result = await chatSenderGuard.canActivate(mockContext as any);
