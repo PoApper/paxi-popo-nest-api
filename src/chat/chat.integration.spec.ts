@@ -397,6 +397,149 @@ describe('ChatModule - Integration Test', () => {
 
       expect(result).toHaveLength(0);
     });
+
+    describe('Kicked User', () => {
+      let kickedUser: any;
+      let kickedUserJwtToken: JwtPayload;
+      let kickedAdmin: any;
+      let kickedAdminJwtToken: JwtPayload;
+
+      beforeEach(async () => {
+        // 강퇴될 일반 유저 생성
+        kickedUser = await userService.save({
+          email: 'kicked@test.com',
+          password: 'password123',
+          name: 'Kicked User',
+          userType: UserType.student,
+        });
+
+        await userService.createNickname(kickedUser.uuid, '강퇴된_유저_1234');
+
+        kickedUserJwtToken = {
+          uuid: kickedUser.uuid,
+          email: kickedUser.email,
+          name: kickedUser.name,
+          nickname: '강퇴된_유저_1234',
+          userType: UserType.student,
+        };
+
+        // 강퇴될 어드민 유저 생성
+        kickedAdmin = await userService.save({
+          email: 'kickedadmin@test.com',
+          password: 'password123',
+          name: 'Kicked Admin',
+          userType: UserType.admin,
+        });
+
+        await userService.createNickname(kickedAdmin.uuid, '강퇴된_어드민_1234');
+
+        kickedAdminJwtToken = {
+          uuid: kickedAdmin.uuid,
+          email: kickedAdmin.email,
+          name: kickedAdmin.name,
+          nickname: '강퇴된_어드민_1234',
+          userType: UserType.admin,
+        };
+      });
+
+      it('should throw UnauthorizedException when kicked user tries to read chat messages', async () => {
+        // 유저를 방에 참여시킨 후 강퇴
+        await roomService.joinRoom(testRoom.uuid, kickedUser.uuid);
+        await roomService.kickUserFromRoom(
+          testRoom.uuid,
+          testUtils.getTestUser().uuid,
+          kickedUser.uuid,
+          '테스트 강퇴',
+          UserType.student,
+        );
+
+        // 강퇴된 유저가 채팅을 읽으려고 시도
+        await expect(
+          chatController.getMessages(
+            testRoom.uuid,
+            null,
+            5,
+            kickedUserJwtToken,
+          ),
+        ).rejects.toThrow('강퇴된 유저는 채팅을 볼 수 없습니다.');
+      });
+
+      it('should throw UnauthorizedException when kicked admin tries to read chat messages', async () => {
+        // 어드민을 방에 참여시킨 후 강퇴
+        await roomService.joinRoom(testRoom.uuid, kickedAdmin.uuid);
+        await roomService.kickUserFromRoom(
+          testRoom.uuid,
+          testUtils.getTestUser().uuid,
+          kickedAdmin.uuid,
+          '테스트 강퇴',
+          UserType.student,
+        );
+
+        // 강퇴된 어드민이 채팅을 읽으려고 시도
+        await expect(
+          chatController.getMessages(
+            testRoom.uuid,
+            null,
+            5,
+            kickedAdminJwtToken,
+          ),
+        ).rejects.toThrow('강퇴된 유저는 채팅을 볼 수 없습니다.');
+      });
+
+      it('should allow admin to read chat messages when not in room and not kicked', async () => {
+        // 어드민이 방에 참여하지 않은 상태에서 채팅을 읽으려고 시도 (관리자 페이지 용도)
+        const result = await chatController.getMessages(
+          testRoom.uuid,
+          null,
+          5,
+          testUtils.getTestAdminJwtToken(),
+        );
+
+        expect(result).toBeDefined();
+        expect(result).toHaveLength(5);
+        // 최신 메시지부터 가져와야 함 (ID 내림차순)
+        expect(result[0].id).toBeGreaterThan(result[1].id);
+      });
+
+      it('should allow normal user to read chat messages when not kicked', async () => {
+        // 일반 유저를 방에 참여시킨 후 (강퇴하지 않고) 채팅을 읽으려고 시도
+        await roomService.joinRoom(testRoom.uuid, kickedUser.uuid);
+
+        const result = await chatController.getMessages(
+          testRoom.uuid,
+          null,
+          5,
+          kickedUserJwtToken,
+        );
+
+        expect(result).toBeDefined();
+        expect(result).toHaveLength(5);
+        // 최신 메시지부터 가져와야 함 (ID 내림차순)
+        expect(result[0].id).toBeGreaterThan(result[1].id);
+      });
+
+      it('should throw UnauthorizedException when non-admin user not in room tries to read chat', async () => {
+        // 방에 참여하지 않은 일반 유저가 채팅을 읽으려고 시도
+        const anotherUserJwtToken: JwtPayload = {
+          uuid: '123e4567-e89b-12d3-a456-426614174000',
+          email: 'another@test.com',
+          name: 'Another User',
+          nickname: 'another_user',
+          userType: UserType.student,
+        };
+
+        await expect(
+          chatController.getMessages(
+            testRoom.uuid,
+            null,
+            5,
+            anotherUserJwtToken,
+          ),
+        ).rejects.toThrow(
+          '채팅을 볼 권한이 없습니다. 관리자 혹은 방에 속한 유저만 가능합니다.',
+        );
+      });
+    });
   });
 
   describe('updateMessage', () => {
