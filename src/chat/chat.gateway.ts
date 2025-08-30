@@ -123,6 +123,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           usersToNotify,
           `${await this.roomService.getRoomTitle(roomUuid)}`,
           message.message,
+          {
+            roomUuid: roomUuid,
+          },
         )
         .catch(console.error);
     }
