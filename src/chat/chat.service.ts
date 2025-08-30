@@ -52,14 +52,6 @@ export class ChatService {
     });
   }
 
-  async getAllMessages(roomUuid: string, take: number, skip: number) {
-    return await this.chatRepo.find({
-      where: { roomUuid },
-      take: take,
-      skip: skip,
-    });
-  }
-
   async getMessagesByCursor(
     roomUuid: string,
     before: string | null,

@@ -267,78 +267,6 @@ describe('ChatModule - Integration Test', () => {
     });
   });
 
-  describe('getAllMessages', () => {
-    let testRoom: any;
-
-    beforeEach(async () => {
-      testRoom = await roomService.create(testUtils.getTestUser().uuid, {
-        description: '테스트 방입니다',
-        title: '테스트 방',
-        departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        departureLocation: '출발지',
-        destinationLocation: '도착지',
-        maxParticipant: 4,
-      });
-
-      // 여러 메시지 생성
-      for (let i = 1; i <= 10; i++) {
-        await chatService.create(
-          {
-            roomUuid: testRoom.uuid,
-            senderUuid: testUtils.getTestUser().uuid,
-            message: `메시지 ${i}`,
-            messageType: ChatMessageType.TEXT,
-          },
-          '테스트_닉네임',
-        );
-      }
-    });
-
-    it('should get messages with pagination', async () => {
-      const result = await chatService.getAllMessages(testRoom.uuid, 5, 0);
-
-      expect(result).toHaveLength(5);
-      for (let i = 0; i < 5; i++) {
-        expect(result[i].senderNickname).toBe('테스트_닉네임');
-        expect(result[i].senderUuid).toBe(testUtils.getTestUser().uuid);
-        expect(result[i].message).toBe(`메시지 ${i + 1}`);
-        expect(result[i].messageType).toBe(ChatMessageType.TEXT);
-      }
-    });
-
-    it('should get messages with skip', async () => {
-      const skipLength = 5;
-      const result = await chatService.getAllMessages(
-        testRoom.uuid,
-        5,
-        skipLength,
-      );
-
-      expect(result).toHaveLength(5);
-      for (let i = 0; i < 5; i++) {
-        expect(result[i].senderNickname).toBe('테스트_닉네임');
-        expect(result[i].senderUuid).toBe(testUtils.getTestUser().uuid);
-        expect(result[i].message).toBe(`메시지 ${i + skipLength + 1}`);
-        expect(result[i].messageType).toBe(ChatMessageType.TEXT);
-      }
-    });
-
-    it('should return empty array when no messages exist', async () => {
-      const emptyRoom = await roomService.create(testUtils.getTestUser().uuid, {
-        description: '빈 방',
-        title: '빈 방',
-        departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24),
-        departureLocation: '출발지',
-        destinationLocation: '도착지',
-        maxParticipant: 4,
-      });
-
-      const result = await chatService.getAllMessages(emptyRoom.uuid, 10, 0);
-
-      expect(result).toHaveLength(0);
-    });
-  });
-
   describe('getMessagesByCursor', () => {
     let testRoom: any;
     let testChats: Chat[];
@@ -370,14 +298,16 @@ describe('ChatModule - Integration Test', () => {
     });
 
     it('should get messages without before parameter (latest messages)', async () => {
+      const before = null;
+      const take = 5;
       const result = await chatController.getMessages(
         testRoom.uuid,
-        null,
-        5,
+        before,
+        take,
         testUtils.getTestUserJwtToken(),
       );
 
-      expect(result).toHaveLength(5);
+      expect(result).toHaveLength(take);
       // 최신 메시지부터 가져와야 함 (ID 내림차순)
       expect(result[0].id).toBeGreaterThan(result[1].id);
     });
