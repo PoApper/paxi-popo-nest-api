@@ -390,6 +390,7 @@ export class RoomController {
       dto.kickedUserUuid,
     );
 
+    const kickerNickname = await this.userService.getNickname(user.uuid);
     const kicker = user.uuid == room.ownerUuid ? '방장' : '관리자';
     const message = `${kicker}에 의해 ${kickedUserNickname?.nickname} 님이 방에서 강제퇴장 되었습니다.`;
     const chat = await this.chatService.create({
@@ -398,6 +399,15 @@ export class RoomController {
       messageType: ChatMessageType.TEXT,
     });
     this.chatGateway.sendMessage(uuid, chat);
+
+    // WebSocket 이벤트 전송
+    this.chatGateway.sendUserKicked(
+      uuid,
+      dto.kickedUserUuid,
+      kickedUserNickname?.nickname || '알 수 없는 사용자',
+      kickerNickname?.nickname || kicker,
+      dto.reason,
+    );
 
     return room;
   }
