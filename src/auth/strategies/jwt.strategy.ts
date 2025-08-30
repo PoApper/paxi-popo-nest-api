@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -8,22 +8,26 @@ import { JwtPayload } from './jwt.payload';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  private readonly logger = new Logger(JwtStrategy.name);
-  constructor(private readonly configService: ConfigService) {
+  constructor(configService: ConfigService) {
+    const secret = configService.get<string>('JWT_ACCESS_TOKEN_SECRET');
+    if (!secret) {
+      throw new Error(
+        'JWT_ACCESS_TOKEN_SECRET is not defined in environment variables',
+      );
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (request: Request) => {
-          this.logger.debug(request.cookies);
           return request?.cookies?.Authentication;
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>(
-        'JWT_ACCESS_TOKEN_SECRET',
-      ) as string,
+      secretOrKey: secret,
     });
   }
 
+  // only can access properties described in `generateJwtToken()` function
   validate(payload: any): JwtPayload {
     return {
       uuid: payload.uuid,
@@ -32,5 +36,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       userType: payload.userType,
       email: payload.email,
     };
+    // this is what you can access by `@Req() req` with `@JwtAuthGuard` decorator
   }
 }
