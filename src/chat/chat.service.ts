@@ -3,7 +3,7 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { LessThan, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { RoomService } from 'src/room/room.service';
 import { UserType } from 'src/user/user.meta';
 import { RoomUser } from 'src/room/entities/room-user.entity';
+import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 
 import { Chat } from './entities/chat.entity';
 import { CreateChatDto } from './dto/create-chat.dto';
@@ -51,14 +52,6 @@ export class ChatService {
     });
   }
 
-  async getAllMessages(roomUuid: string, take: number, skip: number) {
-    return await this.chatRepo.find({
-      where: { roomUuid },
-      take: take,
-      skip: skip,
-    });
-  }
-
   async getMessagesByCursor(
     roomUuid: string,
     before: string | null,
@@ -71,15 +64,22 @@ export class ChatService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
-    if (
-      userType !== UserType.admin &&
-      !(await this.roomUserRepo.findOne({
-        where: { roomUuid, userUuid: userUuid },
-      }))
-    ) {
-      throw new UnauthorizedException(
-        '채팅을 볼 권한이 없습니다. 관리자 혹은 방에 속한 유저만 가능합니다.',
-      );
+    const roomUser = await this.roomUserRepo.findOne({
+      where: { roomUuid, userUuid: userUuid },
+    });
+
+    // 상황 1: 강퇴된 유저는 채팅을 볼 수 없음. Admin이라도 진짜로 강퇴된 유저라면 적용됨
+    if (roomUser && roomUser.status === RoomUserStatus.KICKED) {
+      throw new ForbiddenException('강퇴된 유저는 채팅을 볼 수 없습니다.');
+    }
+
+    // 상황 2: Admin이 방에 속한 유저가 아니라면 채팅을 볼 수 없음 -> 관리자 페이지 용도
+    if (!roomUser) {
+      if (userType !== UserType.admin) {
+        throw new ForbiddenException(
+          '채팅을 볼 권한이 없습니다. 관리자 혹은 방에 속한 유저만 가능합니다.',
+        );
+      }
     }
 
     const queryBuilder = this.chatRepo
