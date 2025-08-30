@@ -268,29 +268,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     for (const user of roomUsers) {
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
-        this.server
-          .to(`user-${user.userUuid}`)
-          .emit(ChatEvent.USER_KICKED, {
-            roomUuid,
-            kickedUserUuid,
-            kickedUserNickname,
-            kickerNickname,
-            reason,
-          });
-      }
-    }
-
-    // 강퇴된 유저에게도 이벤트 전송 (앱에서 즉시 방에서 나가도록)
-    if (this.server.sockets.adapter.rooms.has(`user-${kickedUserUuid}`)) {
-      this.server
-        .to(`user-${kickedUserUuid}`)
-        .emit(ChatEvent.USER_KICKED, {
+        this.server.to(`user-${user.userUuid}`).emit(ChatEvent.USER_KICKED, {
           roomUuid,
           kickedUserUuid,
           kickedUserNickname,
           kickerNickname,
           reason,
         });
+      }
+    }
+
+    // 강퇴된 유저에게도 이벤트 전송 (앱에서 즉시 방에서 나가도록)
+    if (this.server.sockets.adapter.rooms.has(`user-${kickedUserUuid}`)) {
+      this.server.to(`user-${kickedUserUuid}`).emit(ChatEvent.USER_KICKED, {
+        roomUuid,
+        kickedUserUuid,
+        kickedUserNickname,
+        kickerNickname,
+        reason,
+      });
     }
   }
 
