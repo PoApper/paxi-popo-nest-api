@@ -12,10 +12,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { RoomService } from 'src/room/room.service';
 import { UserType } from 'src/user/user.meta';
 import { RoomUser } from 'src/room/entities/room-user.entity';
+import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 
 import { Chat } from './entities/chat.entity';
 import { CreateChatDto } from './dto/create-chat.dto';
-import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 @Injectable()
 export class ChatService {
   constructor(

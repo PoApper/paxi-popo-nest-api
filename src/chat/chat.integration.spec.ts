@@ -431,7 +431,10 @@ describe('ChatModule - Integration Test', () => {
           userType: UserType.admin,
         });
 
-        await userService.createNickname(kickedAdmin.uuid, '강퇴된_어드민_1234');
+        await userService.createNickname(
+          kickedAdmin.uuid,
+          '강퇴된_어드민_1234',
+        );
 
         kickedAdminJwtToken = {
           uuid: kickedAdmin.uuid,
