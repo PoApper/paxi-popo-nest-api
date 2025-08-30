@@ -20,6 +20,7 @@ import { UpdateRoomDto } from 'src/room/dto/update-room.dto';
 
 import { WsExceptionFilter } from './filters/ws-exception.filter';
 import { Chat } from './entities/chat.entity';
+import { ChatEvent } from './chat.events';
 @Injectable()
 @WebSocketGateway()
 @UseFilters(WsExceptionFilter)
@@ -60,7 +61,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       // NOTE: @SubscribeMessage() 에노테이션이 붙지 않은 이벤트에서 발생한 에러는 ExceptionFilter에 전달되지 않음
       // 따라서 여기서 클라이언트에 에러 이벤트를 전송해야 함
-      client.emit('error', {
+      client.emit(ChatEvent.ERROR, {
         message: `웹소켓 연결에 실패했습니다. ${error.message}`,
       });
       client.disconnect();
@@ -106,7 +107,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (isActive && isFocused) {
         this.server
           .to(`user-${user.userUuid}`)
-          .emit('newMessage', instanceToPlain(message));
+          .emit(ChatEvent.NEW_MESSAGE, instanceToPlain(message));
       } else {
         // 다른 방에 있거나 앱에 없는 사용자에게 FCM 알림 전송
         // 음소거 설정을 따르는지 확인
@@ -137,7 +138,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
         this.server
           .to(`user-${user.userUuid}`)
-          .emit('updatedMessage', instanceToPlain(chat));
+          .emit(ChatEvent.UPDATED_MESSAGE, instanceToPlain(chat));
       }
     }
   }
@@ -152,7 +153,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
         this.server
           .to(`user-${user.userUuid}`)
-          .emit('deletedMessage', { uuid: chatUuid });
+          .emit(ChatEvent.DELETED_MESSAGE, { uuid: chatUuid });
       }
     }
   }
@@ -167,7 +168,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
         this.server
           .to(`user-${user.userUuid}`)
-          .emit('newSettlement', settlement);
+          .emit(ChatEvent.NEW_SETTLEMENT, settlement);
       }
     }
   }
@@ -185,7 +186,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
         this.server
           .to(`user-${user.userUuid}`)
-          .emit('updatedSettlement', settlement);
+          .emit(ChatEvent.UPDATED_SETTLEMENT, settlement);
       }
     }
   }
@@ -200,7 +201,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
         this.server
           .to(`user-${user.userUuid}`)
-          .emit('deletedSettlement', { roomUuid: roomUuid });
+          .emit(ChatEvent.DELETED_SETTLEMENT, { roomUuid: roomUuid });
       }
     }
   }
@@ -222,7 +223,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
     for (const user of roomUsers) {
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
-        this.server.to(`user-${user.userUuid}`).emit('updatedRoom', {
+        this.server.to(`user-${user.userUuid}`).emit(ChatEvent.UPDATED_ROOM, {
           updatedRoom: updatedRoomDto,
           diff: diff,
         });
@@ -245,7 +246,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
         this.server
           .to(`user-${user.userUuid}`)
-          .emit('updatedIsPaid', { isPaid, userUuid, nickname });
+          .emit(ChatEvent.UPDATED_IS_PAID, { isPaid, userUuid, nickname });
       }
     }
   }
@@ -266,7 +267,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (this.server.sockets.adapter.rooms.has(`user-${user.userUuid}`)) {
         this.server
           .to(`user-${user.userUuid}`)
-          .emit('userKicked', {
+          .emit(ChatEvent.USER_KICKED, {
             roomUuid,
             kickedUserUuid,
             kickedUserNickname,
@@ -280,7 +281,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (this.server.sockets.adapter.rooms.has(`user-${kickedUserUuid}`)) {
       this.server
         .to(`user-${kickedUserUuid}`)
-        .emit('userKicked', {
+        .emit(ChatEvent.USER_KICKED, {
           roomUuid,
           kickedUserUuid,
           kickedUserNickname,
