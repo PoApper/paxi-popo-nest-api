@@ -212,7 +212,9 @@ describe('UserModule - Integration Test', () => {
         userType: UserType.student,
       };
 
-      const result = await userController.getOnboardingStatus(userWithNicknameInToken);
+      const result = await userController.getOnboardingStatus(
+        userWithNicknameInToken,
+      );
 
       expect(result).toEqual({
         onboardingStatus: true,
@@ -222,7 +224,10 @@ describe('UserModule - Integration Test', () => {
 
     it('should return onboarding status when nickname exists in DB but not in JWT token', async () => {
       // 먼저 DB에 닉네임 생성
-      await userService.createNickname(testUtils.getTestUser().uuid, 'DB에_있는_닉네임');
+      await userService.createNickname(
+        testUtils.getTestUser().uuid,
+        'DB에_있는_닉네임',
+      );
 
       // JWT 토큰에는 닉네임이 없는 경우
       const userWithoutNicknameInToken: JwtPayload = {
@@ -233,7 +238,9 @@ describe('UserModule - Integration Test', () => {
         userType: UserType.student,
       };
 
-      const result = await userController.getOnboardingStatus(userWithoutNicknameInToken);
+      const result = await userController.getOnboardingStatus(
+        userWithoutNicknameInToken,
+      );
 
       expect(result).toEqual({
         onboardingStatus: true,
@@ -243,7 +250,10 @@ describe('UserModule - Integration Test', () => {
 
     it('should return onboarding status when nickname exists in DB but JWT token nickname is null', async () => {
       // 먼저 DB에 닉네임 생성
-      await userService.createNickname(testUtils.getTestUser().uuid, 'DB에_있는_닉네임');
+      await userService.createNickname(
+        testUtils.getTestUser().uuid,
+        'DB에_있는_닉네임',
+      );
 
       // JWT 토큰에는 닉네임이 null인 경우
       const userWithNullNicknameInToken: JwtPayload = {
@@ -254,7 +264,9 @@ describe('UserModule - Integration Test', () => {
         userType: UserType.student,
       };
 
-      const result = await userController.getOnboardingStatus(userWithNullNicknameInToken);
+      const result = await userController.getOnboardingStatus(
+        userWithNullNicknameInToken,
+      );
 
       expect(result).toEqual({
         onboardingStatus: true,
@@ -272,18 +284,22 @@ describe('UserModule - Integration Test', () => {
         userType: UserType.student,
       };
 
-      const result = await userController.getOnboardingStatus(userWithoutNickname);
+      const result =
+        await userController.getOnboardingStatus(userWithoutNickname);
 
       expect(result).toEqual({
         onboardingStatus: false,
-        nickname: expect.any(String), 
+        nickname: expect.any(String),
       });
       expect(result.nickname).toMatch(/^[가-힣]+_[가-힣]+_\d{4}$/); // 랜덤 닉네임 패턴 확인
     });
 
     it('should prioritize JWT token nickname over DB nickname', async () => {
       // 먼저 DB에 닉네임 생성
-      await userService.createNickname(testUtils.getTestUser().uuid, 'DB에_있는_닉네임');
+      await userService.createNickname(
+        testUtils.getTestUser().uuid,
+        'DB에_있는_닉네임',
+      );
 
       // JWT 토큰에도 다른 닉네임이 있는 경우 (토큰이 우선)
       const userWithDifferentNicknameInToken: JwtPayload = {
@@ -294,7 +310,9 @@ describe('UserModule - Integration Test', () => {
         userType: UserType.student,
       };
 
-      const result = await userController.getOnboardingStatus(userWithDifferentNicknameInToken);
+      const result = await userController.getOnboardingStatus(
+        userWithDifferentNicknameInToken,
+      );
 
       expect(result).toEqual({
         onboardingStatus: true,
