@@ -530,10 +530,10 @@ describe('RoomModule - Integration Test', () => {
       const y = now.getFullYear();
       const m = now.getMonth() + 1;
       const mStr = m.toString().padStart(2, '0');
-      
+
       // 현재 월의 마지막 날 계산
       const lastDay = new Date(y, m, 0).getDate();
-      
+
       const startDate = `${y}-${mStr}-01`;
       const endDate = `${y}-${mStr}-${lastDay}`;
 
@@ -610,14 +610,16 @@ describe('RoomModule - Integration Test', () => {
         endDate,
       });
       expect(res).toBeDefined();
-      
+
       // 현재 월을 기준으로 monthKey 생성 (두 자리 월 형식으로)
       const monthKey = `${y}-${mStr}`;
-      
+
       const monthData = res.data[monthKey];
       expect(monthData).toBeDefined();
       if (!monthData) {
-        throw new Error(`Month data not found for key: ${monthKey}. Available keys: ${Object.keys(res.data)}`);
+        throw new Error(
+          `Month data not found for key: ${monthKey}. Available keys: ${Object.keys(res.data)}`,
+        );
       }
 
       // statusCounts dictionary
