@@ -538,7 +538,7 @@ describe('RoomModule - Integration Test', () => {
       const endDate = `${y}-${mStr}-${lastDay}`;
 
       // Room A (ACTIVE)
-      const roomA = await roomService.create(testUtils.getTestUser().uuid, {
+      await roomService.create(testUtils.getTestUser().uuid, {
         description: 'A desc',
         title: 'A 제목',
         departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 1),
@@ -618,7 +618,7 @@ describe('RoomModule - Integration Test', () => {
       expect(monthData).toBeDefined();
       if (!monthData) {
         throw new Error(
-          `Month data not found for key: ${monthKey}. Available keys: ${Object.keys(res.data)}`,
+          `Month data not found for key: ${monthKey}. Available keys: ${Object.keys(res.data).join(', ')}`,
         );
       }
 
