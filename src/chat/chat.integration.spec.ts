@@ -659,10 +659,19 @@ describe('ChatModule - Integration Test', () => {
       expect(result.roomUuid).toBe(testRoom.uuid);
       expect(result.deletedChatUuid).toBe(testChat.uuid);
 
-      // 메시지가 실제로 삭제되었는지 확인
-      await expect(chatService.findOne(testChat.uuid)).rejects.toThrow(
-        '존재하지 않는 메세지입니다.',
-      );
+      // isDeleted should be true
+      const chat = await chatService.findOne(testChat.uuid);
+      if (!chat) {
+        throw new Error('Chat not found');
+      }
+      expect(chat.isDeleted).toBe(true);
+      expect(chat.message).toBe(testChat.message);
+      expect(chat.senderUuid).toBe(testChat.senderUuid);
+      expect(chat.senderNickname).toBe(testChat.senderNickname);
+      expect(chat.messageType).toBe(testChat.messageType);
+      expect(chat.roomUuid).toBe(testChat.roomUuid);
+      expect(chat.createdAt).toStrictEqual(testChat.createdAt);
+      expect(chat.updatedAt).not.toBe(testChat.updatedAt);
     });
 
     it('should throw NotFoundException when chat message does not exist', async () => {
@@ -678,10 +687,20 @@ describe('ChatModule - Integration Test', () => {
 
       expect(result).toBe(testChat.uuid);
 
-      // 메시지가 실제로 삭제되었는지 확인
-      await expect(chatService.findOne(testChat.uuid)).rejects.toThrow(
-        '존재하지 않는 메세지입니다.',
-      );
+      // isDeleted should be true
+      // 프론트에서 내용 핸들링 함
+      const chat = await chatService.findOne(testChat.uuid);
+      if (!chat) {
+        throw new Error('Chat not found');
+      }
+      expect(chat.isDeleted).toBe(true);
+      expect(chat.message).toBe(testChat.message);
+      expect(chat.senderUuid).toBe(testChat.senderUuid);
+      expect(chat.senderNickname).toBe(testChat.senderNickname);
+      expect(chat.messageType).toBe(testChat.messageType);
+      expect(chat.roomUuid).toBe(testChat.roomUuid);
+      expect(chat.createdAt).toStrictEqual(testChat.createdAt);
+      expect(chat.updatedAt).not.toBe(testChat.updatedAt);
     });
   });
 
