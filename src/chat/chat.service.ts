@@ -136,7 +136,7 @@ export class ChatService {
     if (!chat) {
       throw new NotFoundException('메세지를 찾을 수 없습니다.');
     }
-    await this.chatRepo.delete(chat.id);
+    await this.chatRepo.update(chat.id, { isDeleted: true });
     return { roomUuid: chat.roomUuid, deletedChatUuid: chat.uuid };
   }
 
