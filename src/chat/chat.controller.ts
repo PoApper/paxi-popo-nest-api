@@ -106,6 +106,10 @@ export class ChatController {
     type: Chat,
   })
   @ApiResponse({
+    status: 400,
+    description: '삭제된 메세지는 수정할 수 없습니다.',
+  })
+  @ApiResponse({
     status: 403,
     description: '메세지 전송자가 아닙니다.',
   })

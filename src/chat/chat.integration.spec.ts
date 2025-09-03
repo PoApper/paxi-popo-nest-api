@@ -597,6 +597,16 @@ describe('ChatModule - Integration Test', () => {
       ).rejects.toThrow('메세지를 찾을 수 없습니다.');
     });
 
+    it('should throw BadRequestException when chat message is deleted', async () => {
+      await chatService.deleteMessage(testChat.uuid);
+
+      const updateDto = {
+        message: '수정된 메시지',
+      };
+
+      await expect(chatService.updateMessage(testChat.uuid, updateDto)).rejects.toThrow('삭제된 메세지는 수정할 수 없습니다.');
+    });
+
     it('should update message through controller', async () => {
       const updateDto = {
         message: '컨트롤러를 통한 수정',
