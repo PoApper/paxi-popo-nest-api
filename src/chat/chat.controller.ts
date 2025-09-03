@@ -138,12 +138,12 @@ export class ChatController {
 
   @Delete(':chatUuid')
   @ApiOperation({
-    summary: '채팅 메세지를 삭제합니다.',
+    summary: '채팅 메세지를 DB에서 지우지 않고 비활성화합니다. ',
   })
   @ApiResponse({
     status: 200,
     description:
-      '삭제된 메세지의 UUID를 반환합니다. 웹소켓의 `deletedMessage` 이벤트를 통해 삭제된 메세지의 UUID를 전파합니다.',
+      '비활성화된 메세지의 UUID를 반환합니다. 웹소켓의 `deletedMessage` 이벤트를 통해 비활성화된 메세지의 UUID를 전파합니다. DB에서는 메세지가 지워지지 않습니다.',
     example: { uuid: '123e4567-e89b-12d3-a456-426614174000' },
   })
   @ApiResponse({
@@ -152,7 +152,7 @@ export class ChatController {
   })
   @ApiParam({
     name: 'chatUuid',
-    description: '삭제할 메세지의 UUID',
+    description: '비활성화할 메세지의 UUID',
     required: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
