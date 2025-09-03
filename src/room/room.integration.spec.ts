@@ -658,4 +658,368 @@ describe('RoomModule - Integration Test', () => {
       );
     });
   });
+
+  describe('settlement', () => {
+    let testRoom: any;
+    let testUser: any;
+
+    beforeEach(async () => {
+      testUser = testUtils.getTestUser();
+      testRoom = await roomService.create(testUser.uuid, {
+        description: 'Test room for settlement',
+        title: '정산 테스트 방',
+        departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 1),
+        departureLocation: '학생회관',
+        destinationLocation: '포항역',
+        maxParticipant: 4,
+      });
+    });
+
+    describe('requestSettlement', () => {
+      it('should request settlement successfully', async () => {
+        const settlementDto = {
+          payAmount: 10000,
+          payerAccountNumber: '123-456-789',
+          payerAccountHolderName: '테스터',
+          payerBankName: '국민은행',
+          updateAccount: true,
+        };
+
+        const result = await roomService.requestSettlement(
+          testRoom.uuid,
+          testUser.uuid,
+          settlementDto,
+        );
+
+        expect(result).toBeDefined();
+        expect(result.roomUuid).toBe(testRoom.uuid);
+        expect(result.payerNickname).toBe('행복한_수소_1234');
+        expect(result.payAmount).toBe(10000);
+        expect(result.payerAccountHolderName).toBe('테스터');
+        expect(result.payerBankName).toBe('국민은행');
+        expect(result.payAmountPerPerson).toBe(10000); // 1명이므로 전체 금액
+      });
+
+      it('should throw BadRequestException when room is already in settlement', async () => {
+        const settlementDto = {
+          payAmount: 10000,
+          payerAccountNumber: '123-456-789',
+          payerAccountHolderName: '테스터',
+          payerBankName: '국민은행',
+          updateAccount: true,
+        };
+
+        // 첫 번째 정산 요청
+        await roomService.requestSettlement(
+          testRoom.uuid,
+          testUser.uuid,
+          settlementDto,
+        );
+
+        // 두 번째 정산 요청 시도
+        await expect(
+          roomService.requestSettlement(testRoom.uuid, testUser.uuid, settlementDto),
+        ).rejects.toThrow('이미 정산이 진행되고 있습니다.');
+      });
+
+      it('should throw BadRequestException when room is deleted', async () => {
+        // 방 삭제
+        await roomService.remove(testRoom.uuid, testUser.uuid);
+
+        const settlementDto = {
+          payAmount: 10000,
+          payerAccountNumber: '123-456-789',
+          payerAccountHolderName: '테스터',
+          payerBankName: '국민은행',
+          updateAccount: true,
+        };
+
+        await expect(
+          roomService.requestSettlement(testRoom.uuid, testUser.uuid, settlementDto),
+        ).rejects.toThrow('삭제된 방입니다.');
+      });
+
+      it('should throw BadRequestException when room is completed', async () => {
+        const settlementDto = {
+          payAmount: 10000,
+          payerAccountNumber: '123-456-789',
+          payerAccountHolderName: '테스터',
+          payerBankName: '국민은행',
+          updateAccount: true,
+        };
+
+        // 정산 요청
+        await roomService.requestSettlement(
+          testRoom.uuid,
+          testUser.uuid,
+          settlementDto,
+        );
+
+        // 방 완료
+        await roomService.completeRoom(testRoom.uuid, testUser.uuid, UserType.student);
+
+        // 완료된 방에 정산 요청 시도
+        await expect(
+          roomService.requestSettlement(testRoom.uuid, testUser.uuid, settlementDto),
+        ).rejects.toThrow('정산이 종료된 방입니다.');
+      });
+    });
+
+    describe('updateSettlement', () => {
+      beforeEach(async () => {
+        const settlementDto = {
+          payAmount: 10000,
+          payerAccountNumber: '123-456-789',
+          payerAccountHolderName: '테스터',
+          payerBankName: '국민은행',
+          updateAccount: true,
+        };
+
+        await roomService.requestSettlement(
+          testRoom.uuid,
+          testUser.uuid,
+          settlementDto,
+        );
+      });
+
+      it('should update settlement successfully', async () => {
+        const updateDto = {
+          payAmount: 15000,
+          payerAccountNumber: '987-654-321',
+          payerAccountHolderName: '수정된테스터',
+          payerBankName: '신한은행',
+          updateAccount: true,
+        };
+
+        const result = await roomService.updateSettlement(
+          testRoom.uuid,
+          testUser.uuid,
+          updateDto,
+        );
+
+        expect(result).toBeDefined();
+        expect(result.payAmount).toBe(15000);
+        expect(result.payerAccountHolderName).toBe('수정된테스터');
+        expect(result.payerBankName).toBe('신한은행');
+        expect(result.payAmountPerPerson).toBe(15000);
+      });
+
+      it('should throw BadRequestException when room is not in settlement', async () => {
+        // 정산 취소
+        await roomService.cancelSettlement(testRoom.uuid, testUser.uuid);
+
+        const updateDto = {
+          payAmount: 15000,
+          payerAccountNumber: '987-654-321',
+          payerAccountHolderName: '수정된테스터',
+          payerBankName: '신한은행',
+          updateAccount: true,
+        };
+
+        await expect(
+          roomService.updateSettlement(testRoom.uuid, testUser.uuid, updateDto),
+        ).rejects.toThrow('정산이 진행되고 있지 않습니다.');
+      });
+
+      it('should throw UnauthorizedException when user is not the payer', async () => {
+        const otherUser = testUtils.getTestAdmin();
+        
+        const updateDto = {
+          payAmount: 15000,
+          payerAccountNumber: '987-654-321',
+          payerAccountHolderName: '수정된테스터',
+          payerBankName: '신한은행',
+          updateAccount: true,
+        };
+
+        await expect(
+          roomService.updateSettlement(testRoom.uuid, otherUser.uuid, updateDto),
+        ).rejects.toThrow('정산자가 아니므로 정산 정보를 수정할 수 없습니다.');
+      });
+    });
+
+    describe('cancelSettlement', () => {
+      beforeEach(async () => {
+        const settlementDto = {
+          payAmount: 10000,
+          payerAccountNumber: '123-456-789',
+          payerAccountHolderName: '테스터',
+          payerBankName: '국민은행',
+          updateAccount: true,
+        };
+
+        await roomService.requestSettlement(
+          testRoom.uuid,
+          testUser.uuid,
+          settlementDto,
+        );
+      });
+
+      it('should cancel settlement successfully', async () => {
+        const result = await roomService.cancelSettlement(testRoom.uuid, testUser.uuid);
+
+        expect(result).toBeDefined();
+        expect(result!.status).toBe(RoomStatus.ACTIVATED);
+        expect(result!.payerUuid).toBeNull();
+        expect(result!.payAmount).toBeNull();
+      });
+
+      it('should throw BadRequestException when room is not in settlement', async () => {
+        // 정산 취소
+        await roomService.cancelSettlement(testRoom.uuid, testUser.uuid);
+
+        // 이미 취소된 정산을 다시 취소 시도
+        await expect(
+          roomService.cancelSettlement(testRoom.uuid, testUser.uuid),
+        ).rejects.toThrow('정산이 진행되고 있지 않습니다.');
+      });
+
+      it('should throw UnauthorizedException when user is not the payer', async () => {
+        const otherUser = testUtils.getTestAdmin();
+
+        await expect(
+          roomService.cancelSettlement(testRoom.uuid, otherUser.uuid),
+        ).rejects.toThrow('정산자가 아니므로 정산 요청을 취소할 수 없습니다.');
+      });
+    });
+
+    describe('getSettlement', () => {
+      beforeEach(async () => {
+        const settlementDto = {
+          payAmount: 10000,
+          payerAccountNumber: '123-456-789',
+          payerAccountHolderName: '테스터',
+          payerBankName: '국민은행',
+          updateAccount: true,
+        };
+
+        await roomService.requestSettlement(
+          testRoom.uuid,
+          testUser.uuid,
+          settlementDto,
+        );
+      });
+
+      it('should get settlement information successfully', async () => {
+        const result = await roomService.getSettlement(testRoom.uuid);
+
+        expect(result).toBeDefined();
+        expect(result.roomUuid).toBe(testRoom.uuid);
+        expect(result.payerNickname).toBe('행복한_수소_1234');
+        expect(result.payAmount).toBe(10000);
+        expect(result.payerAccountHolderName).toBe('테스터');
+        expect(result.payerBankName).toBe('국민은행');
+        expect(result.payAmountPerPerson).toBe(10000);
+      });
+
+      it('should throw BadRequestException when room is not in settlement', async () => {
+        // 정산 취소
+        await roomService.cancelSettlement(testRoom.uuid, testUser.uuid);
+
+        await expect(roomService.getSettlement(testRoom.uuid)).rejects.toThrow(
+          '정산이 진행되고 있지 않습니다.',
+        );
+      });
+
+      it('should throw NotFoundException when room does not exist', async () => {
+        const nonExistentUuid = '123e4567-e89b-12d3-a456-426614174000';
+
+        await expect(roomService.getSettlement(nonExistentUuid)).rejects.toThrow(
+          '방이 존재하지 않습니다.',
+        );
+      });
+    });
+
+    describe('updateRoomUserIsPaid', () => {
+      it('should throw BadRequestException when room is not in settlement', async () => {
+        const otherUser = testUtils.getTestAdmin();
+        
+        await expect(
+          roomService.updateRoomUserIsPaid(testRoom.uuid, otherUser.uuid, true),
+        ).rejects.toThrow('정산이 진행되고 있지 않습니다.');
+      });
+
+      it('should throw BadRequestException when user is not in room', async () => {
+        const otherUser = testUtils.getTestAdmin();
+        
+        const settlementDto = {
+          payAmount: 10000,
+          payerAccountNumber: '123-456-789',
+          payerAccountHolderName: '테스터',
+          payerBankName: '국민은행',
+          updateAccount: true,
+        };
+
+        await roomService.requestSettlement(
+          testRoom.uuid,
+          testUser.uuid,
+          settlementDto,
+        );
+
+        await expect(
+          roomService.updateRoomUserIsPaid(testRoom.uuid, otherUser.uuid, true),
+        ).rejects.toThrow('방에 가입되어 있지 않습니다.');
+      });
+    });
+
+    describe('completeRoom', () => {
+      beforeEach(async () => {
+        const settlementDto = {
+          payAmount: 10000,
+          payerAccountNumber: '123-456-789',
+          payerAccountHolderName: '테스터',
+          payerBankName: '국민은행',
+          updateAccount: true,
+        };
+
+        await roomService.requestSettlement(
+          testRoom.uuid,
+          testUser.uuid,
+          settlementDto,
+        );
+      });
+
+      it('should complete room successfully', async () => {
+        const result = await roomService.completeRoom(
+          testRoom.uuid,
+          testUser.uuid,
+          UserType.student,
+        );
+
+        expect(result).toBeDefined();
+        expect(result!.status).toBe(RoomStatus.COMPLETED);
+      });
+
+      it('should throw BadRequestException when room is already completed', async () => {
+        // 방 완료
+        await roomService.completeRoom(testRoom.uuid, testUser.uuid, UserType.student);
+
+        // 이미 완료된 방을 다시 완료 시도
+        await expect(
+          roomService.completeRoom(testRoom.uuid, testUser.uuid, UserType.student),
+        ).rejects.toThrow('이미 종료된 방입니다.');
+      });
+
+      it('should throw UnauthorizedException when user is not the payer or admin', async () => {
+        const otherUser = testUtils.getTestAdmin();
+
+        await expect(
+          roomService.completeRoom(testRoom.uuid, otherUser.uuid, UserType.student),
+        ).rejects.toThrow('정산자 또는 관리자가 아닙니다.');
+      });
+
+      it('should allow admin to complete room', async () => {
+        const adminUser = testUtils.getTestAdmin();
+        
+        const result = await roomService.completeRoom(
+          testRoom.uuid,
+          adminUser.uuid,
+          UserType.admin,
+        );
+
+        expect(result).toBeDefined();
+        expect(result!.status).toBe(RoomStatus.COMPLETED);
+      });
+    });
+  });
 });
