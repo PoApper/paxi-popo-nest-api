@@ -68,6 +68,10 @@ describe('RoomModule - Integration Test', () => {
       testUtils.getTestUser().uuid,
       '행복한_수소_1234',
     );
+    await userService.createNickname(
+      testUtils.getTestAdmin().uuid,
+      '관리자_닉네임_5678',
+    );
 
     // sendPushNotificationByUserUuid 모킹
     if (fcmService) {
@@ -1020,6 +1024,153 @@ describe('RoomModule - Integration Test', () => {
         expect(result).toBeDefined();
         expect(result!.status).toBe(RoomStatus.COMPLETED);
       });
+    });
+  });
+
+  describe('joinRoom - settlement condition', () => {
+    let testRoom: any;
+    let testUser: any;
+    let otherUser: any;
+    
+    beforeEach(async () => {
+      testUser = testUtils.getTestUser();
+      otherUser = testUtils.getTestAdmin();
+
+      testRoom = await roomService.create(testUser.uuid, {
+        description: 'Test room for join',
+        title: '참여 테스트 방',
+        departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 1),
+        departureLocation: '학생회관',
+        destinationLocation: '포항역',
+        maxParticipant: 4,
+      });
+    });
+
+    it('should join room successfully when room is activated', async () => {
+      const result = await roomService.joinRoom(testRoom.uuid, otherUser.uuid);
+
+      expect(result).toBeDefined();
+      expect(result.sendMessage).toBe(true);
+      expect(result.room.uuid).toBe(testRoom.uuid);
+      expect(result.room.room_users).toHaveLength(2); // 방장 + 참여한 사용자
+    });
+
+    it('should throw BadRequestException when trying to join room in settlement', async () => {
+      // 정산 요청
+      const settlementDto = {
+        payAmount: 10000,
+        payerAccountNumber: '123-456-789',
+        payerAccountHolderName: '테스터',
+        payerBankName: '국민은행',
+        updateAccount: true,
+      };
+
+      await roomService.requestSettlement(
+        testRoom.uuid,
+        testUser.uuid,
+        settlementDto,
+      );
+      
+      const newUser = await userService.save({
+        email: 'new@test.com',
+        password: 'password123',
+        name: 'New User',
+        userType: UserType.student,
+      });
+      await userService.createNickname(newUser.uuid, '새로운_유저_1234');
+      // 정산 중인 방에 참여 시도
+      await expect(
+        roomService.joinRoom(testRoom.uuid, newUser.uuid),
+      ).rejects.toThrow('정산이 진행되고 있어 참여할 수 없습니다.');
+    });
+
+    it('should throw BadRequestException when trying to join completed room', async () => {
+      // 정산 요청
+      const settlementDto = {
+        payAmount: 10000,
+        payerAccountNumber: '123-456-789',
+        payerAccountHolderName: '테스터',
+        payerBankName: '국민은행',
+        updateAccount: true,
+      };
+
+      await roomService.requestSettlement(
+        testRoom.uuid,
+        testUser.uuid,
+        settlementDto,
+      );
+
+      // 방 완료
+      await roomService.completeRoom(testRoom.uuid, testUser.uuid, UserType.student);
+
+      const newUser = await userService.save({
+        email: 'new@test.com',
+        password: 'password123',
+        name: 'New User',
+        userType: UserType.student,
+      });
+      await userService.createNickname(newUser.uuid, '새로운_유저_1234');
+      // 완료된 방에 참여 시도
+      await expect(
+        roomService.joinRoom(testRoom.uuid, newUser.uuid),
+      ).rejects.toThrow('정산이 진행되고 있어 참여할 수 없습니다.');
+    });
+
+    it('should allow re-joining for existing room users even when room is in settlement', async () => {
+      // 먼저 방에 참여
+      await roomService.joinRoom(testRoom.uuid, otherUser.uuid);
+
+      // 정산 요청
+      const settlementDto = {
+        payAmount: 10000,
+        payerAccountNumber: '123-456-789',
+        payerAccountHolderName: '테스터',
+        payerBankName: '국민은행',
+        updateAccount: true,
+      };
+
+      await roomService.requestSettlement(
+        testRoom.uuid,
+        testUser.uuid,
+        settlementDto,
+      );
+
+      // 이미 참여한 사용자가 다시 참여 시도
+      const result = await roomService.joinRoom(testRoom.uuid, otherUser.uuid);
+
+      expect(result).toBeDefined();
+      expect(result.sendMessage).toBe(false); // 이미 참여한 사용자이므로 메시지 전송 안함
+      expect(result.room.uuid).toBe(testRoom.uuid);
+    });
+
+    it('should allow re-joining for existing room users even when room is completed', async () => {
+      // 먼저 방에 참여
+      await roomService.joinRoom(testRoom.uuid, otherUser.uuid);
+
+      // 정산 요청
+      const settlementDto = {
+        payAmount: 10000,
+        payerAccountNumber: '123-456-789',
+        payerAccountHolderName: '테스터',
+        payerBankName: '국민은행',
+        updateAccount: true,
+      };
+
+      await roomService.requestSettlement(
+        testRoom.uuid,
+        testUser.uuid,
+        settlementDto,
+      );
+
+      // 방 완료
+      await roomService.completeRoom(testRoom.uuid, testUser.uuid, UserType.student);
+
+      // 이미 참여한 사용자가 다시 참여 시도
+      const result = await roomService.joinRoom(testRoom.uuid, otherUser.uuid);
+
+      expect(result).toBeDefined();
+      expect(result.sendMessage).toBe(false); // 이미 참여한 사용자이므로 메시지 전송 안함
+      expect(result.room.uuid).toBe(testRoom.uuid);
     });
   });
 });

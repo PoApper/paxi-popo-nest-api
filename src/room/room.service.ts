@@ -264,6 +264,10 @@ export class RoomService {
       throw new BadRequestException('정원이 가득 찼습니다.');
     }
 
+    if (!roomUser && (room.status == RoomStatus.IN_SETTLEMENT || room.status == RoomStatus.COMPLETED)) {
+      throw new BadRequestException('정산이 진행되고 있어 참여할 수 없습니다.');
+    }
+
     // 첫 입장 시 메세지 전송 여부 확인
     const sendMessage =
       roomUser?.status == RoomUserStatus.JOINED ? false : true;
