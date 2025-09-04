@@ -15,7 +15,6 @@ export const enum ChatEvent {
 
   // 유저 강퇴 관련 이벤트
   USER_KICKED = 'userKicked',
-  USER_KICK_CANCELLED = 'userKickCancelled',
 
   // 에러 이벤트
   ERROR = 'error',
