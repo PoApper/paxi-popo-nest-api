@@ -28,6 +28,16 @@
 
 ## 프론트에서 Listening 해야 할 이벤트 리스트
 
+### 0. 에러 관련
+- `error`
+- 웹소켓 연결 시 발생한 에러 정보 전송
+- 메세지 예시:
+```json
+{
+  "message": "웹소켓 연결에 실패했습니다. {에러내용~~}"
+}
+```
+
 ### 1. 메세지 받기
 - `newMessage`를 통해 채팅 혹은 공지 등 새로운 메세지를 받을 수 있음
   - 유저의 방 입장, 퇴장, 강퇴, 정산 요청, 정산 완료 등 방의 상태 변경 시 시스템 메세지를 받을 수 있음
@@ -131,5 +141,42 @@
   "isPaid": true,
   "userUuid": "12e18adf-9a25-42e7-b0b9-88d222542c5e",
   "nickname": "포닉스"
+}
+```
+
+### 8. 방 정보 업데이트
+- `updatedRoom`을 통해 **변경된 방 정보**를 받을 수 있음
+- 방 정보 실시간 수정을 위해 사용
+- 응답 메세지 예시:
+    - updatedRoom: 업데이트 된 방의 정보
+    - diff: 기존 방 정보와 비교했을 때 업데이트 된 내역
+```json
+{
+  "updatedRoom": {
+    "description": "캐리어 세 개 있습니다",
+    "title": "포항역 가는 택시 같이 타요 🚕",
+    "departureTime": "2026-01-01T05:00:00.000Z",
+    "departureLocation": "지곡회관",
+    "destinationLocation": "포항역",
+    "maxParticipant": 4
+  },
+  "diff": {
+    "description": "캐리어 세 개 있습니다",
+    "departureTime": "2026-01-01T05:00:00.000Z"
+  }
+}
+```
+
+### 9. 유저 강퇴
+- `userKicked`
+- 강퇴당한 유저를 방에서 실시간으로 제외시키기 위한 이벤트
+- 응답 메세지 에시:
+```json
+{
+  "roomUuid": "45281c1e-61e5-4628-8821-6e0cb0940fd3",
+  "kickedUserUuid": "12e18adf-9a25-42e7-b0b9-88d222542c5e",
+  "kickedUserNickname": "넙죽이",
+  "kickerNickname": "포닉스",
+  "reason": "말을 안 해 강퇴합니다."
 }
 ```
