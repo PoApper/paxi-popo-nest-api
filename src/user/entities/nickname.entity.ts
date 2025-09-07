@@ -18,7 +18,7 @@ export class Nickname extends Base {
   @Exclude()
   id: number;
 
-  @Column({ name: 'user_uuid', type: 'uuid', nullable: false })
+  @Column({ name: 'user_uuid', type: 'uuid', nullable: false, unique: true })
   userUuid: string;
 
   @Column({ type: 'varchar', length: 20, nullable: false })

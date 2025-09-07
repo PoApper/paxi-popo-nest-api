@@ -48,14 +48,14 @@ export class RoomUser extends Base {
    * Database Relation
    */
 
-  @ManyToOne(() => User, (user) => user.room_users, {
+  @ManyToOne(() => User, (user) => user.roomUsers, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'user_uuid', referencedColumnName: 'uuid' })
   @ApiHideProperty()
   user: User;
 
-  @ManyToOne(() => Room, (room) => room.room_users, {
+  @ManyToOne(() => Room, (room) => room.roomUsers, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'room_uuid', referencedColumnName: 'uuid' })

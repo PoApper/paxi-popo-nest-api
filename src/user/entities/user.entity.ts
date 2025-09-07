@@ -74,19 +74,19 @@ export class User extends Base {
 
   @OneToMany(() => Room, (room) => room.owner)
   @ApiHideProperty()
-  own_rooms: Room[];
+  ownRooms: Room[];
 
   @OneToMany(() => Room, (room) => room.payer)
   @ApiHideProperty()
-  pay_rooms: Room[];
+  payRooms: Room[];
 
-  @OneToMany(() => RoomUser, (room_user) => room_user.user)
+  @OneToMany(() => RoomUser, (roomUser) => roomUser.user)
   @ApiHideProperty()
-  room_users: RoomUser[];
+  roomUsers: RoomUser[];
 
-  @OneToMany(() => FcmKey, (fcm_key) => fcm_key.user)
+  @OneToMany(() => FcmKey, (fcmKey) => fcmKey.user)
   @ApiHideProperty()
-  push_keys: FcmKey[];
+  pushKeys: FcmKey[];
 
   @OneToMany(() => Chat, (chat) => chat.sender)
   @ApiHideProperty()
