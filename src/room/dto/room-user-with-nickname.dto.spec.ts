@@ -1,8 +1,12 @@
-import { RoomUserWithNicknameDto, RoomWithUsersDto } from './room-user-with-nickname.dto';
 import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 import { RoomStatus } from 'src/room/entities/room.meta';
 import { RoomUser } from 'src/room/entities/room-user.entity';
 import { Room } from 'src/room/entities/room.entity';
+
+import {
+  RoomUserWithNicknameDto,
+  RoomWithUsersDto,
+} from './room-user-with-nickname.dto';
 
 describe('RoomUserWithNicknameDto', () => {
   const baseRoomUser = {
@@ -113,12 +117,13 @@ describe('RoomWithUsersDto', () => {
   });
 
   it('should handle room with one roomUser', () => {
-    const minimalRoom = { ...baseRoom, roomUsers: [roomUsers[0]] } as unknown as Room;
+    const minimalRoom = {
+      ...baseRoom,
+      roomUsers: [roomUsers[0]],
+    } as unknown as Room;
     const dto = new RoomWithUsersDto(minimalRoom);
     expect(Array.isArray(dto.roomUsers)).toBe(true);
     expect(dto.roomUsers).toHaveLength(1);
     expect(dto.roomUsers[0].nickname).toBe(roomUsers[0].user.nickname.nickname);
   });
 });
-
-
