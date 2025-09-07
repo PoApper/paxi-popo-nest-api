@@ -528,10 +528,14 @@ describe('RoomModule - Integration Test', () => {
     it('should return monthly statistics with status and location dictionaries', async () => {
       const now = new Date();
       const y = now.getFullYear();
-      const m = (now.getMonth() + 1).toString().padStart(2, '0');
-      const startDate = `${y}${m}01`;
-      // 임의로 월말을 크게 잡아 다음달 01로 범위를 만들기 위해 31일 지정
-      const endDate = `${y}${m}31`;
+      const m = now.getMonth() + 1;
+      const mStr = m.toString().padStart(2, '0');
+
+      // 현재 월의 마지막 날 계산
+      const lastDay = new Date(y, m, 0).getDate();
+
+      const startDate = `${y}-${mStr}-01`;
+      const endDate = `${y}-${mStr}-${lastDay}`;
 
       // Room A (ACTIVE)
       await roomService.create(testUtils.getTestUser().uuid, {
@@ -606,11 +610,16 @@ describe('RoomModule - Integration Test', () => {
         endDate,
       });
       expect(res).toBeDefined();
-      const monthKey = `${y}-${m}`;
+
+      // 현재 월을 기준으로 monthKey 생성 (두 자리 월 형식으로)
+      const monthKey = `${y}-${mStr}`;
+
       const monthData = res.data[monthKey];
       expect(monthData).toBeDefined();
       if (!monthData) {
-        throw new Error('Month data not found');
+        throw new Error(
+          `Month data not found for key: ${monthKey}. Available keys: ${Object.keys(res.data).join(', ')}`,
+        );
       }
 
       // statusCounts dictionary
