@@ -200,4 +200,124 @@ describe('UserModule - Integration Test', () => {
       ).rejects.toThrow(NotFoundException);
     });
   });
+
+  describe('getOnboardingStatus', () => {
+    it('should return onboarding status when nickname exists in JWT token', async () => {
+      // JWT 토큰에 닉네임이 있는 경우
+      const userWithNicknameInToken: JwtPayload = {
+        uuid: testUtils.getTestUser().uuid,
+        email: testUtils.getTestUser().email,
+        name: testUtils.getTestUser().name,
+        nickname: '토큰에_있는_닉네임',
+        userType: UserType.student,
+      };
+
+      const result = await userController.getOnboardingStatus(
+        userWithNicknameInToken,
+      );
+
+      expect(result).toEqual({
+        onboardingStatus: true,
+        nickname: '토큰에_있는_닉네임',
+      });
+    });
+
+    it('should return onboarding status when nickname exists in DB but not in JWT token', async () => {
+      // 먼저 DB에 닉네임 생성
+      await userService.createNickname(
+        testUtils.getTestUser().uuid,
+        'DB에_있는_닉네임',
+      );
+
+      // JWT 토큰에는 닉네임이 없는 경우
+      const userWithoutNicknameInToken: JwtPayload = {
+        uuid: testUtils.getTestUser().uuid,
+        email: testUtils.getTestUser().email,
+        name: testUtils.getTestUser().name,
+        nickname: '', // 빈 문자열
+        userType: UserType.student,
+      };
+
+      const result = await userController.getOnboardingStatus(
+        userWithoutNicknameInToken,
+      );
+
+      expect(result).toEqual({
+        onboardingStatus: true,
+        nickname: 'DB에_있는_닉네임',
+      });
+    });
+
+    it('should return onboarding status when nickname exists in DB but JWT token nickname is null', async () => {
+      // 먼저 DB에 닉네임 생성
+      await userService.createNickname(
+        testUtils.getTestUser().uuid,
+        'DB에_있는_닉네임',
+      );
+
+      // JWT 토큰에는 닉네임이 null인 경우
+      const userWithNullNicknameInToken: JwtPayload = {
+        uuid: testUtils.getTestUser().uuid,
+        email: testUtils.getTestUser().email,
+        name: testUtils.getTestUser().name,
+        nickname: null as any, // "nickname": null 과 같이 옴, 빈 문자열 x
+        userType: UserType.student,
+      };
+
+      const result = await userController.getOnboardingStatus(
+        userWithNullNicknameInToken,
+      );
+
+      expect(result).toEqual({
+        onboardingStatus: true,
+        nickname: 'DB에_있는_닉네임',
+      });
+    });
+
+    it('should return onboarding status false when nickname does not exist in both JWT token and DB', async () => {
+      // JWT 토큰과 DB 모두에 닉네임이 없는 경우
+      const userWithoutNickname: JwtPayload = {
+        uuid: testUtils.getTestUser().uuid,
+        email: testUtils.getTestUser().email,
+        name: testUtils.getTestUser().name,
+        nickname: null as any,
+        userType: UserType.student,
+      };
+
+      const result =
+        await userController.getOnboardingStatus(userWithoutNickname);
+
+      expect(result).toEqual({
+        onboardingStatus: false,
+        nickname: expect.any(String),
+      });
+      expect(result.nickname).toMatch(/^[가-힣]+_[가-힣]+_\d{4}$/); // 랜덤 닉네임 패턴 확인
+    });
+
+    it('should prioritize JWT token nickname over DB nickname', async () => {
+      // 먼저 DB에 닉네임 생성
+      await userService.createNickname(
+        testUtils.getTestUser().uuid,
+        'DB에_있는_닉네임',
+      );
+
+      // JWT 토큰에도 다른 닉네임이 있는 경우 (토큰이 우선)
+      const userWithDifferentNicknameInToken: JwtPayload = {
+        uuid: testUtils.getTestUser().uuid,
+        email: testUtils.getTestUser().email,
+        name: testUtils.getTestUser().name,
+        nickname: '토큰에_있는_닉네임',
+        userType: UserType.student,
+      };
+
+      const result = await userController.getOnboardingStatus(
+        userWithDifferentNicknameInToken,
+      );
+
+      expect(result).toEqual({
+        onboardingStatus: true,
+        nickname: '토큰에_있는_닉네임', // 토큰의 닉네임이 우선
+      });
+    });
+  });
 });
