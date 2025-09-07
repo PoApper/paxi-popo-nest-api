@@ -64,7 +64,7 @@ export class RoomService {
       const room = await queryRunner.manager.save(Room, {
         ...dto,
         ownerUuid: userUuid,
-        room_users: [{ userUuid: userUuid }],
+        roomUsers: [{ userUuid: userUuid }],
       });
 
       await queryRunner.manager.save(RoomUser, {
@@ -112,7 +112,7 @@ export class RoomService {
   async findOneWithRoomUsers(uuid: string): Promise<RoomWithUsersDto> {
     const room = await this.roomRepo.findOne({
       where: { uuid: uuid },
-      relations: ['room_users', 'room_users.user.nickname'],
+      relations: ['roomUsers', 'roomUsers.user.nickname'],
     });
 
     if (!room) {
@@ -132,30 +132,30 @@ export class RoomService {
     // JOINED 및 KICKED 상태인 방 모두 조회
     const rooms: Room[] = await this.roomRepo.find({
       where: {
-        room_users: { userUuid: userUuid },
+        roomUsers: { userUuid: userUuid },
         status: Not(RoomStatus.DELETED),
       },
       select: {
-        room_users: {
+        roomUsers: {
           userUuid: false,
           status: true,
           kickedReason: true,
           lastReadChatUuid: true,
         },
       },
-      relations: ['room_users'],
+      relations: ['roomUsers'],
     });
 
     return await Promise.all(
       rooms.map(async (room) => {
         const lastChat = await this.chatService.getLastMessageOfRoom(room.uuid);
         const hasNewMessage =
-          lastChat?.uuid != room.room_users[0].lastReadChatUuid;
+          lastChat?.uuid != room.roomUsers[0].lastReadChatUuid;
 
         return new ResponseMyRoomDto(
           room,
-          room.room_users[0].status,
-          room.room_users[0].kickedReason,
+          room.roomUsers[0].status,
+          room.roomUsers[0].kickedReason,
           hasNewMessage,
         );
       }),
@@ -894,7 +894,7 @@ export class RoomService {
       );
       this.fcmService
         .sendPushNotificationByUserUuid(
-          room.room_users.map((ru) => ru.userUuid),
+          room.roomUsers.map((ru) => ru.userUuid),
           '출발 알림',
           `방 "${room.title}"의 출발이 ${leftMinutes}분 남았습니다.`,
           {
@@ -937,11 +937,11 @@ export class RoomService {
         ),
         departureAlertSent: false,
         status: RoomStatus.ACTIVATED,
-        room_users: {
+        roomUsers: {
           status: RoomUserStatus.JOINED,
         },
       },
-      relations: ['room_users'],
+      relations: ['roomUsers'],
     });
   }
 
