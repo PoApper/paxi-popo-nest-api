@@ -604,7 +604,9 @@ describe('ChatModule - Integration Test', () => {
         message: '수정된 메시지',
       };
 
-      await expect(chatService.updateMessage(testChat.uuid, updateDto)).rejects.toThrow('삭제된 메세지는 수정할 수 없습니다.');
+      await expect(
+        chatService.updateMessage(testChat.uuid, updateDto),
+      ).rejects.toThrow('삭제된 메세지는 수정할 수 없습니다.');
     });
 
     it('should update message through controller', async () => {
