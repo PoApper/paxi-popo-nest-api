@@ -264,6 +264,14 @@ export class RoomService {
       throw new BadRequestException('정원이 가득 찼습니다.');
     }
 
+    if (
+      !roomUser &&
+      (room.status == RoomStatus.IN_SETTLEMENT ||
+        room.status == RoomStatus.COMPLETED)
+    ) {
+      throw new BadRequestException('정산이 진행되고 있어 참여할 수 없습니다.');
+    }
+
     // 첫 입장 시 메세지 전송 여부 확인
     const sendMessage =
       roomUser?.status == RoomUserStatus.JOINED ? false : true;
@@ -525,6 +533,14 @@ export class RoomService {
       throw new BadRequestException('이미 정산이 진행되고 있습니다.');
     }
 
+    if (room.status == RoomStatus.DELETED) {
+      throw new BadRequestException('삭제된 방입니다.');
+    }
+
+    if (room.status == RoomStatus.COMPLETED) {
+      throw new BadRequestException('정산이 종료된 방입니다.');
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -580,15 +596,17 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
-    if (room.payerUuid != userUuid) {
-      throw new UnauthorizedException(
-        '정산자가 아니므로 정산 정보를 수정할 수 없습니다.',
-      );
+    if (room.status == RoomStatus.COMPLETED) {
+      throw new BadRequestException('정산이 종료된 방입니다.');
     }
 
     if (room.status != RoomStatus.IN_SETTLEMENT) {
-      throw new BadRequestException(
-        '정산 정보를 수정할 수 있는 방 상태가 아닙니다.',
+      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
+    }
+
+    if (room.payerUuid != userUuid) {
+      throw new UnauthorizedException(
+        '정산자가 아니므로 정산 정보를 수정할 수 없습니다.',
       );
     }
 
@@ -647,10 +665,12 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
+    if (room.status == RoomStatus.COMPLETED) {
+      throw new BadRequestException('정산이 종료된 방입니다.');
+    }
+
     if (room.status != RoomStatus.IN_SETTLEMENT) {
-      throw new BadRequestException(
-        '정산이 진행되고 있지 않으므로 정산 요청을 취소할 수 없습니다.',
-      );
+      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
     }
 
     if (room.payerUuid != userUuid) {
@@ -706,7 +726,10 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
-    if (room.status != RoomStatus.IN_SETTLEMENT) {
+    if (
+      room.status != RoomStatus.IN_SETTLEMENT &&
+      room.status != RoomStatus.COMPLETED
+    ) {
       throw new BadRequestException('정산이 진행되고 있지 않습니다.');
     }
 
