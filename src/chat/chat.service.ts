@@ -2,6 +2,7 @@ import {
   forwardRef,
   Inject,
   Injectable,
+  BadRequestException,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -119,6 +120,9 @@ export class ChatService {
     if (!chat) {
       throw new NotFoundException('메세지를 찾을 수 없습니다.');
     }
+    if (chat.isDeleted) {
+      throw new BadRequestException('삭제된 메세지는 수정할 수 없습니다.');
+    }
     // 수정은 PK로 해줘야 함
     await this.chatRepo.update(chat.id, {
       message: body.message,
@@ -136,7 +140,10 @@ export class ChatService {
     if (!chat) {
       throw new NotFoundException('메세지를 찾을 수 없습니다.');
     }
-    await this.chatRepo.delete(chat.id);
+    if (chat.isDeleted) {
+      throw new BadRequestException('이미 삭제된 메세지입니다.');
+    }
+    await this.chatRepo.update(chat.id, { isDeleted: true });
     return { roomUuid: chat.roomUuid, deletedChatUuid: chat.uuid };
   }
 

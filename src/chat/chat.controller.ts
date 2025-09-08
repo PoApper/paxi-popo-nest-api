@@ -106,6 +106,10 @@ export class ChatController {
     type: Chat,
   })
   @ApiResponse({
+    status: 400,
+    description: '삭제된 메세지는 수정할 수 없습니다.',
+  })
+  @ApiResponse({
     status: 403,
     description: '메세지 전송자가 아닙니다.',
   })
@@ -139,6 +143,8 @@ export class ChatController {
   @Delete(':chatUuid')
   @ApiOperation({
     summary: '채팅 메세지를 삭제합니다.',
+    description:
+      '채팅 메세지를 DB에서 지우지 않고 isDeleted를 true로 설정해 프론트에서 메세지를 보여주지 않도록 합니다.',
   })
   @ApiResponse({
     status: 200,
