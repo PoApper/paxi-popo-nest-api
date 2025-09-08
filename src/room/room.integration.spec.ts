@@ -1087,7 +1087,7 @@ describe('RoomModule - Integration Test', () => {
       expect(result).toBeDefined();
       expect(result.sendMessage).toBe(true);
       expect(result.room.uuid).toBe(testRoom.uuid);
-      expect(result.room.room_users).toHaveLength(2); // 방장 + 참여한 사용자
+      expect(result.room.roomUsers).toHaveLength(2); // 방장 + 참여한 사용자
     });
 
     it('should throw BadRequestException when trying to join room in settlement', async () => {

@@ -4,6 +4,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  Unique,
 } from 'typeorm';
 import { ApiHideProperty } from '@nestjs/swagger';
 import { Exclude } from 'class-transformer';
@@ -11,6 +12,7 @@ import { Exclude } from 'class-transformer';
 import { User } from 'src/user/entities/user.entity';
 import { Base } from 'src/common/base.entity';
 @Entity()
+@Unique(['userUuid', 'pushKey'])
 export class FcmKey extends Base {
   @PrimaryGeneratedColumn()
   @ApiHideProperty()
@@ -27,7 +29,7 @@ export class FcmKey extends Base {
    * Database Relation
    */
 
-  @ManyToOne(() => User, (user) => user.push_keys, {
+  @ManyToOne(() => User, (user) => user.pushKeys, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'user_uuid', referencedColumnName: 'uuid' })

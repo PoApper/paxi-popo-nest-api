@@ -85,23 +85,23 @@ export class Room extends Base {
    * Database Relation
    */
 
-  @ManyToOne(() => User, (user) => user.own_rooms, {
+  @ManyToOne(() => User, (user) => user.ownRooms, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'owner_uuid' })
   @ApiHideProperty()
   owner: User;
 
-  @ManyToOne(() => User, (user) => user.pay_rooms, {
+  @ManyToOne(() => User, (user) => user.payRooms, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'payer_uuid' })
   @ApiHideProperty()
   payer: User;
 
-  @OneToMany(() => RoomUser, (room_user) => room_user.room)
+  @OneToMany(() => RoomUser, (roomUser) => roomUser.room)
   @ApiHideProperty()
-  room_users: RoomUser[];
+  roomUsers: RoomUser[];
 
   @OneToMany(() => Chat, (chat) => chat.room)
   @ApiHideProperty()
