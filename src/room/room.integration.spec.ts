@@ -722,7 +722,11 @@ describe('RoomModule - Integration Test', () => {
 
         // 두 번째 정산 요청 시도
         await expect(
-          roomService.requestSettlement(testRoom.uuid, testUser.uuid, settlementDto),
+          roomService.requestSettlement(
+            testRoom.uuid,
+            testUser.uuid,
+            settlementDto,
+          ),
         ).rejects.toThrow('이미 정산이 진행되고 있습니다.');
       });
 
@@ -739,7 +743,11 @@ describe('RoomModule - Integration Test', () => {
         };
 
         await expect(
-          roomService.requestSettlement(testRoom.uuid, testUser.uuid, settlementDto),
+          roomService.requestSettlement(
+            testRoom.uuid,
+            testUser.uuid,
+            settlementDto,
+          ),
         ).rejects.toThrow('삭제된 방입니다.');
       });
 
@@ -760,11 +768,19 @@ describe('RoomModule - Integration Test', () => {
         );
 
         // 방 완료
-        await roomService.completeRoom(testRoom.uuid, testUser.uuid, UserType.student);
+        await roomService.completeRoom(
+          testRoom.uuid,
+          testUser.uuid,
+          UserType.student,
+        );
 
         // 완료된 방에 정산 요청 시도
         await expect(
-          roomService.requestSettlement(testRoom.uuid, testUser.uuid, settlementDto),
+          roomService.requestSettlement(
+            testRoom.uuid,
+            testUser.uuid,
+            settlementDto,
+          ),
         ).rejects.toThrow('정산이 종료된 방입니다.');
       });
     });
@@ -827,7 +843,7 @@ describe('RoomModule - Integration Test', () => {
 
       it('should throw UnauthorizedException when user is not the payer', async () => {
         const otherUser = testUtils.getTestAdmin();
-        
+
         const updateDto = {
           payAmount: 15000,
           payerAccountNumber: '987-654-321',
@@ -837,7 +853,11 @@ describe('RoomModule - Integration Test', () => {
         };
 
         await expect(
-          roomService.updateSettlement(testRoom.uuid, otherUser.uuid, updateDto),
+          roomService.updateSettlement(
+            testRoom.uuid,
+            otherUser.uuid,
+            updateDto,
+          ),
         ).rejects.toThrow('정산자가 아니므로 정산 정보를 수정할 수 없습니다.');
       });
     });
@@ -860,7 +880,10 @@ describe('RoomModule - Integration Test', () => {
       });
 
       it('should cancel settlement successfully', async () => {
-        const result = await roomService.cancelSettlement(testRoom.uuid, testUser.uuid);
+        const result = await roomService.cancelSettlement(
+          testRoom.uuid,
+          testUser.uuid,
+        );
 
         expect(result).toBeDefined();
         expect(result!.status).toBe(RoomStatus.ACTIVATED);
@@ -928,16 +951,16 @@ describe('RoomModule - Integration Test', () => {
       it('should throw NotFoundException when room does not exist', async () => {
         const nonExistentUuid = '123e4567-e89b-12d3-a456-426614174000';
 
-        await expect(roomService.getSettlement(nonExistentUuid)).rejects.toThrow(
-          '방이 존재하지 않습니다.',
-        );
+        await expect(
+          roomService.getSettlement(nonExistentUuid),
+        ).rejects.toThrow('방이 존재하지 않습니다.');
       });
     });
 
     describe('updateRoomUserIsPaid', () => {
       it('should throw BadRequestException when room is not in settlement', async () => {
         const otherUser = testUtils.getTestAdmin();
-        
+
         await expect(
           roomService.updateRoomUserIsPaid(testRoom.uuid, otherUser.uuid, true),
         ).rejects.toThrow('정산이 진행되고 있지 않습니다.');
@@ -945,7 +968,7 @@ describe('RoomModule - Integration Test', () => {
 
       it('should throw BadRequestException when user is not in room', async () => {
         const otherUser = testUtils.getTestAdmin();
-        
+
         const settlementDto = {
           payAmount: 10000,
           payerAccountNumber: '123-456-789',
@@ -996,11 +1019,19 @@ describe('RoomModule - Integration Test', () => {
 
       it('should throw BadRequestException when room is already completed', async () => {
         // 방 완료
-        await roomService.completeRoom(testRoom.uuid, testUser.uuid, UserType.student);
+        await roomService.completeRoom(
+          testRoom.uuid,
+          testUser.uuid,
+          UserType.student,
+        );
 
         // 이미 완료된 방을 다시 완료 시도
         await expect(
-          roomService.completeRoom(testRoom.uuid, testUser.uuid, UserType.student),
+          roomService.completeRoom(
+            testRoom.uuid,
+            testUser.uuid,
+            UserType.student,
+          ),
         ).rejects.toThrow('이미 종료된 방입니다.');
       });
 
@@ -1008,13 +1039,17 @@ describe('RoomModule - Integration Test', () => {
         const otherUser = testUtils.getTestAdmin();
 
         await expect(
-          roomService.completeRoom(testRoom.uuid, otherUser.uuid, UserType.student),
+          roomService.completeRoom(
+            testRoom.uuid,
+            otherUser.uuid,
+            UserType.student,
+          ),
         ).rejects.toThrow('정산자 또는 관리자가 아닙니다.');
       });
 
       it('should allow admin to complete room', async () => {
         const adminUser = testUtils.getTestAdmin();
-        
+
         const result = await roomService.completeRoom(
           testRoom.uuid,
           adminUser.uuid,
@@ -1031,7 +1066,7 @@ describe('RoomModule - Integration Test', () => {
     let testRoom: any;
     let testUser: any;
     let otherUser: any;
-    
+
     beforeEach(async () => {
       testUser = testUtils.getTestUser();
       otherUser = testUtils.getTestAdmin();
@@ -1070,7 +1105,7 @@ describe('RoomModule - Integration Test', () => {
         testUser.uuid,
         settlementDto,
       );
-      
+
       const newUser = await userService.save({
         email: 'new@test.com',
         password: 'password123',
@@ -1101,7 +1136,11 @@ describe('RoomModule - Integration Test', () => {
       );
 
       // 방 완료
-      await roomService.completeRoom(testRoom.uuid, testUser.uuid, UserType.student);
+      await roomService.completeRoom(
+        testRoom.uuid,
+        testUser.uuid,
+        UserType.student,
+      );
 
       const newUser = await userService.save({
         email: 'new@test.com',
@@ -1163,7 +1202,11 @@ describe('RoomModule - Integration Test', () => {
       );
 
       // 방 완료
-      await roomService.completeRoom(testRoom.uuid, testUser.uuid, UserType.student);
+      await roomService.completeRoom(
+        testRoom.uuid,
+        testUser.uuid,
+        UserType.student,
+      );
 
       // 이미 참여한 사용자가 다시 참여 시도
       const result = await roomService.joinRoom(testRoom.uuid, otherUser.uuid);
