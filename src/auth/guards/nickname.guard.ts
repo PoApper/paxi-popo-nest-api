@@ -48,14 +48,13 @@ export class NicknameExistsGuard implements CanActivate {
           ...user,
           nickname: userNickname.nickname,
         } as JwtPayload;
-        const tokens = await this.authService.generateTokens(updatedPayload);
+        const accessToken =
+          this.authService.generateAccessToken(updatedPayload);
+        const refreshToken =
+          await this.authService.generateRefreshToken(updatedPayload);
 
         // 쿠키 재설정
-        this.authService.setCookies(
-          response,
-          tokens.accessToken,
-          tokens.refreshToken,
-        );
+        this.authService.setCookies(response, accessToken, refreshToken);
 
         // request.user도 업데이트
         request.user.nickname = userNickname.nickname;

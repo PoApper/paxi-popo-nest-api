@@ -25,11 +25,16 @@ export class AuthService {
     });
   }
 
-  generateRefreshToken(payload: JwtPayload): string {
-    return this.jwtService.sign(payload, {
+  async generateRefreshToken(payload: JwtPayload): Promise<string> {
+    const refreshToken = this.jwtService.sign(payload, {
       secret: jwtConstants.refreshTokenSecret,
       expiresIn: jwtConstants.refreshTokenExpirationTime,
     });
+
+    // 리프레시 토큰을 DB에 저장
+    await this.saveRefreshToken(payload.uuid, refreshToken);
+
+    return refreshToken;
   }
 
   verifyRefreshToken(token: string): JwtPayload {
@@ -43,10 +48,7 @@ export class AuthService {
     refreshToken: string;
   }> {
     const accessToken = this.generateAccessToken(payload);
-    const refreshToken = this.generateRefreshToken(payload);
-
-    // 리프레시 토큰을 DB에 저장
-    await this.saveRefreshToken(payload.uuid, refreshToken);
+    const refreshToken = await this.generateRefreshToken(payload);
 
     return { accessToken, refreshToken };
   }
