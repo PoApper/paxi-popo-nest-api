@@ -90,10 +90,6 @@ export class AuthService {
     return user.hashedRefreshToken === hashedToken;
   }
 
-  async removeRefreshToken(userUuid: string): Promise<void> {
-    await this.userService.updateRefreshToken(userUuid, null, null);
-  }
-
   setCookies(res: Response, accessToken: string, refreshToken: string): void {
     const domain =
       process.env.NODE_ENV === 'prod'
