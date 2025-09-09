@@ -8,16 +8,16 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ApiCookieAuth, ApiOperation } from '@nestjs/swagger';
-import ms from 'ms';
+import * as ms from 'ms';
 
 import { UserType } from 'src/user/user.meta';
 import { GuardName } from 'src/common/guard-name';
 import { PublicGuard } from 'src/common/public-guard.decorator';
 import { UserService } from 'src/user/user.service';
-import { jwtConstants } from 'src/auth/constants';
 
 import { JwtPayload } from './strategies/jwt.payload';
 import { AuthService } from './auth.service';
+import { jwtConstants } from './constants';
 
 const requiredRoles = [UserType.admin, UserType.association, UserType.staff];
 

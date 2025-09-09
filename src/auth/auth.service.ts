@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
-import ms from 'ms';
+import * as ms from 'ms';
 import * as crypto from 'crypto';
 
 import { UserService } from 'src/user/user.service';
