@@ -33,7 +33,14 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     }
 
     if (err || !user) {
-      this.logger.debug('JWT Auth Error:', { err, user, info });
+      // 토큰이 없는 경우는 정상적인 상황이므로 로그 레벨을 낮춤
+      if (info?.message === 'No auth token') {
+        // 토큰이 없는 경우는 verbose 레벨로 로그
+        this.logger.verbose('No auth token provided');
+      } else {
+        // 다른 JWT 오류는 debug 레벨로 로그
+        this.logger.debug('JWT Auth Error:', { err, user, info });
+      }
       throw new UnauthorizedException({
         error: 'Unauthorized',
         message: 'Invalid or missing access token.',
