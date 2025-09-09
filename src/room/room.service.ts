@@ -12,7 +12,7 @@ import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { instanceToPlain } from 'class-transformer';
-import * as moment from 'moment';
+import moment from 'moment';
 
 import { Room } from 'src/room/entities/room.entity';
 import { RoomUser } from 'src/room/entities/room-user.entity';
