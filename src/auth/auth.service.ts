@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { Response } from 'express';
 import ms from 'ms';
 import * as crypto from 'crypto';
@@ -14,82 +13,126 @@ import { jwtConstants } from './constants';
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
     private readonly userService: UserService,
   ) {}
+  private readonly logger = new Logger(AuthService.name);
 
-  generateAccessToken(payload: JwtPayload): string {
+  generateAccessToken(user: JwtPayload) {
+    const payload = {
+      uuid: user.uuid,
+      email: user.email,
+      name: user.name,
+      nickname: user.nickname,
+      userType: user.userType,
+    };
     return this.jwtService.sign(payload, {
-      secret: jwtConstants.accessTokenSecret,
       expiresIn: jwtConstants.accessTokenExpirationTime,
+      secret: jwtConstants.accessTokenSecret,
     });
   }
 
-  async generateRefreshToken(payload: JwtPayload): Promise<string> {
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: jwtConstants.refreshTokenSecret,
+  async generateRefreshToken(user: JwtPayload) {
+    const payload = {
+      uuid: user.uuid,
+      email: user.email,
+      name: user.name,
+      nickname: user.nickname,
+      userType: user.userType,
+    };
+
+    const token = this.jwtService.sign(payload, {
       expiresIn: jwtConstants.refreshTokenExpirationTime,
-    });
-
-    // 리프레시 토큰을 DB에 저장
-    await this.saveRefreshToken(payload.uuid, refreshToken);
-
-    return refreshToken;
-  }
-
-  verifyRefreshToken(token: string): JwtPayload {
-    return this.jwtService.verify(token, {
       secret: jwtConstants.refreshTokenSecret,
     });
-  }
 
-  async generateTokens(payload: JwtPayload): Promise<{
-    accessToken: string;
-    refreshToken: string;
-  }> {
-    const accessToken = this.generateAccessToken(payload);
-    const refreshToken = await this.generateRefreshToken(payload);
+    const hashedToken = this.hashToken(token);
 
-    return { accessToken, refreshToken };
-  }
-
-  private async saveRefreshToken(
-    userUuid: string,
-    refreshToken: string,
-  ): Promise<void> {
-    const hashedRefreshToken = this.hashToken(refreshToken);
     const expiresAt = new Date(
       Date.now() + ms(jwtConstants.refreshTokenExpirationTime),
     );
 
     await this.userService.updateRefreshToken(
-      userUuid,
-      hashedRefreshToken,
+      user.uuid,
+      hashedToken,
       expiresAt,
     );
+
+    return token;
   }
 
   private hashToken(token: string): string {
     return crypto.createHash('sha256').update(token).digest('hex');
   }
 
+  // password encrypt util
+  private encryptPassword(password: string, cryptoSalt: string) {
+    return crypto
+      .pbkdf2Sync(password, cryptoSalt, 10000, 64, 'sha512')
+      .toString('base64');
+  }
+
   async validateRefreshToken(
-    userUuid: string,
+    userInAccessToken: JwtPayload,
     refreshToken: string,
   ): Promise<boolean> {
-    const user = await this.userService.findOne(userUuid);
-    if (!user || !user.hashedRefreshToken || !user.refreshTokenExpiresAt) {
+    try {
+      // 1. 리프레시 토큰이 유효한지 검증하고 payload 추출
+      const userInRefreshToken = await this.jwtService.verifyAsync(
+        refreshToken,
+        {
+          secret: jwtConstants.refreshTokenSecret,
+        },
+      );
+
+      // 2. 리프레시 토큰의 payload가 액세스 토큰의 정보와 일치하는지 검증
+      if (userInRefreshToken.uuid !== userInAccessToken.uuid) {
+        return false;
+      }
+
+      // 3. DB에 저장된 해시된 리프레시 토큰과 일치하는지 검증
+      const user = (await this.userService.findOne(userInAccessToken.uuid))!;
+      const hashedToken = this.hashToken(refreshToken);
+
+      if (!user.hashedRefreshToken || user.hashedRefreshToken !== hashedToken) {
+        return false;
+      }
+
+      // 4. 토큰 만료 시간 검증
+      if (
+        !user.refreshTokenExpiresAt ||
+        user.refreshTokenExpiresAt <= new Date()
+      ) {
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      // 토큰 검증 실패 (만료되었거나 서명이 잘못된 경우)
+      this.logger.error('리프레시 토큰 검증 실패:', error);
       return false;
     }
+  }
 
-    // 토큰 만료 확인
-    if (user.refreshTokenExpiresAt <= new Date()) {
-      return false;
+  // 만료된 access token을 디코딩하는 메서드 (refresh 엔드포인트용)
+  decodeExpiredAccessToken(accessToken: string): JwtPayload | null {
+    try {
+      // ignoreExpiration: true로 설정하여 만료된 토큰도 디코딩
+      const payload = this.jwtService.verify(accessToken, {
+        secret: jwtConstants.accessTokenSecret,
+        ignoreExpiration: true,
+      });
+
+      return {
+        uuid: payload.uuid,
+        email: payload.email,
+        name: payload.name,
+        nickname: payload.nickname,
+        userType: payload.userType,
+      };
+    } catch (error) {
+      this.logger.error('액세스 토큰 디코딩 실패:', error);
+      return null;
     }
-
-    // 토큰 검증
-    const hashedToken = this.hashToken(refreshToken);
-    return user.hashedRefreshToken === hashedToken;
   }
 
   setCookies(res: Response, accessToken: string, refreshToken: string): void {

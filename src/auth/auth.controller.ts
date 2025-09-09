@@ -6,13 +6,15 @@ import {
   Res,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
-import { ApiCookieAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiOperation } from '@nestjs/swagger';
+import ms from 'ms';
 
 import { UserType } from 'src/user/user.meta';
 import { GuardName } from 'src/common/guard-name';
 import { PublicGuard } from 'src/common/public-guard.decorator';
+import { UserService } from 'src/user/user.service';
+import { jwtConstants } from 'src/auth/constants';
 
 import { JwtPayload } from './strategies/jwt.payload';
 import { AuthService } from './auth.service';
@@ -24,7 +26,7 @@ const requiredRoles = [UserType.admin, UserType.association, UserType.staff];
 @Controller('auth')
 export class AuthController {
   constructor(
-    private readonly configService: ConfigService,
+    private readonly userService: UserService,
     private readonly authService: AuthService,
   ) {}
 
@@ -40,46 +42,102 @@ export class AuthController {
     return user;
   }
 
-  @Post('refresh')
-  @PublicGuard([GuardName.JwtGuard])
+  @ApiCookieAuth()
   @ApiOperation({
-    summary: '리프레시 토큰을 사용하여 새로운 액세스 토큰을 발급합니다.',
+    summary:
+      'Swagger에서 테스트 불가능: 리프레시 토큰을 사용해 엑세스 토큰 갱신',
+    description:
+      '해당 엔드포인트를 테스트하려면 Authentication, Refresh 두 가지 토큰이 필요한데, Swagger에서는 최대 하나의 토큰만 등록 가능합니다. 테스트하려면 Postman같은 툴을 사용하거나 개발자도구로 Refresh 쿠키를 직접 넣어야 합니다.',
   })
-  @ApiResponse({
-    status: 200,
-    description: '새로운 토큰이 쿠키에 설정됩니다.',
-  })
-  @ApiResponse({
-    status: 401,
-    description: '리프레시 토큰이 유효하지 않습니다.',
-  })
+  @Post('refresh')
   async refresh(@Req() req: Request, @Res() res: Response) {
-    const refreshToken = req.cookies?.Refresh as string;
+    const accessTokenInCookie = req.cookies?.Authentication;
+    const refreshTokenInCookie = req.cookies?.Refresh;
 
-    if (!refreshToken) {
-      throw new UnauthorizedException('리프레시 토큰이 없습니다.');
+    if (!accessTokenInCookie || !refreshTokenInCookie) {
+      this.clearCookies(res);
+      throw new UnauthorizedException('Missing access token or refresh token');
     }
 
-    try {
-      const payload = this.authService.verifyRefreshToken(refreshToken);
-
-      // DB에서 리프레시 토큰 검증
-      const isValidRefreshToken = await this.authService.validateRefreshToken(
-        payload.uuid,
-        refreshToken,
-      );
-
-      if (!isValidRefreshToken) {
-        throw new UnauthorizedException('리프레시 토큰이 유효하지 않습니다.');
-      }
-
-      const tokens = await this.authService.generateTokens(payload);
-
-      this.authService.setCookies(res, tokens.accessToken, tokens.refreshToken);
-
-      return res.json({ message: '토큰이 갱신되었습니다.' });
-    } catch {
-      throw new UnauthorizedException('리프레시 토큰이 유효하지 않습니다.');
+    // 만료된 access token을 디코딩 (JWT 가드 우회)
+    const user = this.authService.decodeExpiredAccessToken(accessTokenInCookie);
+    if (!user) {
+      this.clearCookies(res);
+      throw new UnauthorizedException('Invalid access token');
     }
+
+    // refresh token 검증
+    const isValid = await this.authService.validateRefreshToken(
+      user,
+      refreshTokenInCookie,
+    );
+    if (!isValid) {
+      await this.userService.updateRefreshToken(user.uuid, null, null);
+      this.clearCookies(res);
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const accessToken = this.authService.generateAccessToken(user);
+    const refreshToken = await this.authService.generateRefreshToken(user);
+
+    this.setCookies(res, accessToken, refreshToken);
+
+    return res.send(user);
+  }
+
+  private setCookies(
+    res: Response,
+    accessToken: string,
+    refreshToken: string,
+  ): void {
+    const domain =
+      process.env.NODE_ENV === 'prod'
+        ? 'popo.poapper.club'
+        : process.env.NODE_ENV === 'dev'
+          ? 'popo-dev.poapper.club'
+          : 'localhost';
+
+    res.cookie('Authentication', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'local' ? false : true,
+      path: '/',
+      domain: domain,
+      sameSite: 'lax',
+      maxAge: ms(jwtConstants.refreshTokenExpirationTime),
+    });
+
+    res.cookie('Refresh', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'local' ? false : true,
+      path: '/auth/refresh',
+      domain: domain,
+      sameSite: 'lax',
+      maxAge: ms(jwtConstants.refreshTokenExpirationTime),
+    });
+  }
+
+  private clearCookies(res: Response): void {
+    const domain =
+      process.env.NODE_ENV === 'prod'
+        ? 'popo.poapper.club'
+        : process.env.NODE_ENV === 'dev'
+          ? 'popo-dev.poapper.club'
+          : 'localhost';
+
+    res.clearCookie('Authentication', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'local' ? false : true,
+      path: '/',
+      domain: domain,
+      sameSite: 'lax',
+    });
+
+    res.clearCookie('Refresh', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'local' ? false : true,
+      path: '/auth/refresh',
+      domain: domain,
+      sameSite: 'lax',
+    });
   }
 }
