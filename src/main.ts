@@ -1,6 +1,6 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import * as cookieParser from 'cookie-parser';
+import cookieParser from 'cookie-parser';
 import {
   initializeApp as initializeFirebaseApp,
   ServiceAccount,
@@ -9,8 +9,12 @@ import { credential as firebaseCredential } from 'firebase-admin';
 import { ConfigService } from '@nestjs/config';
 import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
 import * as fs from 'fs';
+import { config } from 'dotenv';
 
 import { AppModule } from './app.module';
+
+// 환경변수를 애플리케이션 시작 전에 로드
+config();
 
 async function bootstrap() {
   const isLocalDeploy = process.env.NODE_ENV == 'local';

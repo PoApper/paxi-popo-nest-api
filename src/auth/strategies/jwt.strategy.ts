@@ -1,14 +1,21 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
 
-import { jwtConstants } from '../constants';
 import { JwtPayload } from './jwt.payload';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private configService: ConfigService) {
+    const jwtSecret = configService.get<string>('JWT_ACCESS_TOKEN_SECRET');
+    if (!jwtSecret) {
+      throw new Error(
+        'JWT_ACCESS_TOKEN_SECRET is not defined in environment variables',
+      );
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (request: Request) => {
@@ -16,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey: jwtConstants.accessTokenSecret,
+      secretOrKey: jwtSecret,
     });
   }
 
