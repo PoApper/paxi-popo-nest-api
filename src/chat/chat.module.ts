@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { RoomModule } from 'src/room/room.module';
 import { FcmModule } from 'src/fcm/fcm.module';
 import { UserModule } from 'src/user/user.module';
+import { RoomUser } from 'src/room/entities/room-user.entity';
 
 import { ChatGateway } from './chat.gateway';
 import { Chat } from './entities/chat.entity';
@@ -20,7 +21,7 @@ import { ChatController } from './chat.controller';
         secret: configService.get<string>('JWT_ACCESS_TOKEN_SECRET'),
       }),
     }),
-    TypeOrmModule.forFeature([Chat]),
+    TypeOrmModule.forFeature([Chat, RoomUser]),
     forwardRef(() => RoomModule),
     UserModule,
     FcmModule,

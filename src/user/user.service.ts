@@ -199,7 +199,9 @@ export class UserService {
         adjectives[Math.floor(Math.random() * adjectives.length)];
       const noun = nouns[Math.floor(Math.random() * nouns.length)];
       const randomNumber = Math.floor(Math.random() * 10000);
-      const randomNickname = `${adjective}_${noun}_${randomNumber}`;
+      const randomNickname = `${adjective}_${noun}_${randomNumber
+        .toString()
+        .padStart(4, '0')}`;
       const hasTaken = await this.nicknameRepo.findOne({
         where: { nickname: randomNickname },
       });

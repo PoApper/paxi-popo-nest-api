@@ -64,10 +64,15 @@ export class UserController {
       '낮은 확률이지만, 제한 횟수 초과로 랜덤 닉네임을 생성하는 데 실패한 경우',
   })
   async getOnboardingStatus(@User() user: JwtPayload) {
-    if (user.nickname) {
+    // Paxi탭에 들어갈 때 프론트에선 해당 엔드포인트를 호출함. 닉네임을 만든 직후에는 토큰에 닉네임 값이 없으므로 DB에서 조회함
+    const nickname = user.nickname
+      ? user.nickname
+      : (await this.userService.getNickname(user.uuid))?.nickname;
+
+    if (nickname) {
       return {
         onboardingStatus: true,
-        nickname: user.nickname,
+        nickname: nickname,
       };
     }
 

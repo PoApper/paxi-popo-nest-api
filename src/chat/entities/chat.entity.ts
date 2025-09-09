@@ -50,6 +50,9 @@ export class Chat {
   @Column({ name: 'is_edited', type: 'boolean', default: false })
   isEdited: boolean;
 
+  @Column({ name: 'is_deleted', type: 'boolean', default: false })
+  isDeleted: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

@@ -46,14 +46,14 @@ export class CheatController {
   @Delete('chat')
   //   @ApiExcludeEndpoint()
   @ApiQuery({
-    name: 'roomUuid',
+    name: 'chatUuid',
     required: false,
     type: String,
     description: '특정 방의 채팅 UUID. 없으면 모든 채팅 삭제',
   })
   async deleteChats(
     @User() user: JwtPayload,
-    @Query('roomUuid') roomUuid?: string,
+    @Query('chatUuid') chatUuid?: string,
   ) {
     // if (user.userType !== UserType.admin) {
     //   throw new ForbiddenException({
@@ -61,7 +61,7 @@ export class CheatController {
     //     message: '관리자 권한이 필요합니다.',
     //   });
     // }
-    return await this.chatService.deleteAll(roomUuid);
+    return await this.chatService.deleteAll(chatUuid);
   }
 
   @Delete('nickname')
