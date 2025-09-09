@@ -19,28 +19,28 @@ export class RoomUser extends Base {
   @Exclude()
   id: number;
 
-  @Column({ nullable: false })
+  @Column({ name: 'user_uuid', nullable: false })
   userUuid: string;
 
-  @Column({ nullable: false })
+  @Column({ name: 'room_uuid', nullable: false })
   roomUuid: string;
 
   @Column({ nullable: false, default: RoomUserStatus.JOINED })
   @ApiProperty({ example: RoomUserStatus.JOINED })
   status: RoomUserStatus;
 
-  @Column({ nullable: false, default: false })
+  @Column({ name: 'is_paid', nullable: false, default: false })
   @ApiProperty({ example: false })
   isPaid: boolean;
 
-  @Column({ nullable: true })
+  @Column({ name: 'kicked_reason', nullable: true })
   kickedReason: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'last_read_chat_uuid', nullable: true })
   @ApiProperty({ example: '25c930d5-f38e-4f28-813b-82eb49acd606' })
   lastReadChatUuid: string;
 
-  @Column({ nullable: false, default: false })
+  @Column({ name: 'is_muted', nullable: false, default: false })
   @ApiProperty({ example: false })
   isMuted: boolean;
 
@@ -48,17 +48,17 @@ export class RoomUser extends Base {
    * Database Relation
    */
 
-  @ManyToOne(() => User, (user) => user.room_users, {
+  @ManyToOne(() => User, (user) => user.roomUsers, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'userUuid', referencedColumnName: 'uuid' })
+  @JoinColumn({ name: 'user_uuid', referencedColumnName: 'uuid' })
   @ApiHideProperty()
   user: User;
 
-  @ManyToOne(() => Room, (room) => room.room_users, {
+  @ManyToOne(() => Room, (room) => room.roomUsers, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'roomUuid', referencedColumnName: 'uuid' })
+  @JoinColumn({ name: 'room_uuid', referencedColumnName: 'uuid' })
   @ApiHideProperty()
   room: Room;
 }

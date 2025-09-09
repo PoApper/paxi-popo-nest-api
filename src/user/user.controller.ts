@@ -64,10 +64,15 @@ export class UserController {
       '낮은 확률이지만, 제한 횟수 초과로 랜덤 닉네임을 생성하는 데 실패한 경우',
   })
   async getOnboardingStatus(@User() user: JwtPayload) {
-    if (user.nickname) {
+    // Paxi탭에 들어갈 때 프론트에선 해당 엔드포인트를 호출함. 닉네임을 만든 직후에는 토큰에 닉네임 값이 없으므로 DB에서 조회함
+    const nickname = user.nickname
+      ? user.nickname
+      : (await this.userService.getNickname(user.uuid))?.nickname;
+
+    if (nickname) {
       return {
         onboardingStatus: true,
-        nickname: user.nickname,
+        nickname: nickname,
       };
     }
 
@@ -194,6 +199,47 @@ export class UserController {
   })
   async getUserInfo(@User() user: JwtPayload) {
     return await this.userService.getUserInfo(user.uuid);
+  }
+
+  @Get('my/:userUuid')
+  @ApiOperation({
+    summary: '[관리자 전용] 특정 유저의 정보를 반환합니다.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: '유저의 정보를 반환합니다.',
+    schema: {
+      type: 'object',
+      properties: {
+        uuid: {
+          type: 'string',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
+        nickname: { type: 'string', example: '행복한_수소_1234' },
+        accountNumber: { type: 'string', example: '1234-5678-9012-3456' },
+        accountHolderName: { type: 'string', example: '포닉스' },
+        bankName: { type: 'string', example: '국민은행' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 403,
+    description: '관리자 권한이 없는 경우',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '유저가 존재하지 않는 경우',
+  })
+  @ApiParam({
+    name: 'userUuid',
+    description: '정보를 조회할 유저의 UUID',
+    required: true,
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @UseGuards(RolesGuard)
+  @Roles(UserType.admin)
+  async getUserInfoByUuid(@Param('userUuid') userUuid: string) {
+    return await this.userService.getUserInfo(userUuid);
   }
 
   @Post('account')

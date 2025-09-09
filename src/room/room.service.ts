@@ -12,6 +12,7 @@ import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { instanceToPlain } from 'class-transformer';
+import * as moment from 'moment';
 
 import { Room } from 'src/room/entities/room.entity';
 import { RoomUser } from 'src/room/entities/room-user.entity';
@@ -30,6 +31,7 @@ import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
 import { ResponseSettlementDto } from './dto/response-settlement.dto';
+import { RoomStatisticsDto } from './dto/room-statistics.dto';
 
 @Injectable()
 export class RoomService {
@@ -62,7 +64,7 @@ export class RoomService {
       const room = await queryRunner.manager.save(Room, {
         ...dto,
         ownerUuid: userUuid,
-        room_users: [{ userUuid: userUuid }],
+        roomUsers: [{ userUuid: userUuid }],
       });
 
       await queryRunner.manager.save(RoomUser, {
@@ -81,13 +83,16 @@ export class RoomService {
     }
   }
 
-  findAll() {
+  findAll(all: boolean) {
     // NOTE: 프론트에서 필터링을 하기 때문에 페이지네이션을 하지 않는다.
+    const where = all
+      ? {}
+      : {
+          status: RoomStatus.ACTIVATED,
+          departureTime: MoreThan(new Date()),
+        };
     return this.roomRepo.find({
-      where: {
-        status: RoomStatus.ACTIVATED,
-        departureTime: MoreThan(new Date()),
-      },
+      where,
       order: { departureTime: 'ASC' },
     });
   }
@@ -107,44 +112,50 @@ export class RoomService {
   async findOneWithRoomUsers(uuid: string): Promise<RoomWithUsersDto> {
     const room = await this.roomRepo.findOne({
       where: { uuid: uuid },
-      relations: ['room_users', 'room_users.user.nickname'],
+      relations: ['roomUsers', 'roomUsers.user.nickname'],
     });
 
     if (!room) {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
-    return new RoomWithUsersDto(room);
+    let decryptedAccountNumber: string | undefined = undefined;
+    if (room.payerEncryptedAccountNumber) {
+      decryptedAccountNumber = this.userService.decryptAccountNumber(
+        room.payerEncryptedAccountNumber,
+      );
+    }
+    return new RoomWithUsersDto(room, decryptedAccountNumber);
   }
 
   async findMyRoomByUserUuid(userUuid: string) {
     // JOINED 및 KICKED 상태인 방 모두 조회
     const rooms: Room[] = await this.roomRepo.find({
       where: {
-        room_users: { userUuid: userUuid },
+        roomUsers: { userUuid: userUuid },
         status: Not(RoomStatus.DELETED),
       },
       select: {
-        room_users: {
+        roomUsers: {
           userUuid: false,
           status: true,
           kickedReason: true,
           lastReadChatUuid: true,
         },
       },
-      relations: ['room_users'],
+      relations: ['roomUsers'],
     });
 
     return await Promise.all(
       rooms.map(async (room) => {
         const lastChat = await this.chatService.getLastMessageOfRoom(room.uuid);
         const hasNewMessage =
-          lastChat?.uuid != room.room_users[0].lastReadChatUuid;
+          lastChat?.uuid != room.roomUsers[0].lastReadChatUuid;
 
         return new ResponseMyRoomDto(
           room,
-          room.room_users[0].status,
-          room.room_users[0].kickedReason,
+          room.roomUsers[0].status,
+          room.roomUsers[0].kickedReason,
           hasNewMessage,
         );
       }),
@@ -180,7 +191,7 @@ export class RoomService {
       throw new BadRequestException('이미 종료된 방입니다.');
     }
 
-    if (!(user.userType == UserType.admin || room?.ownerUuid == user.uuid)) {
+    if (!(user.userType == UserType.admin || room.ownerUuid == user.uuid)) {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
 
@@ -253,6 +264,14 @@ export class RoomService {
       throw new BadRequestException('정원이 가득 찼습니다.');
     }
 
+    if (
+      !roomUser &&
+      (room.status == RoomStatus.IN_SETTLEMENT ||
+        room.status == RoomStatus.COMPLETED)
+    ) {
+      throw new BadRequestException('정산이 진행되고 있어 참여할 수 없습니다.');
+    }
+
     // 첫 입장 시 메세지 전송 여부 확인
     const sendMessage =
       roomUser?.status == RoomUserStatus.JOINED ? false : true;
@@ -319,31 +338,17 @@ export class RoomService {
       throw new BadRequestException('이미 정산이 진행되고 있습니다.');
     }
 
+    if (room.ownerUuid == userUuid) {
+      throw new BadRequestException(
+        '방장은 방을 나갈 수 없습니다. 방장을 위임해 주세요.',
+      );
+    }
+
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      if (room.ownerUuid == userUuid) {
-        const newOwnerRoomUser = await this.roomUserRepo.findOneBy({
-          roomUuid: uuid,
-          userUuid: Not(userUuid),
-          status: RoomUserStatus.JOINED,
-        });
-
-        if (!newOwnerRoomUser) {
-          throw new BadRequestException(
-            '위임된 방장이 없어 방을 나갈 수 없습니다.',
-          );
-        }
-
-        await queryRunner.manager.update(
-          Room,
-          { uuid: uuid },
-          { ownerUuid: newOwnerRoomUser.userUuid },
-        );
-      }
-
       // RoomUser 삭제
       await queryRunner.manager.delete(RoomUser, {
         roomUuid: uuid,
@@ -383,6 +388,7 @@ export class RoomService {
     ownerUuid: string,
     kickedUserUuid: string,
     reason: string,
+    userType: UserType,
   ) {
     const room = await this.findOne(uuid);
     if (!room) {
@@ -400,8 +406,8 @@ export class RoomService {
       );
     }
 
-    if (room.ownerUuid != ownerUuid) {
-      throw new UnauthorizedException('방장이 아닙니다.');
+    if (room.ownerUuid != ownerUuid && userType != UserType.admin) {
+      throw new UnauthorizedException('방장이나 관리자가 아닙니다.');
     }
 
     if (room.ownerUuid == kickedUserUuid) {
@@ -485,6 +491,13 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
+    if (room.status !== RoomStatus.ACTIVATED) {
+      throw new BadRequestException(
+        '방장을 위임할 수 있는 방 상태가 아닙니다. 정산이 요청되기 전까지만 방장을 위임할 수 있습니다. 현재 방 상태: ' +
+          room.status,
+      );
+    }
+
     if (room.ownerUuid != ownerUuid) {
       throw new UnauthorizedException('방장이 아닙니다.');
     }
@@ -499,10 +512,7 @@ export class RoomService {
       throw new BadRequestException('유저가 방에 가입되어 있지 않습니다.');
     }
 
-    await this.roomRepo.update(
-      { uuid: uuid },
-      { ownerUuid: newOwnerUuid, status: RoomStatus.ACTIVATED },
-    );
+    await this.roomRepo.update({ uuid: uuid }, { ownerUuid: newOwnerUuid });
 
     return await this.roomRepo.findOne({
       where: { uuid: uuid },
@@ -521,6 +531,14 @@ export class RoomService {
 
     if (room.status == RoomStatus.IN_SETTLEMENT) {
       throw new BadRequestException('이미 정산이 진행되고 있습니다.');
+    }
+
+    if (room.status == RoomStatus.DELETED) {
+      throw new BadRequestException('삭제된 방입니다.');
+    }
+
+    if (room.status == RoomStatus.COMPLETED) {
+      throw new BadRequestException('정산이 종료된 방입니다.');
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -578,15 +596,17 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
-    if (room.payerUuid != userUuid) {
-      throw new UnauthorizedException(
-        '정산자가 아니므로 정산 정보를 수정할 수 없습니다.',
-      );
+    if (room.status == RoomStatus.COMPLETED) {
+      throw new BadRequestException('정산이 종료된 방입니다.');
     }
 
     if (room.status != RoomStatus.IN_SETTLEMENT) {
-      throw new BadRequestException(
-        '정산 정보를 수정할 수 있는 방 상태가 아닙니다.',
+      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
+    }
+
+    if (room.payerUuid != userUuid) {
+      throw new UnauthorizedException(
+        '정산자가 아니므로 정산 정보를 수정할 수 없습니다.',
       );
     }
 
@@ -645,10 +665,12 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
+    if (room.status == RoomStatus.COMPLETED) {
+      throw new BadRequestException('정산이 종료된 방입니다.');
+    }
+
     if (room.status != RoomStatus.IN_SETTLEMENT) {
-      throw new BadRequestException(
-        '정산이 진행되고 있지 않으므로 정산 요청을 취소할 수 없습니다.',
-      );
+      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
     }
 
     if (room.payerUuid != userUuid) {
@@ -704,7 +726,10 @@ export class RoomService {
       throw new NotFoundException('방이 존재하지 않습니다.');
     }
 
-    if (room.status != RoomStatus.IN_SETTLEMENT) {
+    if (
+      room.status != RoomStatus.IN_SETTLEMENT &&
+      room.status != RoomStatus.COMPLETED
+    ) {
       throw new BadRequestException('정산이 진행되고 있지 않습니다.');
     }
 
@@ -743,6 +768,23 @@ export class RoomService {
       room.payerBankName,
       payAmountPerPerson,
     );
+  }
+
+  async getUserPayStatus(roomUuid: string, userUuid: string) {
+    const room = await this.findOne(roomUuid);
+    if (!room) {
+      throw new NotFoundException('방이 존재하지 않습니다.');
+    }
+
+    const roomUser = await this.roomUserRepo.findOne({
+      where: { roomUuid, userUuid },
+    });
+
+    if (!roomUser) {
+      throw new NotFoundException('유저가 방에 가입되어 있지 않습니다.');
+    }
+
+    return roomUser.isPaid;
   }
 
   async updateRoomUserIsPaid(
@@ -852,7 +894,7 @@ export class RoomService {
       );
       this.fcmService
         .sendPushNotificationByUserUuid(
-          room.room_users.map((ru) => ru.userUuid),
+          room.roomUsers.map((ru) => ru.userUuid),
           '출발 알림',
           `방 "${room.title}"의 출발이 ${leftMinutes}분 남았습니다.`,
           {
@@ -895,11 +937,11 @@ export class RoomService {
         ),
         departureAlertSent: false,
         status: RoomStatus.ACTIVATED,
-        room_users: {
+        roomUsers: {
           status: RoomUserStatus.JOINED,
         },
       },
-      relations: ['room_users'],
+      relations: ['roomUsers'],
     });
   }
 
@@ -926,6 +968,18 @@ export class RoomService {
       }
     }
     return diff;
+  }
+
+  private formatKst(date: Date | string): string {
+    const target = typeof date === 'string' ? new Date(date) : date;
+    return target.toLocaleString('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
 
   generateRoomUpdateMessage(
@@ -961,21 +1015,9 @@ export class RoomService {
       );
     }
     if (roomDiff.departureTime) {
-      const originalTime = originalRoom.departureTime.toLocaleString('ko-KR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      const newTime = new Date(roomDiff.departureTime).toLocaleString('ko-KR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-      changes.push(`출발 시간: ${originalTime} → ${newTime}`);
+      const originalTime = this.formatKst(originalRoom.departureTime);
+      const newTime = this.formatKst(roomDiff.departureTime);
+      changes.push(`출발 시각: ${originalTime} → ${newTime}`);
     }
 
     return `방 정보가 수정되었습니다.\n${changes.join('\n')}`;
@@ -988,5 +1030,139 @@ export class RoomService {
     } else {
       await this.roomRepo.delete({});
     }
+  }
+
+  async cancelKickUserFromRoom(
+    roomUuid: string,
+    ownerUuid: string,
+    kickedUserUuid: string,
+    userType: UserType,
+  ) {
+    // 방장 또는 관리자만 가능
+    if (userType !== UserType.admin) {
+      const room = await this.findOne(roomUuid);
+      if (room.ownerUuid !== ownerUuid) {
+        throw new UnauthorizedException(
+          '방장 또는 관리자만 강퇴를 취소할 수 있습니다.',
+        );
+      }
+    }
+
+    this.logger.debug(
+      `Canceling kick for user ${kickedUserUuid} from room ${roomUuid}`,
+    );
+
+    // KICKED 상태인 RoomUser 찾기
+    const roomUser = await this.roomUserRepo.findOne({
+      where: {
+        roomUuid: roomUuid,
+        userUuid: kickedUserUuid,
+        status: RoomUserStatus.KICKED,
+      },
+    });
+
+    if (!roomUser) {
+      throw new NotFoundException('강퇴된 사용자를 찾을 수 없습니다.');
+    }
+
+    // RoomUser 데이터 삭제
+    await this.roomUserRepo.delete({
+      roomUuid: roomUuid,
+      userUuid: kickedUserUuid,
+    });
+
+    return await this.findOneWithRoomUsers(roomUuid);
+  }
+
+  // 통계 데이터 로직
+  async getRoomStatistics(
+    startDate: string,
+    endDate: string,
+  ): Promise<{ [key: string]: RoomStatisticsDto }> {
+    const data: { [key: string]: RoomStatisticsDto } = {};
+
+    const query_start = moment(startDate);
+    const query_end = moment(endDate);
+
+    const query_idx = query_start.clone();
+
+    while (query_idx.isBefore(query_end)) {
+      const targetMonth = query_idx.format('YYYY-MM');
+      const targetStartDate = query_idx.format('YYYY-MM-DD');
+      // 1달 더하기
+      query_idx.add(1, 'M');
+
+      const targetEndDate = query_idx.format('YYYY-MM-DD');
+
+      // 상태별 카운트 (DB GROUP BY)
+      const statusRows = await this.roomRepo
+        .createQueryBuilder('room')
+        .select('room.status', 'status')
+        .addSelect('COUNT(*)', 'count')
+        .where('room.createdAt BETWEEN :start AND :end', {
+          start: targetStartDate,
+          end: targetEndDate,
+        })
+        .groupBy('room.status')
+        .getRawMany();
+
+      const statusCounts: Record<string, number> = { total: 0 };
+
+      for (const row of statusRows) {
+        const key = row.status as string;
+        const count = parseInt(row.count);
+        if (key) {
+          statusCounts[key] = count;
+          statusCounts.total += count;
+        }
+      }
+
+      // 출발지/도착지 GROUP BY (DB 레벨)
+      const departureRows = await this.roomRepo
+        .createQueryBuilder('room')
+        .select('room.departureLocation', 'location')
+        .addSelect('COUNT(*)', 'count')
+        .where('room.createdAt BETWEEN :start AND :end', {
+          start: targetStartDate,
+          end: targetEndDate,
+        })
+        .groupBy('room.departureLocation')
+        .getRawMany();
+
+      const departureLocationCounts: Record<string, number> = { total: 0 };
+      for (const row of departureRows) {
+        if (row.location) {
+          departureLocationCounts[row.location] = parseInt(row.count);
+          departureLocationCounts.total += parseInt(row.count);
+        }
+      }
+
+      const destinationRows = await this.roomRepo
+        .createQueryBuilder('room')
+        .select('room.destinationLocation', 'location')
+        .addSelect('COUNT(*)', 'count')
+        .where('room.createdAt BETWEEN :start AND :end', {
+          start: targetStartDate,
+          end: targetEndDate,
+        })
+        .groupBy('room.destinationLocation')
+        .getRawMany();
+
+      const destinationLocationCounts: Record<string, number> = { total: 0 };
+      for (const row of destinationRows) {
+        if (row.location) {
+          destinationLocationCounts[row.location] = parseInt(row.count);
+          destinationLocationCounts.total += parseInt(row.count);
+        }
+      }
+
+      data[targetMonth] = {
+        statusCounts,
+        departureLocationCounts,
+        destinationLocationCounts,
+      } as RoomStatisticsDto;
+    }
+
+    return data;
   }
 }
