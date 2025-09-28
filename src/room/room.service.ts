@@ -1028,7 +1028,11 @@ export class RoomService {
       await this.findOne(roomUuid);
       await this.roomRepo.delete({ uuid: roomUuid });
     } else {
-      await this.roomRepo.delete({});
+      await this.dataSource
+        .createQueryBuilder()
+        .delete()
+        .from('room')
+        .execute();
     }
   }
 
