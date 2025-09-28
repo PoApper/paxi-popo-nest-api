@@ -17,14 +17,13 @@ import { JwtPayload } from '../strategies/jwt.payload';
 
 @Injectable()
 export class NicknameExistsGuard implements CanActivate {
+  private readonly logger = new Logger(NicknameExistsGuard.name);
+
   constructor(
     private readonly reflector: Reflector,
     private readonly userService: UserService,
     private readonly authService: AuthService,
-    private readonly logger: Logger,
-  ) {
-    this.logger = new Logger(NicknameExistsGuard.name);
-  }
+  ) {}
 
   async canActivate(context: ExecutionContext) {
     const publicGuardNames = this.reflector.getAllAndOverride<GuardName[]>(
