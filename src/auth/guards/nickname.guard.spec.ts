@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { Reflector } from '@nestjs/core';
 
@@ -57,7 +57,13 @@ describe('NicknameExistsGuard', () => {
         UserModule,
         AuthModule,
       ],
-      providers: [NicknameExistsGuard],
+      providers: [
+        NicknameExistsGuard,
+        {
+          provide: Logger,
+          useValue: new Logger(NicknameExistsGuard.name),
+        },
+      ],
     }).compile();
 
     app = moduleFixture.createNestApplication();
