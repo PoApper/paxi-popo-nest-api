@@ -10,7 +10,7 @@ export default () => {
 
   return {
     database: {
-      type: isTest ? 'sqlite' : process.env.DATABASE_TYPE || 'mysql',
+      type: isTest ? 'sqlite' : process.env.DATABASE_TYPE || 'mariadb',
       host: isTest ? undefined : process.env.DATABASE_HOST,
       port: isTest
         ? undefined

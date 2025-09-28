@@ -16,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey: jwtConstants.accessTokenSecret || 'fallback-secret',
+      secretOrKey: jwtConstants.accessTokenSecret,
     });
   }
 
