@@ -42,6 +42,7 @@
     "firebase-admin": "^13.2.0",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.47",
+    "ms": "^2.1.3",
     "mysql2": "^3.14.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -102,7 +103,8 @@
     "coveragePathIgnorePatterns": [
       "/node_modules/",
       "/dist/",
-      "/coverage/"
+      "/coverage/",
+      "src/database/"
     ],
     "testEnvironment": "node",
     "moduleNameMapper": {

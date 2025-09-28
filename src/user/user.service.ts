@@ -295,4 +295,18 @@ export class UserService {
       await this.accountRepo.delete({});
     }
   }
+
+  async updateRefreshToken(
+    userUuid: string,
+    hashedRefreshToken: string | null,
+    refreshTokenExpiresAt: Date | null,
+  ): Promise<void> {
+    await this.userRepo.update(
+      { uuid: userUuid },
+      {
+        hashedRefreshToken,
+        refreshTokenExpiresAt,
+      },
+    );
+  }
 }

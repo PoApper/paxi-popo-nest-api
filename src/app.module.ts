@@ -1,3 +1,7 @@
+// constants.ts를 가장 먼저 import하여 환경변수 로딩 보장
+// TODO: 장기적으로는 환경변수 configService로 가져와야 함
+import './auth/constants';
+
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
