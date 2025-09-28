@@ -50,7 +50,10 @@ export class AuthController {
       '해당 엔드포인트를 테스트하려면 Authentication, Refresh 두 가지 토큰이 필요한데, Swagger에서는 최대 하나의 토큰만 등록 가능합니다. 테스트하려면 Postman같은 툴을 사용하거나 개발자도구로 Refresh 쿠키를 직접 넣어야 합니다.',
   })
   @Post('refresh')
-  async refresh(@Req() req: Request, @Res({passthrough: true}) res: Response) {
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const accessTokenInCookie = req.cookies?.Authentication;
     const refreshTokenInCookie = req.cookies?.Refresh;
 
@@ -82,7 +85,7 @@ export class AuthController {
 
     this.setCookies(res, accessToken, refreshToken);
 
-    return user
+    return user;
   }
 
   private setCookies(
