@@ -24,7 +24,9 @@ function loadEnvFile() {
 function getEnvVarOrThrow(name: string): string {
   const value = process.env[name];
   if (typeof value === 'undefined' || value === '') {
-    throw new Error(`Environment variable "${name}" is required but was not found or is empty.`);
+    throw new Error(
+      `Environment variable "${name}" is required but was not found or is empty.`,
+    );
   }
   return value;
 }
@@ -34,6 +36,10 @@ loadEnvFile();
 export const jwtConstants = {
   accessTokenSecret: getEnvVarOrThrow('JWT_ACCESS_TOKEN_SECRET'),
   refreshTokenSecret: getEnvVarOrThrow('JWT_REFRESH_TOKEN_SECRET'),
-  accessTokenExpirationTime: getEnvVarOrThrow('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
-  refreshTokenExpirationTime: getEnvVarOrThrow('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
+  accessTokenExpirationTime: getEnvVarOrThrow(
+    'JWT_ACCESS_TOKEN_EXPIRATION_TIME',
+  ),
+  refreshTokenExpirationTime: getEnvVarOrThrow(
+    'JWT_REFRESH_TOKEN_EXPIRATION_TIME',
+  ),
 };
