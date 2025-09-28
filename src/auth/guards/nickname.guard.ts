@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   UnauthorizedException,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Response } from 'express';
@@ -20,7 +21,10 @@ export class NicknameExistsGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly userService: UserService,
     private readonly authService: AuthService,
-  ) {}
+    private readonly logger: Logger,
+  ) {
+    this.logger = new Logger(NicknameExistsGuard.name);
+  }
 
   async canActivate(context: ExecutionContext) {
     const publicGuardNames = this.reflector.getAllAndOverride<GuardName[]>(
@@ -55,10 +59,14 @@ export class NicknameExistsGuard implements CanActivate {
 
         // 쿠키 재설정
         this.authService.setCookies(response, accessToken, refreshToken);
-
+        this.logger.debug('No nickname in token, set nickname from database');
+        this.logger.debug('user:', user);
+        this.logger.debug('accessToken:', accessToken);
+        this.logger.debug('refreshToken:', refreshToken);
         // request.user도 업데이트
         request.user.nickname = userNickname.nickname;
       } else {
+        this.logger.debug('No nickname in database');
         throw new UnauthorizedException(
           '닉네임이 존재하지 않습니다. 닉네임을 먼저 생성해주세요.',
         );
