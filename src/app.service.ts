@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import moment from 'moment';
-import momentTz from 'moment-timezone';
+import * as moment from 'moment';
+import * as momentTz from 'moment-timezone';
 
 @Injectable()
 export class AppService {
