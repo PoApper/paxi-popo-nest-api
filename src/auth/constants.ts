@@ -21,14 +21,19 @@ function loadEnvFile() {
   }
 }
 
-// 환경변수가 설정되어 있지 않으면 .env 파일에서 로드
-if (!process.env.JWT_ACCESS_TOKEN_SECRET) {
-  loadEnvFile();
+function getEnvVarOrThrow(name: string): string {
+  const value = process.env[name];
+  if (typeof value === 'undefined' || value === '') {
+    throw new Error(`Environment variable "${name}" is required but was not found or is empty.`);
+  }
+  return value;
 }
 
+loadEnvFile();
+
 export const jwtConstants = {
-  accessTokenSecret: process.env.JWT_ACCESS_TOKEN_SECRET!,
-  refreshTokenSecret: process.env.JWT_REFRESH_TOKEN_SECRET!,
-  accessTokenExpirationTime: process.env.JWT_ACCESS_TOKEN_EXPIRATION_TIME!,
-  refreshTokenExpirationTime: process.env.JWT_REFRESH_TOKEN_EXPIRATION_TIME!,
+  accessTokenSecret: getEnvVarOrThrow('JWT_ACCESS_TOKEN_SECRET'),
+  refreshTokenSecret: getEnvVarOrThrow('JWT_REFRESH_TOKEN_SECRET'),
+  accessTokenExpirationTime: getEnvVarOrThrow('JWT_ACCESS_TOKEN_EXPIRATION_TIME'),
+  refreshTokenExpirationTime: getEnvVarOrThrow('JWT_REFRESH_TOKEN_EXPIRATION_TIME'),
 };
