@@ -12,6 +12,15 @@ import { TestUtils } from 'src/test/test-utils';
 import { GuardName } from 'src/common/guard-name';
 
 import { NicknameExistsGuard } from './nickname.guard';
+import { User } from 'src/user/entities/user.entity';
+import { Room } from 'src/room/entities/room.entity';
+import { Nickname } from 'src/user/entities/nickname.entity';
+import { Account } from 'src/user/entities/account.entity';
+import { RoomUser } from 'src/room/entities/room-user.entity';
+import { Chat } from 'src/chat/entities/chat.entity';
+import { FcmKey } from 'src/fcm/entities/fcm-key.entity';
+import { Report } from 'src/report/entities/report.entity';
+import { AuthModule } from '../auth.module';
 
 describe('NicknameExistsGuard', () => {
   let app: INestApplication;
@@ -28,15 +37,15 @@ describe('NicknameExistsGuard', () => {
           isGlobal: true,
           envFilePath: ['.env.test'],
         }),
-        TypeOrmModule.forRootAsync({
-          imports: [ConfigModule],
-          inject: [ConfigService],
-          useFactory: (configService: ConfigService) => {
-            const dbConfig = configService.get('database');
-            return dbConfig;
-          },
-        }),
+        TypeOrmModule.forRoot({
+            type: 'sqlite',
+            database: ':memory:',
+            entities: [User, Account, Nickname, Room, RoomUser, Chat, FcmKey, Report],
+            synchronize: true,
+            dropSchema: true,
+          }),
         UserModule,
+        AuthModule,
       ],
       providers: [NicknameExistsGuard],
     }).compile();
@@ -84,9 +93,14 @@ describe('NicknameExistsGuard', () => {
         },
       };
 
+      const mockResponse = {
+        cookie: jest.fn(),
+      };
+
       const mockContext = {
         switchToHttp: () => ({
           getRequest: () => mockRequest,
+          getResponse: () => mockResponse,
         }),
         getHandler: () => ({}),
         getClass: () => ({}),
@@ -117,9 +131,14 @@ describe('NicknameExistsGuard', () => {
         },
       };
 
+      const mockResponse = {
+        cookie: jest.fn(),
+      };
+
       const mockContext = {
         switchToHttp: () => ({
           getRequest: () => mockRequest,
+          getResponse: () => mockResponse,
         }),
         getHandler: () => ({}),
         getClass: () => ({}),
@@ -142,9 +161,14 @@ describe('NicknameExistsGuard', () => {
         },
       };
 
+      const mockResponse = {
+        cookie: jest.fn(),
+      };
+
       const mockContext = {
         switchToHttp: () => ({
           getRequest: () => mockRequest,
+          getResponse: () => mockResponse,
         }),
         getHandler: () => ({}),
         getClass: () => ({}),
@@ -166,9 +190,14 @@ describe('NicknameExistsGuard', () => {
         },
       };
 
+      const mockResponse = {
+        cookie: jest.fn(),
+      };
+
       const mockContext = {
         switchToHttp: () => ({
           getRequest: () => mockRequest,
+          getResponse: () => mockResponse,
         }),
         getHandler: () => ({}),
         getClass: () => ({}),
@@ -194,9 +223,14 @@ describe('NicknameExistsGuard', () => {
         },
       };
 
+      const mockResponse = {
+        cookie: jest.fn(),
+      };
+
       const mockContext = {
         switchToHttp: () => ({
           getRequest: () => mockRequest,
+          getResponse: () => mockResponse,
         }),
         getHandler: () => ({}),
         getClass: () => ({}),
@@ -219,9 +253,14 @@ describe('NicknameExistsGuard', () => {
         },
       };
 
+      const mockResponse = {
+        cookie: jest.fn(),
+      };
+
       const mockContext = {
         switchToHttp: () => ({
           getRequest: () => mockRequest,
+          getResponse: () => mockResponse,
         }),
         getHandler: () => ({}),
         getClass: () => ({}),
@@ -246,9 +285,14 @@ describe('NicknameExistsGuard', () => {
         },
       };
 
+      const mockResponse = {
+        cookie: jest.fn(),
+      };
+
       const mockContext = {
         switchToHttp: () => ({
           getRequest: () => mockRequest,
+          getResponse: () => mockResponse,
         }),
         getHandler: () => ({}),
         getClass: () => ({}),
@@ -272,9 +316,14 @@ describe('NicknameExistsGuard', () => {
         },
       };
 
+      const mockResponse = {
+        cookie: jest.fn(),
+      };
+
       const mockContext = {
         switchToHttp: () => ({
           getRequest: () => mockRequest,
+          getResponse: () => mockResponse,
         }),
         getHandler: () => ({}),
         getClass: () => ({}),
