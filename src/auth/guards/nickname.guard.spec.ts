@@ -21,6 +21,7 @@ import { Chat } from 'src/chat/entities/chat.entity';
 import { FcmKey } from 'src/fcm/entities/fcm-key.entity';
 import { Report } from 'src/report/entities/report.entity';
 import { AuthModule } from '../auth.module';
+import { AuthService } from '../auth.service';
 
 describe('NicknameExistsGuard', () => {
   let app: INestApplication;
@@ -116,8 +117,7 @@ describe('NicknameExistsGuard', () => {
     });
 
     it('should set nickname from database when token has no nickname', async () => {
-      // 닉네임을 데이터베이스에만 저장하고 토큰에는 없는 경우
-      // TODO: 이런 상황에서 닉네임을 담은 토큰을 새로 발급해 주는 쪽으로 변경함
+      // 닉네임을 데이터베이스에만 저장하고 토큰에는 없는 경우, 닉네임을 담은 토큰을 새로 발급함
       // 관련 PR: https://github.com/PoApper/paxi-popo-nest-api/pull/122
       await userService.createNickname(
         testUtils.getTestUser().uuid,
@@ -147,10 +147,39 @@ describe('NicknameExistsGuard', () => {
       // reflector 모킹 - public guard가 아닌 경우
       jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(undefined);
 
+      // AuthService 스파이 설정
+      const authService = app.get(AuthService);
+      const generateAccessTokenSpy = jest.spyOn(authService, 'generateAccessToken');
+      const generateRefreshTokenSpy = jest.spyOn(authService, 'generateRefreshToken');
+      const setCookiesSpy = jest.spyOn(authService, 'setCookies');
+
       const result = await guard.canActivate(mockContext as any);
 
+      // 결과 검증
       expect(result).toBe(true);
       expect(mockRequest.user.nickname).toBe('데이터베이스_닉네임_5678');
+
+      // 토큰 재발급 로직 검증
+      expect(generateAccessTokenSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          uuid: testUtils.getTestUser().uuid,
+          nickname: '데이터베이스_닉네임_5678',
+        }),
+      );
+      expect(generateRefreshTokenSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          uuid: testUtils.getTestUser().uuid,
+          nickname: '데이터베이스_닉네임_5678',
+        }),
+      );
+      expect(setCookiesSpy).toHaveBeenCalledWith(
+        mockResponse as any,
+        expect.any(String),
+        expect.any(String),
+      );
+
+      // 응답 쿠키 설정 호출 검증
+      expect(mockResponse.cookie).toHaveBeenCalled();
     });
 
     it('should throw UnauthorizedException when user has no nickname', async () => {
