@@ -7,7 +7,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { MoreThan, Not, Repository, DataSource, Between } from 'typeorm';
+import { Between, DataSource, MoreThan, Not, Repository } from 'typeorm';
 import { QueryRunner } from 'typeorm/query-runner/QueryRunner';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -189,8 +189,9 @@ export class RoomService {
       room.status == RoomStatus.DELETED
     ) {
       throw new BadRequestException('이미 종료된 방입니다.');
+    } else if (room.status == RoomStatus.IN_SETTLEMENT) {
+      throw new BadRequestException('정산이 진행 중인 방입니다.');
     }
-
     if (!(user.userType == UserType.admin || room.ownerUuid == user.uuid)) {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
