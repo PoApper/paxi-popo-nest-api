@@ -214,7 +214,8 @@ export class RoomController {
   })
   @ApiResponse({
     status: 400,
-    description: '이미 종료된 방인 경우, 출발 시간이 현재보다 이전인 경우',
+    description:
+      '이미 종료된 방인 경우, 출발 시간이 현재보다 이전인 경우, 정산이 진행중인 경우',
   })
   @ApiResponse({
     status: 401,
