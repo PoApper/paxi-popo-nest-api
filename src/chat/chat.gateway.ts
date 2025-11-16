@@ -6,7 +6,7 @@ import {
   WsException,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 import { instanceToPlain, plainToInstance } from 'class-transformer';
 import { Logger, UseFilters, Injectable } from '@nestjs/common';
 
@@ -61,9 +61,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (error) {
       // NOTE: @SubscribeMessage() 에노테이션이 붙지 않은 이벤트에서 발생한 에러는 ExceptionFilter에 전달되지 않음
       // 따라서 여기서 클라이언트에 에러 이벤트를 전송해야 함
-      client.emit(ChatEvent.ERROR, {
-        message: `웹소켓 연결에 실패했습니다. ${error.message}`,
-      });
+      if (error instanceof TokenExpiredError) {
+        client.emit(ChatEvent.ACCESS_TOKEN_EXPIRED, {
+          error: 'AccessTokenExpired',
+          message: `Access token has expired. Please use refresh token. ${error.message}`,
+        });
+      } else {
+        client.emit(ChatEvent.ERROR, {
+          error: 'ConnectionError',
+          message: `Connection error. ${error.message}`,
+        });
+      }
       client.disconnect();
       // 서버에 로그남기는 용도
       this.logger.error(`웹소켓 연결에 실패했습니다. ${error}`);
