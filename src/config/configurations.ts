@@ -1,6 +1,6 @@
 export default () => {
   const isTest = process.env.NODE_ENV === 'test';
-  const isProd = process.env.APP_ENV === 'prod';
+  const isProd = process.env.NODE_ENV === 'prod';
 
   // RSA 키 줄바꿈 처리
   const rawPrivateKey = process.env.FIREBASE_PRIVATE_KEY ?? '';
