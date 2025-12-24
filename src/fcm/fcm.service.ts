@@ -6,6 +6,7 @@ import {
 import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { getMessaging } from 'firebase-admin/messaging';
+import { getApps } from 'firebase-admin/app';
 
 import { FcmKey } from 'src/fcm/entities/fcm-key.entity';
 import { NoContentException } from 'src/common/exception';
@@ -82,6 +83,18 @@ export class FcmService {
     body: string,
     data?: any,
   ) {
+    // Firebase가 초기화되지 않았으면 푸시 알림을 보내지 않음
+    if (getApps().length === 0) {
+      console.warn(
+        'Firebase is not initialized. Push notification will not be sent.',
+      );
+      return {
+        successCount: 0,
+        failureCount: tokens.length,
+        responses: [],
+      };
+    }
+
     return getMessaging()
       .sendEachForMulticast({
         tokens: Array.isArray(tokens) ? tokens : [tokens],
