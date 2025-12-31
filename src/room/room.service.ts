@@ -196,6 +196,13 @@ export class RoomService {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
 
+    // 관리자가 수정하는 경우 로그 남기기
+    if (user.userType == UserType.admin) {
+      this.logger.log(
+        `[관리자 방 수정] 관리자 UUID: ${user.uuid}, 방 UUID: ${uuid}, 방 제목: ${room.title}`,
+      );
+    }
+
     // 출발 시간이 있다면 현재보다 이전인지 확인
     const departureTime = updateRoomDto.departureTime;
     if (departureTime && new Date(departureTime) < new Date()) {
@@ -218,7 +225,7 @@ export class RoomService {
     return await this.findOne(uuid);
   }
 
-  async remove(uuid: string, userUuid: string) {
+  async remove(uuid: string, userUuid: string, userType?: UserType) {
     const room = await this.findOne(uuid);
     if (!room) {
       throw new NotFoundException('방이 존재하지 않습니다.');
@@ -229,9 +236,17 @@ export class RoomService {
     if (room.status == RoomStatus.IN_SETTLEMENT) {
       throw new BadRequestException('이미 정산이 진행되고 있습니다.');
     }
-    if (room.ownerUuid != userUuid) {
-      throw new UnauthorizedException('방장이 아닙니다.');
+    if (!(userType == UserType.admin || room.ownerUuid == userUuid)) {
+      throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
+
+    // 관리자가 삭제하는 경우 로그 남기기
+    if (userType == UserType.admin) {
+      this.logger.log(
+        `[관리자 방 삭제] 관리자 UUID: ${userUuid}, 방 UUID: ${uuid}, 방 제목: ${room.title}`,
+      );
+    }
+
     await this.roomRepo.update({ uuid: uuid }, { status: RoomStatus.DELETED });
     return uuid;
   }

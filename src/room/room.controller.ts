@@ -273,7 +273,7 @@ export class RoomController {
     description: '로그인이 되어 있지 않은 경우, 방장이나 관리자가 아닌 경우',
   })
   async remove(@User() user: JwtPayload, @Param('uuid') uuid: string) {
-    return this.roomService.remove(uuid, user.uuid);
+    return this.roomService.remove(uuid, user.uuid, user.userType);
   }
 
   @Post('join/:uuid')
