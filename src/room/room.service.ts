@@ -182,25 +182,20 @@ export class RoomService {
   }
 
   async update(uuid: string, updateRoomDto: UpdateRoomDto, user: JwtPayload) {
-    const room = await this.findOne(uuid);
+    const originalRoom = await this.findOne(uuid);
 
     if (
-      room.status == RoomStatus.COMPLETED ||
-      room.status == RoomStatus.DELETED
+      originalRoom.status == RoomStatus.COMPLETED ||
+      originalRoom.status == RoomStatus.DELETED
     ) {
       throw new BadRequestException('이미 종료된 방입니다.');
-    } else if (room.status == RoomStatus.IN_SETTLEMENT) {
+    } else if (originalRoom.status == RoomStatus.IN_SETTLEMENT) {
       throw new BadRequestException('정산이 진행 중인 방입니다.');
     }
-    if (!(user.userType == UserType.admin || room.ownerUuid == user.uuid)) {
+    if (
+      !(user.userType == UserType.admin || originalRoom.ownerUuid == user.uuid)
+    ) {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
-    }
-
-    // 관리자가 수정하는 경우 로그 남기기
-    if (user.userType == UserType.admin) {
-      this.logger.log(
-        `[관리자 방 수정] 관리자 UUID: ${user.uuid}, 방 UUID: ${uuid}, 방 제목: ${room.title}`,
-      );
     }
 
     // 출발 시간이 있다면 현재보다 이전인지 확인
@@ -212,7 +207,7 @@ export class RoomService {
     }
 
     // 출발 시간 변경 시 출발전 알림 여부 초기화
-    let departureAlertSent = room.departureAlertSent;
+    let departureAlertSent = originalRoom.departureAlertSent;
     if (updateRoomDto.departureTime) {
       departureAlertSent = false;
     }
@@ -222,7 +217,43 @@ export class RoomService {
       { ...updateRoomDto, departureAlertSent: departureAlertSent },
     );
 
-    return await this.findOne(uuid);
+    const updatedRoom = await this.findOne(uuid);
+
+    // 관리자가 수정하는 경우 변경사항을 포함한 로그 남기기
+    if (user.userType == UserType.admin) {
+      const roomDiff = this.getRoomDiff(originalRoom, updatedRoom);
+      const changes = Object.keys(roomDiff)
+        .map((key) => {
+          const originalValue = originalRoom[key];
+          const updatedValue = roomDiff[key];
+          let originalStr = originalValue;
+          let updatedStr = updatedValue;
+
+          // Date 타입 포맷팅
+          if (originalValue instanceof Date) {
+            originalStr = this.formatKst(originalValue);
+          }
+          if (updatedValue instanceof Date) {
+            updatedStr = this.formatKst(updatedValue);
+          }
+
+          // null/undefined 처리
+          if (originalValue === null || originalValue === undefined) {
+            originalStr = originalValue === null ? 'null' : 'undefined';
+          }
+          if (updatedValue === null || updatedValue === undefined) {
+            updatedStr = updatedValue === null ? 'null' : 'undefined';
+          }
+
+          return `  - ${key}: "${originalStr}" → "${updatedStr}"`;
+        })
+        .join('\n');
+
+      const logMessage = `[관리자 방 수정] 관리자 UUID: ${user.uuid}, 방 UUID: ${uuid}, 방 제목: ${originalRoom.title}\n변경사항:\n${changes || '  (변경사항 없음)'}`;
+      this.logger.log(logMessage);
+    }
+
+    return updatedRoom;
   }
 
   async remove(uuid: string, userUuid: string, userType?: UserType) {
@@ -240,11 +271,21 @@ export class RoomService {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
 
-    // 관리자가 삭제하는 경우 로그 남기기
+    // 관리자가 삭제하는 경우 상세 로그 남기기
     if (userType == UserType.admin) {
-      this.logger.log(
-        `[관리자 방 삭제] 관리자 UUID: ${userUuid}, 방 UUID: ${uuid}, 방 제목: ${room.title}`,
-      );
+      const roomInfo = [
+        `  - 방 제목: ${room.title}`,
+        `  - 출발지: ${room.departureLocation || '(없음)'}`,
+        `  - 도착지: ${room.destinationLocation || '(없음)'}`,
+        `  - 출발 시간: ${this.formatKst(room.departureTime)}`,
+        `  - 최대 인원: ${room.maxParticipant}명`,
+        `  - 현재 인원: ${room.currentParticipant}명`,
+        `  - 방장 UUID: ${room.ownerUuid}`,
+        `  - 방 상태: ${room.status}`,
+      ].join('\n');
+
+      const logMessage = `[관리자 방 삭제] 관리자 UUID: ${userUuid}, 방 UUID: ${uuid}\n방 정보:\n${roomInfo}`;
+      this.logger.log(logMessage);
     }
 
     await this.roomRepo.update({ uuid: uuid }, { status: RoomStatus.DELETED });
