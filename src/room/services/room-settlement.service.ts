@@ -148,7 +148,8 @@ export class RoomSettlementService {
         },
       );
 
-      await this.roomUserRepo.update(
+      await queryRunner.manager.update(
+        RoomUser,
         {
           roomUuid: uuid,
           status: RoomUserStatus.JOINED,
