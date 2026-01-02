@@ -34,9 +34,6 @@ export class RoomSettlementService {
     dto: CreateSettlementDto,
   ) {
     const room = await this.findOne(uuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
 
     if (room.status == RoomStatus.IN_SETTLEMENT) {
       throw new BadRequestException('이미 정산이 진행되고 있습니다.');
@@ -101,9 +98,6 @@ export class RoomSettlementService {
     dto: UpdateSettlementDto,
   ) {
     const room = await this.findOne(uuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
 
     if (room.status == RoomStatus.COMPLETED) {
       throw new BadRequestException('정산이 종료된 방입니다.');
@@ -171,9 +165,6 @@ export class RoomSettlementService {
 
   async cancelSettlement(uuid: string, userUuid: string) {
     const room = await this.findOne(uuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
 
     if (room.status == RoomStatus.COMPLETED) {
       throw new BadRequestException('정산이 종료된 방입니다.');
@@ -281,10 +272,7 @@ export class RoomSettlementService {
   }
 
   async getUserPayStatus(roomUuid: string, userUuid: string) {
-    const room = await this.findOne(roomUuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
+    await this.findOne(roomUuid);
 
     const roomUser = await this.roomUserRepo.findOne({
       where: { roomUuid, userUuid },
@@ -303,9 +291,6 @@ export class RoomSettlementService {
     isPaid: boolean,
   ) {
     const room = await this.findOne(roomUuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
 
     if (room.status != RoomStatus.IN_SETTLEMENT || room.payerUuid == null) {
       throw new BadRequestException('정산이 진행되고 있지 않습니다.');
@@ -330,9 +315,6 @@ export class RoomSettlementService {
 
   async completeRoom(uuid: string, userUuid: string, userType: UserType) {
     const room = await this.findOne(uuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
 
     if (userUuid != room.payerUuid && userType != UserType.admin) {
       throw new UnauthorizedException('정산자 또는 관리자가 아닙니다.');
