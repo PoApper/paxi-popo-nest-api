@@ -9,6 +9,7 @@ import { FcmModule } from 'src/fcm/fcm.module';
 
 import { RoomService } from './room.service';
 import { RoomController } from './room.controller';
+import { RoomSettlementService } from './services/room-settlement.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Room, RoomUser]),
@@ -17,7 +18,7 @@ import { RoomController } from './room.controller';
     FcmModule,
   ],
   controllers: [RoomController],
-  providers: [RoomService],
+  providers: [RoomService, RoomSettlementService],
   exports: [RoomService],
 })
 export class RoomModule {}
