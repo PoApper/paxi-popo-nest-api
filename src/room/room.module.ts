@@ -9,6 +9,7 @@ import { FcmModule } from 'src/fcm/fcm.module';
 
 import { RoomService } from './room.service';
 import { RoomController } from './room.controller';
+import { RoomPreviewController } from './room-preview.controller';
 import { RoomSettlementService } from './services/room-settlement.service';
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { RoomSettlementService } from './services/room-settlement.service';
     forwardRef(() => ChatModule),
     FcmModule,
   ],
-  controllers: [RoomController],
+  controllers: [RoomController, RoomPreviewController],
   providers: [RoomService, RoomSettlementService],
   exports: [RoomService],
 })
