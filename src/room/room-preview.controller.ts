@@ -2,6 +2,7 @@ import { Controller, Get, Param, Res } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import * as moment from 'moment';
+import 'moment/locale/ko';
 
 import { GuardName } from 'src/common/guard-name';
 import { PublicGuard } from 'src/common/public-guard.decorator';
@@ -31,10 +32,9 @@ export class RoomPreviewController {
     const room = await this.roomService.findOne(uuid);
 
     const departureTime = moment(room.departureTime)
+      .locale('ko')
       .utcOffset(9)
-      .format('M/D(ddd) a h:mm')
-      .replace('am', '오전')
-      .replace('pm', '오후');
+      .format('M/D(ddd) a h:mm');
 
     const title = `${room.departureLocation} → ${room.destinationLocation}`;
     const description = `🕐 ${departureTime} | 👥 ${room.currentParticipant}/${room.maxParticipant}명`;
