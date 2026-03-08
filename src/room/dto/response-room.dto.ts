@@ -64,6 +64,9 @@ export class ResponseRoomDto extends OmitType(Room, [
       this.hasNewMessage = options.myRoomUser.hasNewMessage;
       this.kickedReason = options.myRoomUser.kickedReason;
       this.userStatus = options.myRoomUser.status;
+    } else {
+      // 유저가 해당 방에 참여한 적 없는 경우
+      this.userStatus = null;
     }
 
     if (options?.includeRoomUsers && room.roomUsers) {

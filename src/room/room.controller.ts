@@ -146,9 +146,10 @@ export class RoomController {
     type: [ResponseRoomDto],
   })
   findAll(
+    @User() user: JwtPayload,
     @Query('all', new ParseBoolPipe({ optional: true })) all: boolean = false,
   ) {
-    return this.roomService.findAll(all);
+    return this.roomService.findAll(all, user.uuid);
   }
 
   @Get('my/:userUuid')

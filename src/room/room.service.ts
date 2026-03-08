@@ -84,7 +84,7 @@ export class RoomService {
     }
   }
 
-  async findAll(all: boolean): Promise<ResponseRoomDto[]> {
+  async findAll(all: boolean, userUuid?: string): Promise<ResponseRoomDto[]> {
     // NOTE: 프론트에서 필터링을 하기 때문에 페이지네이션을 하지 않는다.
     const where = all
       ? {}
@@ -95,11 +95,18 @@ export class RoomService {
     const rooms = await this.roomRepo.find({
       where,
       order: { departureTime: 'ASC' },
-      relations: ['roomUsers', 'roomUsers.user.nickname'],
+      relations: ['roomUsers'],
     });
-    return rooms.map(
-      (room) => new ResponseRoomDto(room, { includeRoomUsers: true }),
-    );
+    return rooms.map((room) => {
+      let myRoomUser: MyRoomUserDto | undefined = undefined;
+      if (userUuid) {
+        const roomUser = room.roomUsers?.find((ru) => ru.userUuid === userUuid);
+        if (roomUser) {
+          myRoomUser = new MyRoomUserDto(roomUser, false);
+        }
+      }
+      return new ResponseRoomDto(room, { myRoomUser });
+    });
   }
 
   async findOne(uuid: string) {
