@@ -18,7 +18,7 @@ import { RoomModule } from './room.module';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { RoomStatus } from './entities/room.meta';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
-import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
+import { ResponseRoomDto } from './dto/response-room.dto';
 
 describe('RoomModule - Integration Test', () => {
   let app: INestApplication;
@@ -117,7 +117,7 @@ describe('RoomModule - Integration Test', () => {
       if (!result) {
         throw new Error('Room creation failed');
       }
-      expect(result instanceof RoomWithUsersDto).toBe(true);
+      expect(result instanceof ResponseRoomDto).toBe(true);
       expect(result.title).toBe(dto.title);
       expect(result.departureTime).toEqual(dto.departureTime);
       expect(result.departureLocation).toBe(dto.departureLocation);
