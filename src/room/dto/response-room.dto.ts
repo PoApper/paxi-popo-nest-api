@@ -23,11 +23,11 @@ export class ResponseRoomDto extends OmitType(Room, [
   @ApiProperty({ required: false, deprecated: true })
   hasNewMessage?: boolean;
 
-  @ApiProperty({ required: false, deprecated: true })
-  kickedReason?: string;
+  @ApiProperty({ required: false, deprecated: true, nullable: true })
+  kickedReason?: string | null;
 
-  @ApiProperty({ required: false, deprecated: true })
-  userStatus?: string;
+  @ApiProperty({ required: false, deprecated: true, nullable: true })
+  userStatus?: string | null;
 
   constructor(
     room: Room,
@@ -67,9 +67,7 @@ export class ResponseRoomDto extends OmitType(Room, [
     }
 
     if (options?.includeRoomUsers && room.roomUsers) {
-      this.roomUsers = room.roomUsers.map(
-        (ru) => new RoomParticipantDto(ru),
-      );
+      this.roomUsers = room.roomUsers.map((ru) => new RoomParticipantDto(ru));
     }
   }
 }

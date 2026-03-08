@@ -13,11 +13,11 @@ export class MyRoomUserDto {
   @ApiProperty({ example: false })
   isMuted: boolean;
 
-  @ApiProperty({ example: '25c930d5-f38e-4f28-813b-82eb49acd606' })
-  lastReadChatUuid: string;
+  @ApiProperty({ example: '25c930d5-f38e-4f28-813b-82eb49acd606', nullable: true })
+  lastReadChatUuid: string | null;
 
   @ApiProperty({ example: '추방당했습니다.', nullable: true })
-  kickedReason: string;
+  kickedReason: string | null;
 
   @ApiProperty({ example: true })
   hasNewMessage: boolean;
