@@ -143,7 +143,7 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '출발 시간이 현재보다 이후이고, 모집 중인 모든 방을 반환',
-    type: [Room],
+    type: [ResponseRoomDto],
   })
   findAll(
     @Query('all', new ParseBoolPipe({ optional: true })) all: boolean = false,
