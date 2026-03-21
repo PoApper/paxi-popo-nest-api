@@ -29,8 +29,6 @@ describe('RoomParticipantDto', () => {
     expect(dto.roomUuid).toBe(baseRoomUser.roomUuid);
     expect(dto.status).toBe(baseRoomUser.status);
     expect(dto.isPaid).toBe(baseRoomUser.isPaid);
-    expect(dto.lastReadChatUuid).toBe(baseRoomUser.lastReadChatUuid);
-    expect(dto.isMuted).toBe(baseRoomUser.isMuted);
     expect(dto.nickname).toBe(baseRoomUser.user.nickname.nickname);
   });
 

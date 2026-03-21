@@ -7,8 +7,6 @@ export class RoomParticipantDto extends PickType(RoomUser, [
   'roomUuid',
   'status',
   'isPaid',
-  'lastReadChatUuid',
-  'isMuted',
 ]) {
   @ApiProperty({ nullable: false })
   nickname: string;
@@ -19,8 +17,6 @@ export class RoomParticipantDto extends PickType(RoomUser, [
     this.roomUuid = roomUser.roomUuid;
     this.status = roomUser.status;
     this.isPaid = roomUser.isPaid;
-    this.lastReadChatUuid = roomUser.lastReadChatUuid;
-    this.isMuted = roomUser.isMuted;
     this.nickname = roomUser.user?.nickname?.nickname ?? '';
   }
 }
