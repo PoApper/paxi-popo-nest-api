@@ -27,7 +27,6 @@ import { ChatService } from 'src/chat/chat.service';
 import { UserService } from 'src/user/user.service';
 import { FcmService } from 'src/fcm/fcm.service';
 import { NoContentException } from 'src/common/exception';
-import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
 import { User } from 'src/common/decorators/user.decorator';
 import { UserType } from 'src/user/user.meta';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -40,7 +39,7 @@ import { Room } from './entities/room.entity';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
 import { RoomUser } from './entities/room-user.entity';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
-import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
+import { ResponseRoomDto } from './dto/response-room.dto';
 import { ResponseSettlementDto } from './dto/response-settlement.dto';
 import { RoomStatisticsResponseDto } from './dto/room-statistics.dto';
 
@@ -144,12 +143,13 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '출발 시간이 현재보다 이후이고, 모집 중인 모든 방을 반환',
-    type: [Room],
+    type: [ResponseRoomDto],
   })
   findAll(
+    @User() user: JwtPayload,
     @Query('all', new ParseBoolPipe({ optional: true })) all: boolean = false,
   ) {
-    return this.roomService.findAll(all);
+    return this.roomService.findAll(all, user.uuid);
   }
 
   @Get('my/:userUuid')
@@ -159,7 +159,7 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '특정 유저가 참여중인 방을 반환',
-    type: [ResponseMyRoomDto],
+    type: [ResponseRoomDto],
   })
   @ApiResponse({
     status: 403,
@@ -183,7 +183,7 @@ export class RoomController {
     status: 200,
     description:
       '자신이 참여중인 방을 반환, 참여중인 방이 없을 경우 빈 배열 반환',
-    type: [ResponseMyRoomDto],
+    type: [ResponseRoomDto],
   })
   findMyRoom(@User() user: JwtPayload) {
     return this.roomService.findMyRoomByUserUuid(user.uuid);
@@ -196,7 +196,7 @@ export class RoomController {
   @ApiResponse({
     status: 200,
     description: '복호화된 계좌번호가 포함된 방 정보를 반환',
-    type: RoomWithUsersDto,
+    type: ResponseRoomDto,
   })
   findOne(@Param('uuid') uuid: string) {
     return this.roomService.findOneWithRoomUsers(uuid);
@@ -284,7 +284,7 @@ export class RoomController {
     status: 201,
     description:
       '참여한 방 정보를 반환, 첫 입장 혹은 퇴장 후 입장의 경우 방 전체에 채팅 메시지와 푸시 알림을 전송합니다.',
-    type: RoomWithUsersDto,
+    type: ResponseRoomDto,
   })
   @ApiResponse({
     status: 400,
@@ -318,7 +318,7 @@ export class RoomController {
     status: 200,
     description:
       '방의 현재 인원 수가 하나 줄고, 방 정보를 반환, 퇴장 메세지를 전송합니다.',
-    type: RoomWithUsersDto,
+    type: ResponseRoomDto,
   })
   @ApiResponse({
     status: 400,
@@ -364,7 +364,7 @@ export class RoomController {
     status: 200,
     description:
       '강퇴된 사용자와 방 정보를 반환, 방에 강퇴 메세지를 전송합니다.',
-    type: RoomWithUsersDto,
+    type: ResponseRoomDto,
   })
   @ApiResponse({
     status: 400,
@@ -434,7 +434,7 @@ export class RoomController {
     status: 200,
     description:
       '강퇴가 취소된 방 정보를 반환, 방에 강퇴 취소 메세지를 전송합니다.',
-    type: RoomWithUsersDto,
+    type: ResponseRoomDto,
   })
   @ApiResponse({
     status: 400,

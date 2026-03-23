@@ -70,3 +70,6 @@ launch.json
 # local-certs
 *.csr
 *.pem
+
+# handoff docs
+**/HANDOFF.md

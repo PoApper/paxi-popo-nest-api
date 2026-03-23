@@ -22,10 +22,10 @@ import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 import { RoomStatus } from 'src/room/entities/room.meta';
 import { UserService } from 'src/user/user.service';
 import { ChatService } from 'src/chat/chat.service';
-import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
 import { FcmService } from 'src/fcm/fcm.service';
 
-import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
+import { ResponseRoomDto } from './dto/response-room.dto';
+import { MyRoomUserDto } from './dto/my-room-user.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
@@ -75,7 +75,7 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
-      return await this.findOneWithRoomUsers(room.uuid);
+      return await this.findOneWithRoomUsers(room.uuid, userUuid);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -84,7 +84,7 @@ export class RoomService {
     }
   }
 
-  findAll(all: boolean) {
+  async findAll(all: boolean, userUuid?: string): Promise<ResponseRoomDto[]> {
     // NOTE: 프론트에서 필터링을 하기 때문에 페이지네이션을 하지 않는다.
     const where = all
       ? {}
@@ -92,9 +92,20 @@ export class RoomService {
           status: RoomStatus.ACTIVATED,
           departureTime: MoreThan(new Date()),
         };
-    return this.roomRepo.find({
+    const rooms = await this.roomRepo.find({
       where,
       order: { departureTime: 'ASC' },
+      relations: ['roomUsers'],
+    });
+    return rooms.map((room) => {
+      let myRoomUser: MyRoomUserDto | undefined = undefined;
+      if (userUuid) {
+        const roomUser = room.roomUsers?.find((ru) => ru.userUuid === userUuid);
+        if (roomUser) {
+          myRoomUser = new MyRoomUserDto(roomUser, false);
+        }
+      }
+      return new ResponseRoomDto(room, { myRoomUser });
     });
   }
 
@@ -110,7 +121,10 @@ export class RoomService {
     return room;
   }
 
-  async findOneWithRoomUsers(uuid: string): Promise<RoomWithUsersDto> {
+  async findOneWithRoomUsers(
+    uuid: string,
+    userUuid?: string,
+  ): Promise<ResponseRoomDto> {
     const room = await this.roomRepo.findOne({
       where: { uuid: uuid },
       relations: ['roomUsers', 'roomUsers.user.nickname'],
@@ -126,40 +140,50 @@ export class RoomService {
         room.payerEncryptedAccountNumber,
       );
     }
-    return new RoomWithUsersDto(room, decryptedAccountNumber);
+
+    let myRoomUser: MyRoomUserDto | undefined = undefined;
+    if (userUuid) {
+      const roomUser = room.roomUsers?.find((ru) => ru.userUuid === userUuid);
+      if (roomUser) {
+        const lastChat = await this.chatService.getLastMessageOfRoom(uuid);
+        const hasNewMessage =
+          lastChat !== null && lastChat.uuid !== roomUser.lastReadChatUuid;
+        myRoomUser = new MyRoomUserDto(roomUser, hasNewMessage);
+      }
+    }
+
+    return new ResponseRoomDto(room, {
+      payerAccountNumber: decryptedAccountNumber,
+      myRoomUser,
+      includeRoomUsers: true,
+    });
   }
 
-  async findMyRoomByUserUuid(userUuid: string) {
+  async findMyRoomByUserUuid(userUuid: string): Promise<ResponseRoomDto[]> {
     // JOINED 및 KICKED 상태인 방 모두 조회
     const rooms: Room[] = await this.roomRepo.find({
       where: {
         roomUsers: { userUuid: userUuid },
         status: Not(RoomStatus.DELETED),
       },
-      select: {
-        roomUsers: {
-          userUuid: false,
-          status: true,
-          kickedReason: true,
-          lastReadChatUuid: true,
-        },
-      },
       relations: ['roomUsers'],
     });
 
     return await Promise.all(
       rooms.map(async (room) => {
+        const roomUser = room.roomUsers.find((ru) => ru.userUuid === userUuid);
+        if (!roomUser) return null;
+
         const lastChat = await this.chatService.getLastMessageOfRoom(room.uuid);
         const hasNewMessage =
-          lastChat?.uuid != room.roomUsers[0].lastReadChatUuid;
+          lastChat !== null && lastChat.uuid !== roomUser.lastReadChatUuid;
 
-        return new ResponseMyRoomDto(
-          room,
-          room.roomUsers[0].status,
-          room.roomUsers[0].kickedReason,
-          hasNewMessage,
-        );
+        return new ResponseRoomDto(room, {
+          myRoomUser: new MyRoomUserDto(roomUser, hasNewMessage),
+        });
       }),
+    ).then((results) =>
+      results.filter((r): r is ResponseRoomDto => r !== null),
     );
   }
 
@@ -296,7 +320,7 @@ export class RoomService {
   async joinRoom(
     uuid: string,
     userUuid: string,
-  ): Promise<{ sendMessage: boolean; room: RoomWithUsersDto }> {
+  ): Promise<{ sendMessage: boolean; room: ResponseRoomDto }> {
     const room = await this.findOne(uuid);
 
     if (!room) {
@@ -373,11 +397,11 @@ export class RoomService {
 
     return {
       sendMessage,
-      room: await this.findOneWithRoomUsers(uuid),
+      room: await this.findOneWithRoomUsers(uuid, userUuid),
     };
   }
 
-  async leaveRoom(uuid: string, userUuid: string): Promise<RoomWithUsersDto> {
+  async leaveRoom(uuid: string, userUuid: string): Promise<ResponseRoomDto> {
     const room = await this.findOne(uuid);
 
     if (!room) {
