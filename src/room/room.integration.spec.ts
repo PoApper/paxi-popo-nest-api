@@ -129,6 +129,62 @@ describe('RoomModule - Integration Test', () => {
     });
   });
 
+  describe('findOne', () => {
+    let testRoom: ResponseRoomDto;
+
+    beforeEach(async () => {
+      testRoom = await roomService.create(testUtils.getTestUser().uuid, {
+        description: '테스트 방입니다',
+        title: '테스트 방',
+        departureTime: new Date(Date.now() + 1000 * 60 * 60 * 24),
+        departureLocation: '출발지',
+        destinationLocation: '도착지',
+        maxParticipant: 4,
+      });
+    });
+
+    it('should return myRoomUser when user is a participant', async () => {
+      const result = await roomController.findOne(
+        testUtils.getTestUserJwtToken(),
+        testRoom.uuid,
+      );
+
+      expect(result).toBeDefined();
+      expect(result.uuid).toBe(testRoom.uuid);
+      expect(result.myRoomUser).toBeDefined();
+      expect(result.myRoomUser!.status).toBe('JOINED');
+      expect(result.myRoomUser!.isMuted).toBe(false);
+      expect(result.myRoomUser!.isPaid).toBe(false);
+      expect(typeof result.myRoomUser!.hasNewMessage).toBe('boolean');
+    });
+
+    it('should return myRoomUser as undefined when user is not a participant', async () => {
+      const nonParticipant = await userService.save({
+        email: 'nonparticipant@test.com',
+        password: 'password123',
+        name: 'Non Participant',
+        userType: UserType.student,
+      });
+
+      const nonParticipantJwt: JwtPayload = {
+        uuid: nonParticipant.uuid,
+        email: nonParticipant.email,
+        name: nonParticipant.name,
+        nickname: 'non_participant',
+        userType: UserType.student,
+      };
+
+      const result = await roomController.findOne(
+        nonParticipantJwt,
+        testRoom.uuid,
+      );
+
+      expect(result).toBeDefined();
+      expect(result.uuid).toBe(testRoom.uuid);
+      expect(result.myRoomUser).toBeUndefined();
+    });
+  });
+
   describe('settlement', () => {
     it('should create a requested settlement with an account number', async () => {
       const room = await roomService.create(testUtils.getTestUser().uuid, {
