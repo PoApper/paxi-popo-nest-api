@@ -198,8 +198,8 @@ export class RoomController {
     description: '복호화된 계좌번호가 포함된 방 정보를 반환',
     type: ResponseRoomDto,
   })
-  findOne(@Param('uuid') uuid: string) {
-    return this.roomService.findOneWithRoomUsers(uuid);
+  findOne(@User() user: JwtPayload, @Param('uuid') uuid: string) {
+    return this.roomService.findOneWithRoomUsers(uuid, user.uuid);
   }
 
   @Patch(':uuid')
