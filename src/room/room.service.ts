@@ -22,16 +22,16 @@ import { RoomUserStatus } from 'src/room/entities/room-user.meta';
 import { RoomStatus } from 'src/room/entities/room.meta';
 import { UserService } from 'src/user/user.service';
 import { ChatService } from 'src/chat/chat.service';
-import { ResponseMyRoomDto } from 'src/room/dto/response-myroom.dto';
 import { FcmService } from 'src/fcm/fcm.service';
 
-import { RoomWithUsersDto } from './dto/room-user-with-nickname.dto';
+import { ResponseRoomDto } from './dto/response-room.dto';
+import { MyRoomUserDto } from './dto/my-room-user.dto';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
 import { UpdateSettlementDto } from './dto/update-settlement.dto';
-import { ResponseSettlementDto } from './dto/response-settlement.dto';
 import { RoomStatisticsDto } from './dto/room-statistics.dto';
+import { RoomSettlementService } from './services/room-settlement.service';
 
 @Injectable()
 export class RoomService {
@@ -45,6 +45,7 @@ export class RoomService {
     private readonly chatService: ChatService,
     private readonly fcmService: FcmService,
     private readonly dataSource: DataSource,
+    private readonly roomSettlementService: RoomSettlementService,
   ) {}
   private readonly logger = new Logger(RoomService.name);
 
@@ -74,7 +75,7 @@ export class RoomService {
 
       await queryRunner.commitTransaction();
 
-      return await this.findOneWithRoomUsers(room.uuid);
+      return await this.findOneWithRoomUsers(room.uuid, userUuid);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       throw err;
@@ -83,7 +84,7 @@ export class RoomService {
     }
   }
 
-  findAll(all: boolean) {
+  async findAll(all: boolean, userUuid?: string): Promise<ResponseRoomDto[]> {
     // NOTE: 프론트에서 필터링을 하기 때문에 페이지네이션을 하지 않는다.
     const where = all
       ? {}
@@ -91,9 +92,20 @@ export class RoomService {
           status: RoomStatus.ACTIVATED,
           departureTime: MoreThan(new Date()),
         };
-    return this.roomRepo.find({
+    const rooms = await this.roomRepo.find({
       where,
       order: { departureTime: 'ASC' },
+      relations: ['roomUsers'],
+    });
+    return rooms.map((room) => {
+      let myRoomUser: MyRoomUserDto | undefined = undefined;
+      if (userUuid) {
+        const roomUser = room.roomUsers?.find((ru) => ru.userUuid === userUuid);
+        if (roomUser) {
+          myRoomUser = new MyRoomUserDto(roomUser, false);
+        }
+      }
+      return new ResponseRoomDto(room, { myRoomUser });
     });
   }
 
@@ -109,7 +121,10 @@ export class RoomService {
     return room;
   }
 
-  async findOneWithRoomUsers(uuid: string): Promise<RoomWithUsersDto> {
+  async findOneWithRoomUsers(
+    uuid: string,
+    userUuid?: string,
+  ): Promise<ResponseRoomDto> {
     const room = await this.roomRepo.findOne({
       where: { uuid: uuid },
       relations: ['roomUsers', 'roomUsers.user.nickname'],
@@ -125,40 +140,50 @@ export class RoomService {
         room.payerEncryptedAccountNumber,
       );
     }
-    return new RoomWithUsersDto(room, decryptedAccountNumber);
+
+    let myRoomUser: MyRoomUserDto | undefined = undefined;
+    if (userUuid) {
+      const roomUser = room.roomUsers?.find((ru) => ru.userUuid === userUuid);
+      if (roomUser) {
+        const lastChat = await this.chatService.getLastMessageOfRoom(uuid);
+        const hasNewMessage =
+          lastChat !== null && lastChat.uuid !== roomUser.lastReadChatUuid;
+        myRoomUser = new MyRoomUserDto(roomUser, hasNewMessage);
+      }
+    }
+
+    return new ResponseRoomDto(room, {
+      payerAccountNumber: decryptedAccountNumber,
+      myRoomUser,
+      includeRoomUsers: true,
+    });
   }
 
-  async findMyRoomByUserUuid(userUuid: string) {
+  async findMyRoomByUserUuid(userUuid: string): Promise<ResponseRoomDto[]> {
     // JOINED 및 KICKED 상태인 방 모두 조회
     const rooms: Room[] = await this.roomRepo.find({
       where: {
         roomUsers: { userUuid: userUuid },
         status: Not(RoomStatus.DELETED),
       },
-      select: {
-        roomUsers: {
-          userUuid: false,
-          status: true,
-          kickedReason: true,
-          lastReadChatUuid: true,
-        },
-      },
       relations: ['roomUsers'],
     });
 
     return await Promise.all(
       rooms.map(async (room) => {
+        const roomUser = room.roomUsers.find((ru) => ru.userUuid === userUuid);
+        if (!roomUser) return null;
+
         const lastChat = await this.chatService.getLastMessageOfRoom(room.uuid);
         const hasNewMessage =
-          lastChat?.uuid != room.roomUsers[0].lastReadChatUuid;
+          lastChat !== null && lastChat.uuid !== roomUser.lastReadChatUuid;
 
-        return new ResponseMyRoomDto(
-          room,
-          room.roomUsers[0].status,
-          room.roomUsers[0].kickedReason,
-          hasNewMessage,
-        );
+        return new ResponseRoomDto(room, {
+          myRoomUser: new MyRoomUserDto(roomUser, hasNewMessage),
+        });
       }),
+    ).then((results) =>
+      results.filter((r): r is ResponseRoomDto => r !== null),
     );
   }
 
@@ -182,17 +207,19 @@ export class RoomService {
   }
 
   async update(uuid: string, updateRoomDto: UpdateRoomDto, user: JwtPayload) {
-    const room = await this.findOne(uuid);
+    const originalRoom = await this.findOne(uuid);
 
     if (
-      room.status == RoomStatus.COMPLETED ||
-      room.status == RoomStatus.DELETED
+      originalRoom.status == RoomStatus.COMPLETED ||
+      originalRoom.status == RoomStatus.DELETED
     ) {
       throw new BadRequestException('이미 종료된 방입니다.');
-    } else if (room.status == RoomStatus.IN_SETTLEMENT) {
+    } else if (originalRoom.status == RoomStatus.IN_SETTLEMENT) {
       throw new BadRequestException('정산이 진행 중인 방입니다.');
     }
-    if (!(user.userType == UserType.admin || room.ownerUuid == user.uuid)) {
+    if (
+      !(user.userType == UserType.admin || originalRoom.ownerUuid == user.uuid)
+    ) {
       throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
 
@@ -205,7 +232,7 @@ export class RoomService {
     }
 
     // 출발 시간 변경 시 출발전 알림 여부 초기화
-    let departureAlertSent = room.departureAlertSent;
+    let departureAlertSent = originalRoom.departureAlertSent;
     if (updateRoomDto.departureTime) {
       departureAlertSent = false;
     }
@@ -215,10 +242,46 @@ export class RoomService {
       { ...updateRoomDto, departureAlertSent: departureAlertSent },
     );
 
-    return await this.findOne(uuid);
+    const updatedRoom = await this.findOne(uuid);
+
+    // 관리자가 수정하는 경우 변경사항을 포함한 로그 남기기
+    if (user.userType == UserType.admin) {
+      const roomDiff = this.getRoomDiff(originalRoom, updatedRoom);
+      const changes = Object.keys(roomDiff)
+        .map((key) => {
+          const originalValue = originalRoom[key];
+          const updatedValue = roomDiff[key];
+          let originalStr = originalValue;
+          let updatedStr = updatedValue;
+
+          // Date 타입 포맷팅
+          if (originalValue instanceof Date) {
+            originalStr = this.formatKst(originalValue);
+          }
+          if (updatedValue instanceof Date) {
+            updatedStr = this.formatKst(updatedValue);
+          }
+
+          // null/undefined 처리
+          if (originalValue === null || originalValue === undefined) {
+            originalStr = originalValue === null ? 'null' : 'undefined';
+          }
+          if (updatedValue === null || updatedValue === undefined) {
+            updatedStr = updatedValue === null ? 'null' : 'undefined';
+          }
+
+          return `  - ${key}: "${originalStr}" → "${updatedStr}"`;
+        })
+        .join('\n');
+
+      const logMessage = `[관리자 방 수정] 관리자 UUID: ${user.uuid}, 방 UUID: ${uuid}, 방 제목: ${originalRoom.title}\n변경사항:\n${changes || '  (변경사항 없음)'}`;
+      this.logger.log(logMessage);
+    }
+
+    return updatedRoom;
   }
 
-  async remove(uuid: string, userUuid: string) {
+  async remove(uuid: string, userUuid: string, userType?: UserType) {
     const room = await this.findOne(uuid);
     if (!room) {
       throw new NotFoundException('방이 존재하지 않습니다.');
@@ -229,9 +292,27 @@ export class RoomService {
     if (room.status == RoomStatus.IN_SETTLEMENT) {
       throw new BadRequestException('이미 정산이 진행되고 있습니다.');
     }
-    if (room.ownerUuid != userUuid) {
-      throw new UnauthorizedException('방장이 아닙니다.');
+    if (!(userType == UserType.admin || room.ownerUuid == userUuid)) {
+      throw new UnauthorizedException('방장 또는 관리자가 아닙니다.');
     }
+
+    // 관리자가 삭제하는 경우 상세 로그 남기기
+    if (userType == UserType.admin) {
+      const roomInfo = [
+        `  - 방 제목: ${room.title}`,
+        `  - 출발지: ${room.departureLocation || '(없음)'}`,
+        `  - 도착지: ${room.destinationLocation || '(없음)'}`,
+        `  - 출발 시간: ${this.formatKst(room.departureTime)}`,
+        `  - 최대 인원: ${room.maxParticipant}명`,
+        `  - 현재 인원: ${room.currentParticipant}명`,
+        `  - 방장 UUID: ${room.ownerUuid}`,
+        `  - 방 상태: ${room.status}`,
+      ].join('\n');
+
+      const logMessage = `[관리자 방 삭제] 관리자 UUID: ${userUuid}, 방 UUID: ${uuid}\n방 정보:\n${roomInfo}`;
+      this.logger.log(logMessage);
+    }
+
     await this.roomRepo.update({ uuid: uuid }, { status: RoomStatus.DELETED });
     return uuid;
   }
@@ -239,7 +320,7 @@ export class RoomService {
   async joinRoom(
     uuid: string,
     userUuid: string,
-  ): Promise<{ sendMessage: boolean; room: RoomWithUsersDto }> {
+  ): Promise<{ sendMessage: boolean; room: ResponseRoomDto }> {
     const room = await this.findOne(uuid);
 
     if (!room) {
@@ -316,11 +397,11 @@ export class RoomService {
 
     return {
       sendMessage,
-      room: await this.findOneWithRoomUsers(uuid),
+      room: await this.findOneWithRoomUsers(uuid, userUuid),
     };
   }
 
-  async leaveRoom(uuid: string, userUuid: string): Promise<RoomWithUsersDto> {
+  async leaveRoom(uuid: string, userUuid: string): Promise<ResponseRoomDto> {
     const room = await this.findOne(uuid);
 
     if (!room) {
@@ -525,66 +606,7 @@ export class RoomService {
     userUuid: string,
     dto: CreateSettlementDto,
   ) {
-    const room = await this.findOne(uuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
-
-    if (room.status == RoomStatus.IN_SETTLEMENT) {
-      throw new BadRequestException('이미 정산이 진행되고 있습니다.');
-    }
-
-    if (room.status == RoomStatus.DELETED) {
-      throw new BadRequestException('삭제된 방입니다.');
-    }
-
-    if (room.status == RoomStatus.COMPLETED) {
-      throw new BadRequestException('정산이 종료된 방입니다.');
-    }
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      if (dto.updateAccount) {
-        await this.userService.createOrUpdateAccount(
-          userUuid,
-          dto.payerAccountNumber,
-          dto.payerAccountHolderName,
-          dto.payerBankName,
-          queryRunner,
-        );
-      }
-
-      await queryRunner.manager.update(
-        Room,
-        { uuid: uuid },
-        {
-          status: RoomStatus.IN_SETTLEMENT,
-          payerUuid: userUuid,
-          payAmount: dto.payAmount,
-          payerEncryptedAccountNumber: this.userService.encryptAccountNumber(
-            dto.payerAccountNumber,
-          ),
-          payerAccountHolderName: dto.payerAccountHolderName,
-          payerBankName: dto.payerBankName,
-        },
-      );
-
-      await queryRunner.manager.update(
-        RoomUser,
-        { roomUuid: uuid, userUuid: userUuid },
-        { isPaid: true },
-      );
-      await queryRunner.commitTransaction();
-      return await this.getSettlement(uuid);
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
+    return this.roomSettlementService.requestSettlement(uuid, userUuid, dto);
   }
 
   async updateSettlement(
@@ -592,200 +614,19 @@ export class RoomService {
     userUuid: string,
     dto: UpdateSettlementDto,
   ) {
-    const room = await this.findOne(uuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
-
-    if (room.status == RoomStatus.COMPLETED) {
-      throw new BadRequestException('정산이 종료된 방입니다.');
-    }
-
-    if (room.status != RoomStatus.IN_SETTLEMENT) {
-      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
-    }
-
-    if (room.payerUuid != userUuid) {
-      throw new UnauthorizedException(
-        '정산자가 아니므로 정산 정보를 수정할 수 없습니다.',
-      );
-    }
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      if (dto.updateAccount) {
-        await this.userService.createOrUpdateAccount(
-          userUuid,
-          dto.payerAccountNumber,
-          dto.payerAccountHolderName,
-          dto.payerBankName,
-          queryRunner,
-        );
-      }
-
-      await queryRunner.manager.update(
-        Room,
-        { uuid: uuid },
-        {
-          status: RoomStatus.IN_SETTLEMENT,
-          payAmount: dto.payAmount,
-          payerEncryptedAccountNumber: dto.payerAccountNumber
-            ? this.userService.encryptAccountNumber(dto.payerAccountNumber)
-            : room.payerEncryptedAccountNumber,
-          payerAccountHolderName: dto.payerAccountHolderName,
-          payerBankName: dto.payerBankName,
-        },
-      );
-
-      await this.roomUserRepo.update(
-        {
-          roomUuid: uuid,
-          status: RoomUserStatus.JOINED,
-          userUuid: Not(userUuid),
-        },
-        { isPaid: false },
-      );
-
-      await queryRunner.commitTransaction();
-
-      return await this.getSettlement(uuid);
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
+    return this.roomSettlementService.updateSettlement(uuid, userUuid, dto);
   }
 
   async cancelSettlement(uuid: string, userUuid: string) {
-    const room = await this.findOne(uuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
-
-    if (room.status == RoomStatus.COMPLETED) {
-      throw new BadRequestException('정산이 종료된 방입니다.');
-    }
-
-    if (room.status != RoomStatus.IN_SETTLEMENT) {
-      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
-    }
-
-    if (room.payerUuid != userUuid) {
-      throw new UnauthorizedException(
-        '정산자가 아니므로 정산 요청을 취소할 수 없습니다.',
-      );
-    }
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
-      await queryRunner.manager.update(
-        RoomUser,
-        { roomUuid: uuid, status: RoomUserStatus.JOINED },
-        { isPaid: false },
-      );
-      await queryRunner.manager.update(
-        Room,
-        { uuid: uuid },
-        {
-          status: RoomStatus.ACTIVATED,
-          // NOTE: update에 undefined를 넣으면 무시됨, 값을 초기화하고 싶으면 null을 넣어야 함
-          payerUuid: null,
-          payAmount: null,
-          payerEncryptedAccountNumber: null,
-          payerAccountHolderName: null,
-          payerBankName: null,
-        },
-      );
-      await queryRunner.commitTransaction();
-
-      return await this.roomRepo.findOne({
-        where: { uuid: uuid },
-      });
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
+    return this.roomSettlementService.cancelSettlement(uuid, userUuid);
   }
 
   async getSettlement(roomUuid: string) {
-    const room = await this.roomRepo.findOne({
-      where: {
-        uuid: roomUuid,
-      },
-    });
-
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
-
-    if (
-      room.status != RoomStatus.IN_SETTLEMENT &&
-      room.status != RoomStatus.COMPLETED
-    ) {
-      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
-    }
-
-    if (!room.payAmount || !room.payerUuid) {
-      throw new NotFoundException('정산 내역이 없습니다.');
-    }
-
-    if (
-      !room.payerEncryptedAccountNumber ||
-      !room.payerAccountHolderName ||
-      !room.payerBankName
-    ) {
-      throw new NotFoundException('정산자의 계좌 정보가 없습니다.');
-    }
-
-    const decryptedAccountNumber = this.userService.decryptAccountNumber(
-      room.payerEncryptedAccountNumber,
-    );
-
-    const payAmountPerPerson = this.calculatePayAmountPerPerson(
-      room.payAmount,
-      room.currentParticipant,
-    );
-
-    const payerNickname = await this.userService.getNickname(room.payerUuid);
-    if (!payerNickname) {
-      throw new NotFoundException('정산자 닉네임을 찾을 수 없습니다.');
-    }
-
-    // Settlement DTO의 내용을 리턴함
-    return new ResponseSettlementDto(
-      room,
-      payerNickname.nickname,
-      decryptedAccountNumber,
-      room.payerAccountHolderName,
-      room.payerBankName,
-      payAmountPerPerson,
-    );
+    return this.roomSettlementService.getSettlement(roomUuid);
   }
 
   async getUserPayStatus(roomUuid: string, userUuid: string) {
-    const room = await this.findOne(roomUuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
-
-    const roomUser = await this.roomUserRepo.findOne({
-      where: { roomUuid, userUuid },
-    });
-
-    if (!roomUser) {
-      throw new NotFoundException('유저가 방에 가입되어 있지 않습니다.');
-    }
-
-    return roomUser.isPaid;
+    return this.roomSettlementService.getUserPayStatus(roomUuid, userUuid);
   }
 
   async updateRoomUserIsPaid(
@@ -793,54 +634,15 @@ export class RoomService {
     userUuid: string,
     isPaid: boolean,
   ) {
-    const room = await this.findOne(roomUuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
-
-    if (room.status != RoomStatus.IN_SETTLEMENT || room.payerUuid == null) {
-      throw new BadRequestException('정산이 진행되고 있지 않습니다.');
-    }
-
-    const roomUser = await this.roomUserRepo.findOne({
-      where: { roomUuid, userUuid },
-    });
-
-    if (!roomUser || roomUser.status !== RoomUserStatus.JOINED) {
-      throw new BadRequestException('방에 가입되어 있지 않습니다.');
-    }
-
-    await this.roomUserRepo.update({ roomUuid, userUuid }, { isPaid });
-
-    const result = await this.roomUserRepo.findOneOrFail({
-      where: { roomUuid, userUuid },
-    });
-
-    return { payerUuid: room.payerUuid, roomUser: result };
+    return this.roomSettlementService.updateRoomUserIsPaid(
+      roomUuid,
+      userUuid,
+      isPaid,
+    );
   }
 
   async completeRoom(uuid: string, userUuid: string, userType: UserType) {
-    const room = await this.findOne(uuid);
-    if (!room) {
-      throw new NotFoundException('방이 존재하지 않습니다.');
-    }
-
-    if (userUuid != room.payerUuid && userType != UserType.admin) {
-      throw new UnauthorizedException('정산자 또는 관리자가 아닙니다.');
-    }
-
-    if (room.status == RoomStatus.COMPLETED) {
-      throw new BadRequestException('이미 종료된 방입니다.');
-    }
-
-    await this.roomRepo.update(
-      { uuid: uuid },
-      { status: RoomStatus.COMPLETED },
-    );
-
-    return await this.roomRepo.findOne({
-      where: { uuid: uuid },
-    });
+    return this.roomSettlementService.completeRoom(uuid, userUuid, userType);
   }
 
   async saveLastReadChat(roomUuid: string, userUuid: string) {
@@ -917,15 +719,6 @@ export class RoomService {
           },
         );
     }
-  }
-
-  private calculatePayAmountPerPerson(
-    payAmount: number,
-    currentParticipant: number,
-  ) {
-    // NOTE: 서비스 이용약관에 따라 소수점은 올려서 계산함
-    // 정산자가 정산 금액보다 최대 (currentParticipant-1)원 더 받을 수 있음
-    return Math.ceil(payAmount / currentParticipant);
   }
 
   private getDepartureAlertTargetRooms() {

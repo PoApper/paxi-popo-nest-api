@@ -9,6 +9,8 @@ import { FcmModule } from 'src/fcm/fcm.module';
 
 import { RoomService } from './room.service';
 import { RoomController } from './room.controller';
+import { RoomPreviewController } from './room-preview.controller';
+import { RoomSettlementService } from './services/room-settlement.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Room, RoomUser]),
@@ -16,8 +18,8 @@ import { RoomController } from './room.controller';
     forwardRef(() => ChatModule),
     FcmModule,
   ],
-  controllers: [RoomController],
-  providers: [RoomService],
+  controllers: [RoomController, RoomPreviewController],
+  providers: [RoomService, RoomSettlementService],
   exports: [RoomService],
 })
 export class RoomModule {}
