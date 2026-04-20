@@ -18,4 +18,5 @@ export const enum ChatEvent {
 
   // 에러 이벤트
   ERROR = 'error',
+  ACCESS_TOKEN_EXPIRED = 'accessTokenExpired',
 }
