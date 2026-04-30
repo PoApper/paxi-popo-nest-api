@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import * as ms from 'ms';
@@ -7,6 +7,7 @@ import * as crypto from 'crypto';
 import { UserService } from 'src/user/user.service';
 
 import { JwtPayload } from './strategies/jwt.payload';
+import { AuthLogger } from './auth.logger';
 import { jwtConstants } from './constants';
 
 @Injectable()
@@ -15,7 +16,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
   ) {}
-  private readonly logger = new Logger(AuthService.name);
+  private readonly logger = new AuthLogger(AuthService.name);
 
   generateAccessToken(user: JwtPayload) {
     const payload = {
@@ -79,14 +80,33 @@ export class AuthService {
 
       // 2. 리프레시 토큰의 payload가 액세스 토큰의 정보와 일치하는지 검증
       if (userInRefreshToken.uuid !== userInAccessToken.uuid) {
+        this.logger.warn('토큰 갱신 실패: UUID 불일치', {
+          'Access Token UUID': userInAccessToken.uuid,
+          'Refresh Token UUID': userInRefreshToken.uuid,
+          이메일: userInAccessToken.email,
+        });
         return false;
       }
 
       // 3. DB에 저장된 해시된 리프레시 토큰과 일치하는지 검증
-      const user = (await this.userService.findOne(userInAccessToken.uuid))!;
+      const user = await this.userService.findOne(userInAccessToken.uuid);
+
+      if (!user) {
+        this.logger.warn('토큰 갱신 실패: 존재하지 않는 유저', {
+          '유저 UUID': userInAccessToken.uuid,
+          이메일: userInAccessToken.email,
+        });
+        return false;
+      }
+
       const hashedToken = this.hashToken(refreshToken);
 
       if (!user.hashedRefreshToken || user.hashedRefreshToken !== hashedToken) {
+        this.logger.warn('토큰 갱신 실패: Refresh Token 해시 불일치', {
+          '유저 UUID': userInAccessToken.uuid,
+          이메일: userInAccessToken.email,
+          'DB에 토큰 존재 여부': !!user.hashedRefreshToken,
+        });
         return false;
       }
 
@@ -95,13 +115,22 @@ export class AuthService {
         !user.refreshTokenExpiresAt ||
         user.refreshTokenExpiresAt <= new Date()
       ) {
+        this.logger.warn('토큰 갱신 실패: Refresh Token 만료', {
+          '유저 UUID': userInAccessToken.uuid,
+          이메일: userInAccessToken.email,
+          '만료 시각': user.refreshTokenExpiresAt?.toISOString(),
+        });
         return false;
       }
 
       return true;
     } catch (error) {
       // 토큰 검증 실패 (만료되었거나 서명이 잘못된 경우)
-      this.logger.error('리프레시 토큰 검증 실패:', error);
+      this.logger.warn('토큰 갱신 실패: Refresh Token 서명 검증 실패', {
+        '유저 UUID': userInAccessToken.uuid,
+        이메일: userInAccessToken.email,
+        에러: error instanceof Error ? error.message : String(error),
+      });
       return false;
     }
   }
@@ -123,7 +152,9 @@ export class AuthService {
         userType: payload.userType,
       };
     } catch (error) {
-      this.logger.error('액세스 토큰 디코딩 실패:', error);
+      this.logger.warn('Access Token 디코딩 실패', {
+        에러: error instanceof Error ? error.message : String(error),
+      });
       return null;
     }
   }
