@@ -73,3 +73,5 @@ launch.json
 
 # handoff docs
 **/HANDOFF.md
+
+.omc/
