@@ -58,6 +58,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.focusedRoomUuid = '';
       // userUuid를 키로 하는 소켓 방 생성, controller에서 userUuid를 받아 메세지를 보낼 때 사용
       await client.join(`user-${payload.uuid}`);
+
+      // 인증 성공 확정 신호. 클라이언트는 전송 계층 connect가 아니라 이 이벤트로
+      // 실제 사용 가능 상태를 판단한다(만료 토큰이면 여기 도달하지 않고 끊김).
+      client.emit(ChatEvent.CONNECTED);
     } catch (error) {
       // NOTE: @SubscribeMessage() 에노테이션이 붙지 않은 이벤트에서 발생한 에러는 ExceptionFilter에 전달되지 않음
       // 따라서 여기서 클라이언트에 에러 이벤트를 전송해야 함

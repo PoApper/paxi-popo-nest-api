@@ -16,6 +16,9 @@ export const enum ChatEvent {
   // 유저 강퇴 관련 이벤트
   USER_KICKED = 'userKicked',
 
+  // 연결 관련 이벤트
+  CONNECTED = 'connected',
+
   // 에러 이벤트
   ERROR = 'error',
   ACCESS_TOKEN_EXPIRED = 'accessTokenExpired',
