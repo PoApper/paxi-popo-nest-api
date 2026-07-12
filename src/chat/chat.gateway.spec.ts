@@ -11,39 +11,44 @@ describe('ChatGateway.handleConnection', () => {
     return new ChatGateway(jwtService, roomService, fcmService);
   };
 
-  const makeClient = (token?: string) =>
-    ({
+  const makeClient = (token?: string) => {
+    const join = jest.fn().mockResolvedValue(undefined);
+    const emit = jest.fn();
+    const disconnect = jest.fn();
+    const client = {
       handshake: { query: { Authentication: token } },
       data: {},
-      join: jest.fn().mockResolvedValue(undefined),
-      emit: jest.fn(),
-      disconnect: jest.fn(),
-    }) as never as import('socket.io').Socket;
+      join,
+      emit,
+      disconnect,
+    } as never as import('socket.io').Socket;
+    return { client, join, emit, disconnect };
+  };
 
   it('인증 성공 시 connected 이벤트를 emit하고 연결을 끊지 않는다', async () => {
     const gateway = makeGateway(() => ({ uuid: 'user-1' }));
-    const client = makeClient('valid-token');
+    const { client, join, emit, disconnect } = makeClient('valid-token');
 
     await gateway.handleConnection(client);
 
-    expect(client.join).toHaveBeenCalledWith('user-user-1');
-    expect(client.emit).toHaveBeenCalledWith(ChatEvent.CONNECTED);
-    expect(client.disconnect).not.toHaveBeenCalled();
+    expect(join).toHaveBeenCalledWith('user-user-1');
+    expect(emit).toHaveBeenCalledWith(ChatEvent.CONNECTED);
+    expect(disconnect).not.toHaveBeenCalled();
   });
 
   it('토큰 만료 시 accessTokenExpired를 emit하고 connected는 보내지 않는다', async () => {
     const gateway = makeGateway(() => {
       throw new TokenExpiredError('jwt expired', new Date());
     });
-    const client = makeClient('expired-token');
+    const { client, emit, disconnect } = makeClient('expired-token');
 
     await gateway.handleConnection(client);
 
-    expect(client.emit).toHaveBeenCalledWith(
+    expect(emit).toHaveBeenCalledWith(
       ChatEvent.ACCESS_TOKEN_EXPIRED,
       expect.objectContaining({ error: 'AccessTokenExpired' }),
     );
-    expect(client.emit).not.toHaveBeenCalledWith(ChatEvent.CONNECTED);
-    expect(client.disconnect).toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalledWith(ChatEvent.CONNECTED);
+    expect(disconnect).toHaveBeenCalled();
   });
 });
