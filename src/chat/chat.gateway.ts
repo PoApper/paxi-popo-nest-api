@@ -19,6 +19,7 @@ import { Room } from 'src/room/entities/room.entity';
 import { UpdateRoomDto } from 'src/room/dto/update-room.dto';
 
 import { WsExceptionFilter } from './filters/ws-exception.filter';
+import { buildWsErrorResponse } from './filters/ws-error-response';
 import { Chat } from './entities/chat.entity';
 import { ChatEvent } from './chat.events';
 @Injectable()
@@ -71,10 +72,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           message: `Access token has expired. Please use refresh token. ${error.message}`,
         });
       } else {
-        client.emit(ChatEvent.ERROR, {
-          error: 'ConnectionError',
-          message: `Connection error. ${error.message}`,
-        });
+        // WsExceptionFilter와 동일한 envelope로 내려보내, 클라이언트의 'error'
+        // 핸들러가 단일 형식만 다루도록 한다. WsException이면 실제 메시지를
+        // 그대로 노출하고, 그 외에는 내부 정보를 흘리지 않도록 일반 문구를 쓴다.
+        client.emit(
+          ChatEvent.ERROR,
+          buildWsErrorResponse(
+            error instanceof WsException ? error.message : 'Connection error.',
+            'ConnectionError',
+          ),
+        );
       }
       client.disconnect();
       // 서버에 로그남기는 용도

@@ -51,4 +51,23 @@ describe('ChatGateway.handleConnection', () => {
     expect(emit).not.toHaveBeenCalledWith(ChatEvent.CONNECTED);
     expect(disconnect).toHaveBeenCalled();
   });
+
+  it('토큰이 없으면 WsExceptionFilter와 동일한 envelope로 error를 emit한다', async () => {
+    const gateway = makeGateway(() => ({ uuid: 'user-1' }));
+    const { client, emit, disconnect } = makeClient(undefined);
+
+    await gateway.handleConnection(client);
+
+    expect(emit).toHaveBeenCalledWith(
+      ChatEvent.ERROR,
+      expect.objectContaining({
+        status: 'error',
+        error: 'ConnectionError',
+        message: '인증 토큰이 없습니다.',
+        timestamp: expect.any(String),
+      }),
+    );
+    expect(emit).not.toHaveBeenCalledWith(ChatEvent.CONNECTED);
+    expect(disconnect).toHaveBeenCalled();
+  });
 });
