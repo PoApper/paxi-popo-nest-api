@@ -44,9 +44,16 @@ describe('ChatGateway.handleConnection', () => {
 
     await gateway.handleConnection(client);
 
-    expect(emit).toHaveBeenCalledWith(
+    expect(emit).toHaveBeenCalledWith(ChatEvent.ACCESS_TOKEN_EXPIRED, {
+      error: 'AccessTokenExpired',
+      message: 'Access token has expired. Please use refresh token.',
+    });
+    // 예외 원문(jwt expired)이 클라이언트 메시지에 새어 나가지 않는다
+    expect(emit).not.toHaveBeenCalledWith(
       ChatEvent.ACCESS_TOKEN_EXPIRED,
-      expect.objectContaining({ error: 'AccessTokenExpired' }),
+      expect.objectContaining({
+        message: expect.stringContaining('jwt expired'),
+      }),
     );
     expect(emit).not.toHaveBeenCalledWith(ChatEvent.CONNECTED);
     expect(disconnect).toHaveBeenCalled();

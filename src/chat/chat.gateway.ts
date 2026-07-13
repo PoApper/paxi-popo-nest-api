@@ -67,9 +67,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // NOTE: @SubscribeMessage() 에노테이션이 붙지 않은 이벤트에서 발생한 에러는 ExceptionFilter에 전달되지 않음
       // 따라서 여기서 클라이언트에 에러 이벤트를 전송해야 함
       if (error instanceof TokenExpiredError) {
+        // 클라이언트에 노출되는 메시지는 고정한다. 예외 원문(jwt expired 등)은
+        // 아래 logger로 서버에만 남긴다.
         client.emit(ChatEvent.ACCESS_TOKEN_EXPIRED, {
           error: 'AccessTokenExpired',
-          message: `Access token has expired. Please use refresh token. ${error.message}`,
+          message: 'Access token has expired. Please use refresh token.',
         });
       } else {
         // WsExceptionFilter와 동일한 envelope로 내려보내, 클라이언트의 'error'
