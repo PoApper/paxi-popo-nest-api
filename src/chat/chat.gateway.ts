@@ -6,7 +6,7 @@ import {
   WsException,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 import { instanceToPlain, plainToInstance } from 'class-transformer';
 import { Logger, UseFilters, Injectable } from '@nestjs/common';
 
@@ -19,6 +19,7 @@ import { Room } from 'src/room/entities/room.entity';
 import { UpdateRoomDto } from 'src/room/dto/update-room.dto';
 
 import { WsExceptionFilter } from './filters/ws-exception.filter';
+import { buildWsErrorResponse } from './filters/ws-error-response';
 import { Chat } from './entities/chat.entity';
 import { ChatEvent } from './chat.events';
 @Injectable()
@@ -58,12 +59,32 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.focusedRoomUuid = '';
       // userUuid를 키로 하는 소켓 방 생성, controller에서 userUuid를 받아 메세지를 보낼 때 사용
       await client.join(`user-${payload.uuid}`);
+
+      // 인증 성공 확정 신호. 클라이언트는 전송 계층 connect가 아니라 이 이벤트로
+      // 실제 사용 가능 상태를 판단한다(만료 토큰이면 여기 도달하지 않고 끊김).
+      client.emit(ChatEvent.CONNECTED);
     } catch (error) {
       // NOTE: @SubscribeMessage() 에노테이션이 붙지 않은 이벤트에서 발생한 에러는 ExceptionFilter에 전달되지 않음
       // 따라서 여기서 클라이언트에 에러 이벤트를 전송해야 함
-      client.emit(ChatEvent.ERROR, {
-        message: `웹소켓 연결에 실패했습니다. ${error.message}`,
-      });
+      if (error instanceof TokenExpiredError) {
+        // 클라이언트에 노출되는 메시지는 고정한다. 예외 원문(jwt expired 등)은
+        // 아래 logger로 서버에만 남긴다.
+        client.emit(ChatEvent.ACCESS_TOKEN_EXPIRED, {
+          error: 'AccessTokenExpired',
+          message: 'Access token has expired. Please use refresh token.',
+        });
+      } else {
+        // WsExceptionFilter와 동일한 envelope로 내려보내, 클라이언트의 'error'
+        // 핸들러가 단일 형식만 다루도록 한다. WsException이면 실제 메시지를
+        // 그대로 노출하고, 그 외에는 내부 정보를 흘리지 않도록 일반 문구를 쓴다.
+        client.emit(
+          ChatEvent.ERROR,
+          buildWsErrorResponse(
+            error instanceof WsException ? error.message : 'Connection error.',
+            'ConnectionError',
+          ),
+        );
+      }
       client.disconnect();
       // 서버에 로그남기는 용도
       this.logger.error(`웹소켓 연결에 실패했습니다. ${error}`);
