@@ -18,17 +18,6 @@ export class ResponseRoomDto extends OmitType(Room, [
   @ApiProperty({ type: [RoomParticipantDto], required: false })
   roomUsers?: RoomParticipantDto[];
 
-  // TODO: 프론트엔드 배포 후 아래 deprecated 필드 삭제
-  // backward compatibility를 위해 일시적으로 유지
-  @ApiProperty({ required: false, deprecated: true })
-  hasNewMessage?: boolean;
-
-  @ApiProperty({ required: false, deprecated: true, nullable: true })
-  kickedReason?: string | null;
-
-  @ApiProperty({ required: false, deprecated: true, nullable: true })
-  userStatus?: string | null;
-
   constructor(
     room: Room,
     options?: {
@@ -57,17 +46,7 @@ export class ResponseRoomDto extends OmitType(Room, [
 
     this.payerAccountNumber = options?.payerAccountNumber;
 
-    if (options?.myRoomUser) {
-      this.myRoomUser = options.myRoomUser;
-
-      // TODO: 프론트엔드 배포 후 아래 deprecated 필드 삭제
-      this.hasNewMessage = options.myRoomUser.hasNewMessage;
-      this.kickedReason = options.myRoomUser.kickedReason;
-      this.userStatus = options.myRoomUser.status;
-    } else {
-      // 유저가 해당 방에 참여한 적 없는 경우
-      this.userStatus = null;
-    }
+    this.myRoomUser = options?.myRoomUser;
 
     if (options?.includeRoomUsers && room.roomUsers) {
       this.roomUsers = room.roomUsers.map((ru) => new RoomParticipantDto(ru));
