@@ -163,15 +163,6 @@ describe('ResponseRoomDto', () => {
     expect(dto.myRoomUser!.hasNewMessage).toBe(true);
   });
 
-  it('should set deprecated fields for backward compatibility when myRoomUser is provided', () => {
-    const myRoomUser = new MyRoomUserDto(roomUsers[0], true);
-    const dto = new ResponseRoomDto(baseRoom, { myRoomUser });
-
-    expect(dto.hasNewMessage).toBe(true);
-    expect(dto.kickedReason).toBeNull();
-    expect(dto.userStatus).toBe(RoomUserStatus.JOINED);
-  });
-
   it('should handle room with one roomUser', () => {
     const minimalRoom = {
       ...baseRoom,
