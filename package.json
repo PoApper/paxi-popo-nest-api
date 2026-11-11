@@ -5,6 +5,10 @@
   "version": "0.0.1",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24.22.2 <25",
+    "npm": ">=11 <12"
+  },
   "scripts": {
     "build": "nest build",
     "start": "nest start",
@@ -49,7 +53,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
-    "sqlite3": "^5.1.7",
+    "sqlite3": "^6.0.1",
     "typeorm": "^0.3.27"
   },
   "devDependencies": {
@@ -62,7 +66,7 @@
     "@swc/core": "^1.10.7",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.14",
-    "@types/node": "^22.14.1",
+    "@types/node": "^24.0.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/parser": "^8.26.0",
