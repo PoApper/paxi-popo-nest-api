@@ -83,6 +83,12 @@ export class FcmService {
     body: string,
     data?: any,
   ) {
+    const tokenList = Array.isArray(tokens) ? tokens : [tokens];
+    // 등록된 푸시 키가 없으면 보낼 대상이 없음 (Firebase는 빈 배열을 거부함)
+    if (tokenList.length === 0) {
+      return { successCount: 0, failureCount: 0, responses: [] };
+    }
+
     // Firebase가 초기화되지 않았으면 푸시 알림을 보내지 않음
     if (getApps().length === 0) {
       console.warn(
@@ -90,14 +96,14 @@ export class FcmService {
       );
       return {
         successCount: 0,
-        failureCount: tokens.length,
+        failureCount: tokenList.length,
         responses: [],
       };
     }
 
     return getMessaging()
       .sendEachForMulticast({
-        tokens: Array.isArray(tokens) ? tokens : [tokens],
+        tokens: tokenList,
         notification: {
           title: title,
           body: body,
