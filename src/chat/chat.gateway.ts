@@ -105,6 +105,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async sendMessage(
     roomUuid: string,
     message: Chat,
+    // 이 메시지를 일으킨 사용자(보낸 사람, 입장한 사람 등). 자기 행동의 푸시는 받지 않는다.
+    actorUuid: string,
     // 해당 함수를 호출하는 함수가 중요한 이벤트(정산 요청 등)라면, 유저의 음소거 요청을 무시하고 모든 유저에게 알림 전송
     // 현재는 일반 유저의 메세지(chatController.create())만 mute 가능함
     respectMuteSetting: boolean = false,
@@ -131,6 +133,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           .emit(ChatEvent.NEW_MESSAGE, instanceToPlain(message));
       } else {
         // 다른 방에 있거나 앱에 없는 사용자에게 FCM 알림 전송
+        if (user.userUuid === actorUuid) continue;
         // 음소거 설정을 따르는지 확인
         if (respectMuteSetting && user.isMuted) continue;
         usersToNotify.push(user.userUuid);
