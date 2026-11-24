@@ -113,7 +113,7 @@ export class FcmService {
                 body: body,
               },
               sound: 'default',
-              contentAvailable: true, // 백그라운드 푸시 알림을 위한 설정
+              // contentAvailable을 넣으면 iOS 앱이 포그라운드에서 메시지를 받지 못한다(popo-mobile#342)
             },
           },
         },
