@@ -78,3 +78,47 @@ describe('ChatGateway.handleConnection', () => {
     expect(disconnect).toHaveBeenCalled();
   });
 });
+
+describe('ChatGateway.sendMessage', () => {
+  const makeGateway = (
+    joinedUserUuids: string[],
+    mutedUserUuids: string[] = [],
+  ) => {
+    const roomService = {
+      findUsersByRoomUuidAndStatus: jest.fn().mockResolvedValue(
+        joinedUserUuids.map((userUuid) => ({
+          userUuid,
+          isMuted: mutedUserUuids.includes(userUuid),
+        })),
+      ),
+      getRoomTitle: jest.fn().mockResolvedValue('방 제목'),
+    } as never;
+    const sendPush = jest.fn().mockResolvedValue(undefined);
+    const fcmService = { sendPushNotificationByUserUuid: sendPush } as never;
+    const gateway = new ChatGateway({} as never, roomService, fcmService);
+    // 아무도 소켓에 연결되어 있지 않은 상태
+    gateway.server = {
+      sockets: { adapter: { rooms: new Map() }, sockets: new Map() },
+    } as never;
+    return { gateway, sendPush };
+  };
+  const chat = { message: '안녕하세요' } as never;
+
+  it('이벤트를 일으킨 사용자에게는 푸시를 보내지 않는다', async () => {
+    const { gateway, sendPush } = makeGateway(['actor', 'other']);
+
+    await gateway.sendMessage('room-1', chat, 'actor');
+
+    expect(sendPush).toHaveBeenCalledWith(['other'], '방 제목', '안녕하세요', {
+      roomUuid: 'room-1',
+    });
+  });
+
+  it('보낼 사람이 이벤트를 일으킨 사용자뿐이면 푸시를 보내지 않는다', async () => {
+    const { gateway, sendPush } = makeGateway(['actor']);
+
+    await gateway.sendMessage('room-1', chat, 'actor');
+
+    expect(sendPush).not.toHaveBeenCalled();
+  });
+});

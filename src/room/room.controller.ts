@@ -249,7 +249,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid);
     this.chatGateway.sendUpdatedRoom(uuid, updatedRoom, roomDiff);
 
     return updatedRoom;
@@ -303,7 +303,7 @@ export class RoomController {
         message: message,
         messageType: ChatMessageType.TEXT,
       });
-      this.chatGateway.sendMessage(uuid, chat);
+      this.chatGateway.sendMessage(uuid, chat, user.uuid);
     }
     this.chatGateway.updateUserFocusRoomUuid(user.uuid, uuid);
     await this.roomService.saveLastReadChat(uuid, user.uuid);
@@ -334,7 +334,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid);
     return room;
   }
 
@@ -399,7 +399,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid);
 
     // WebSocket 이벤트 전송
     this.chatGateway.sendUserKicked(
@@ -471,7 +471,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid);
 
     return room;
   }
@@ -520,7 +520,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid);
     return room;
   }
 
@@ -554,7 +554,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid);
     this.chatGateway.sendNewSettlement(uuid, responseSettlement);
     return responseSettlement;
   }
@@ -616,7 +616,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid);
     this.chatGateway.sendUpdatedSettlement(uuid, responseSettlement);
     return responseSettlement;
   }
@@ -651,7 +651,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid);
     this.chatGateway.sendDeletedSettlement(uuid);
 
     return room;
@@ -776,7 +776,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid);
     return room;
   }
 

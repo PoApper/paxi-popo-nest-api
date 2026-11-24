@@ -208,7 +208,7 @@ export class ChatController {
       },
       user.nickname,
     );
-    this.chatGateway.sendMessage(roomUuid, chat, true);
+    this.chatGateway.sendMessage(roomUuid, chat, user.uuid, true);
     return chat;
   }
 }
