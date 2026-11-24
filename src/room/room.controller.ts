@@ -249,7 +249,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat, user.uuid);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid, true);
     this.chatGateway.sendUpdatedRoom(uuid, updatedRoom, roomDiff);
 
     return updatedRoom;
@@ -303,7 +303,7 @@ export class RoomController {
         message: message,
         messageType: ChatMessageType.TEXT,
       });
-      this.chatGateway.sendMessage(uuid, chat, user.uuid);
+      this.chatGateway.sendMessage(uuid, chat, user.uuid, true);
     }
     this.chatGateway.updateUserFocusRoomUuid(user.uuid, uuid);
     await this.roomService.saveLastReadChat(uuid, user.uuid);
@@ -334,7 +334,7 @@ export class RoomController {
       message: message,
       messageType: ChatMessageType.TEXT,
     });
-    this.chatGateway.sendMessage(uuid, chat, user.uuid);
+    this.chatGateway.sendMessage(uuid, chat, user.uuid, true);
     return room;
   }
 
